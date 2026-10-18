@@ -1,7 +1,7 @@
 /* 十四亿分之一 · 部署配置。上线前按需修改这一个文件即可。 */
 window.JY_CONFIG = {
   // 分享文字里附带的网址，例如 'https://example.com/1in1.4b/'。留空则自动用当前页面地址。
-  siteUrl: '',
+  siteUrl: 'https://vibe-game.com/life-sim/1in1.4b/',
   // 分享图右下角显示的站名（没有网址时使用）。
   siteName: '十四亿分之一',
   // 网页字体的样式表地址。国内访问不了 Google 字体：
