@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>浮生录</title>
+<meta name="description" content="浮生录：人生模拟器合集。选一个背景，投一次胎，从出生活到离世。">
+<meta name="theme-color" content="#0e1315">
+<link rel="stylesheet" href="share/style.css">
+<style>
+  .hub-hero h1 { font-size: clamp(44px, 8vw, 84px); letter-spacing: .08em; }
+  .hub-hero p { max-width: 36em; }
+  .worlds { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+  .world { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 22px 22px 20px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--r); color: inherit; text-decoration: none; overflow: hidden; }
+  .world::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--c); }
+  .world:hover { border-color: var(--c); }
+  .world .nm { font-family: var(--f-head); font-weight: 900; font-size: 30px; }
+  .world .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .world .tags span { font-size: 12px; color: var(--c); border: 1px solid currentColor; border-radius: 3px; padding: 0 6px; line-height: 1.7; }
+  .world .d { color: var(--soft); font-size: 15px; line-height: 1.8; }
+  .world .save { font-size: 13px; color: var(--muted); }
+  .world .save b { color: var(--fg); font-weight: 500; }
+  .world .go { margin-top: auto; align-self: flex-start; }
+  .soon { opacity: .55; }
+</style>
+</head>
+<body>
+<!-- 游戏大厅。新增游戏：在 GAMES 里加一项（id 就是游戏目录名，也是存档前缀） -->
+<div class="home">
+  <div class="home-hero hub-hero"><div><h1>浮生<i>录</i></h1>
+    <p>人生模拟器合集。选一个背景，投一次胎，从出生活到离世。每一世都只有一次，选过的路会一直跟着你。</p></div></div>
+  <section>
+    <div class="section-h"><h2>选一个世界</h2><span>每个世界的存档各自独立，保存在这个浏览器里</span></div>
+    <div class="worlds" id="worlds"></div>
+  </section>
+  <section class="how">
+    <div><b>怎么玩</b>时间一年一年地走，遇到大事会停下来让你选。选项没有对错，只有后果。</div>
+    <div><b>一局多久</b>1× 时一年约一分钟，可以开到 16× 或者直接跳到下一个抉择。</div>
+    <div><b>分享</b>走完一生，会生成一张生平卡片和一段文字，可以发给朋友。</div>
+  </section>
+</div>
+<script>
+(function () {
+  'use strict';
+  var GAMES = [
+    { id: '1in1.4b', name: '十四亿分之一', color: '#d0473a', tags: ['现代中国', '随机投胎', '2026 年出生'],
+      d: '按真实的人口比例，随机投胎到中国某个省、某座城或某个村、某种家庭。中考、高考、打工、买房、成家、养老，过完普通人的一生。' },
+    { id: 'jianghuyimeng', name: '江湖一梦', color: '#c9a24a', tags: ['金庸', '射雕三部曲', '改写原著'],
+      d: '射雕、神雕、倚天放进同一个江湖。重生成书里有名有姓的人，照原著走，或者改写自己和别人的命运。' },
+  ];
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  // 读各游戏的存档，显示活过几世、有没有正在过的一生（读不到就不显示）
+  function saveLine(id) {
+    try {
+      var s = JSON.parse(localStorage.getItem(id + '.save.v2') || 'null');
+      if (!s || !s.W) return '';
+      var bits = [];
+      if (s.L) {
+        var me = (s.W.gen || []).find(function (d) { return d.id === s.L.cid; });
+        bits.push('<b>正在过的一生' + (me ? '：' + esc(me.name) + '，' + (s.L.year - me.born) + ' 岁' : '') + '</b>');
+      }
+      if (s.W.lives && s.W.lives.length) bits.push('已经活过 ' + s.W.lives.length + ' 世');
+      return bits.join(' · ');
+    } catch (e) { return ''; }
+  }
+  document.getElementById('worlds').innerHTML = GAMES.map(function (g) {
+    var save = saveLine(g.id);
+    return '<a class="world" href="' + g.id + '/" style="--c:' + g.color + '">'
+      + '<div class="nm">' + esc(g.name) + '</div>'
+      + '<div class="tags">' + g.tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</div>'
+      + '<div class="d">' + esc(g.d) + '</div>'
+      + (save ? '<div class="save">' + save + '</div>' : '')
+      + '<span class="b primary go">' + (save.indexOf('正在') >= 0 ? '继续' : '进入') + '</span></a>';
+  }).join('');
+})();
+</script>
+</body>
+</html>
