@@ -26,8 +26,15 @@
   --r: 6px;
   color-scheme: dark;
 }
+/* 三种主题：暗（默认）、灰、白。灰是不刺眼的中性灰，适合白天屋里看 */
+:root[data-theme="gray"] {
+  --bg: #2c3033; --panel: #363b3f; --panel-2: #3e4448; --line: #4a5156; --fg: #eceeed; --muted: #a3aaa8; --soft: #ccd2cf;
+  --btn: #41474b; --btn-on: #eceeed; --btn-on-fg: #2c3033;
+  --gen: #6fd09a; --xin: #eebd5c; --wu: #63c8c0; --qing: #ec7c9b; --canon: #ddb970; --mod: #7fcfd9; --bad: #ee917b;
+  color-scheme: dark;
+}
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
+  :root:not([data-theme="dark"]):not([data-theme="gray"]) {
     --bg: #e9ece5; --panel: #f8f9f5; --panel-2: #eef1ea; --line: #d3d9d0; --fg: #1b2322; --muted: #5e6a66; --soft: #3a4542;
     --btn: #eef1ea; --btn-on: #1b2322; --btn-on-fg: #f8f9f5;
     --gen: #2f9a63; --xin: #b88518; --wu: #1f8f88; --qing: #c2456b; --canon: #94702a; --mod: #1f7480; --bad: #b0472f;
@@ -80,7 +87,17 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; display: b
 .when .pace { display: inline-block; min-width: 9.5em; }
 .when .pace.paused { color: var(--mod); }
 /* 顶栏一行放不下标题时先藏标题（“离开”同样回首页），再窄就藏速度说明（速度键和暂停键本身看得出状态） */
-.top-in.wide { max-width: none; }
+.top-in.wide { max-width: none; flex-wrap: nowrap; }
+/* 电脑上顶栏永远一行：按钮放不下时在按钮区里横向滑动，不换行 */
+.top-in.wide .ctl { flex-wrap: nowrap; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.top-in.wide .ctl::-webkit-scrollbar { display: none; }
+.top-in.wide .ctl > * { flex: 0 0 auto; }
+/* 带图标的按钮：主题、反馈；语言下拉 */
+.icon-b { display: inline-flex; align-items: center; gap: 6px; }
+.icon-b svg, .lang-wrap svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.lang-wrap { border-radius: 4px; }
+.site-foot .ver { color: var(--muted); opacity: .7; font-family: var(--f-mono); font-size: 12px; margin-left: 10px; }
+.mt-note { flex-basis: 100%; color: var(--muted); font-size: 12px; margin: 0; }
 @media (max-width: 1479px) and (min-width: 821px) { .top .logo { display: none; } .when .yr-bar { width: 120px; } }
 @media (max-width: 1240px) and (min-width: 821px) { .when .pace { display: none; } .when .yr-bar { width: 90px; } }
 
@@ -328,6 +345,7 @@ details.what p { margin-top: 6px; }
   .top-in { padding: 6px 16px; gap: 6px 14px; }
   .top .logo { display: none; }
   .site-nav, .site-foot { padding: 8px 16px; font-size: 13px; }
+  .top-in.wide { flex-wrap: wrap; } /* 手机上按钮本来就排到第二行横向滑动 */
   .site-foot { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } /* 别被右下角“顶部”按钮挡住 */
   .when .pace { min-width: 0; }
   .agebox span { font-size: 14px; }

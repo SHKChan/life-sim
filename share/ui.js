@@ -50,6 +50,17 @@
   const statName = (k) => t(k);
   const extraLabel = (x, L) => t(typeof x.label === 'function' ? x.label(L, G) : x.label || x.k);
   const tierOf = (x, v) => { if (!x.tier) return ''; const p = x.tier.find((q) => v < q[0]) || x.tier[x.tier.length - 1]; return t(p[1]); };
+  const PROF = T.profile || {};
+  /* 场景框画什么：游戏的 scene(g) 返回 { loc, cap, party, pets } 时照它画（例如在家就画家里人，在医院就画陪着的人）；
+   * 没有就画当前地点和 party */
+  function sceneOf(L, c, age) {
+    const s = T.scene ? T.scene(G) : null;
+    if (s) return { loc: s.loc || L.loc, cap: s.cap || L.locCap, party: (s.party || []).filter((id) => G.alive(id)), pets: s.pets || [] };
+    const loc = JY.LOCS[L.loc] || { name: L.locCap, desc: '' };
+    const party = partyOf(L, c, age);
+    const who = T.sceneCap ? T.sceneCap(G) : age < 3 ? t('在襁褓里') : party.length ? t('与{who}', { who: party.map((id) => G.name(id)).join(t('、')) }) : t('独自一人');
+    return { loc: L.loc, cap: L.locCap + (loc.desc ? ' · ' + t(loc.desc) : '') + ' · ' + who, party, pets: [] };
+  }
   const bookOf = (b) => Object.assign({ short: b || '', code: 'BOOK', color: '#888', ink: '#111' }, T.books[b] || {});
   const PRE = T.id + '.';
   if (T.brand) document.documentElement.style.setProperty('--brand', T.brand);
@@ -114,11 +125,25 @@
   /* ---------- 网站导航、语言、反馈 ----------
    * config.js 里：homeUrl / homeName（所有游戏的总页面）、hubUrl / hubName（这个合集的大厅）、
    * feedbackRepo（'用户名/仓库'，有了才能提交到 GitHub Issues）、feedbackApi（以后有后端时，POST 到这个地址）。 */
+  // 小图标（线条，跟着文字颜色）
+  const ICON = {
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5" stroke-linecap="round"/></svg>',
+    theme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
+  };
+  // 三种主题：暗、灰、白，点一下换下一种
+  const THEMES = [['dark', '暗'], ['gray', '灰'], ['light', '白']];
+  const themeNow = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  function themeBtn(id, withText) {
+    const cur = THEMES.find((x) => x[0] === themeNow()) || THEMES[0];
+    return '<button class="b icon-b" id="' + id + '" data-act="theme" title="' + esc(t('主题：{x}（点一下换）', { x: t(cur[1]) })) + '">' + ICON.theme + '<span>' + esc(t(cur[1])) + (withText ? ' · ' + t('主题') : '') + '</span></button>';
+  }
   function langSelect(id) {
-    return '<label class="lang-wrap" title="' + esc(t('语言')) + '"><span aria-hidden="true">文</span><select class="lang-sel" id="' + id + '" aria-label="' + esc(t('语言')) + '">'
+    return '<label class="lang-wrap" title="' + esc(t('语言')) + '">' + ICON.globe + '<select class="lang-sel" id="' + id + '" aria-label="' + esc(t('语言')) + '">'
       + (JY.LANGS || [['zh', '中文']]).map((l) => '<option value="' + l[0] + '"' + (l[0] === (JY.LANG || 'zh') ? ' selected' : '') + '>' + l[1] + '</option>').join('')
       + '</select></label>';
   }
+  const feedbackBtn = (id, label) => '<button class="b icon-b" id="' + id + '" data-act="feedback">' + ICON.chat + '<span>' + label + '</span></button>';
   function crumbs() {
     const bits = [];
     if (CFG.homeUrl) bits.push('<a href="' + esc(CFG.homeUrl) + '">' + esc(CFG.homeName || t('首页')) + '</a>');
@@ -126,14 +151,13 @@
     bits.push('<span class="cur">' + esc(T.title) + '</span>');
     return bits.join('<span class="sep" aria-hidden="true">›</span>');
   }
-  function topNav() {
-    return '<nav class="site-nav" aria-label="' + esc(t('网站导航')) + '"><div class="crumbs">' + crumbs() + '</div><div class="nav-tools">'
-      + langSelect('lang-top') + '<button class="b" id="n-feedback" data-act="feedback">' + t('反馈') + '</button></div></nav>';
-  }
+  // 页面最上面的全站导航由总页面的 /nav.js 提供（vibe-game 仓库），这里只做每页底部这一条
   function footNav() {
-    return '<footer class="site-foot"><div class="crumbs">' + crumbs() + '</div><div class="nav-tools">'
-      + langSelect('lang-foot') + '<button class="b" id="f-feedback" data-act="feedback">' + t('问题反馈') + '</button></div></footer>';
+    return '<footer class="site-foot"><div class="crumbs">' + crumbs() + (T.version ? '<span class="ver" title="' + esc(t('版本')) + '">v' + esc(T.version) + '</span>' : '') + '</div><div class="nav-tools">'
+      + langSelect('lang-foot') + feedbackBtn('f-feedback', t('问题反馈')) + '</div>' + mtNote() + '</footer>';
   }
+  // 机器翻译剧情时，在底部说一声
+  const mtNote = () => (JY.MT ? '<p class="mt-note">' + t('剧情由谷歌网页翻译自动翻译，可能不够准确。') + '</p>' : '');
   const FB_KINDS = [['bug', '程序出错'], ['story', '剧情不合理'], ['idea', '建议'], ['other', '其他']];
   function feedbackContext() {
     const { L } = E.get();
@@ -369,9 +393,9 @@
     const { W, L } = E.get();
     const avail = E.available();
     const fresh = T.random ? !W.lives.length : W.year < 0 && !W.lives.length;
-    let h = topNav() + '<div class="home"><div class="home-hero"><div><h1>' + T.titleHtml + '</h1>'
+    let h = '<div class="home"><div class="home-hero"><div><h1>' + T.titleHtml + '</h1>'
       + '<p>' + esc(T.intro) + '</p></div>'
-      + '<div><button class="b" id="h-theme" data-act="theme" title="' + esc(t('切换深浅色')) + '">◐ ' + t('深浅色') + '</button></div></div>';
+      + '<div>' + themeBtn('h-theme', true) + '</div></div>';
     h += '<div class="world-line">';
     if (fresh) h += '<span>' + esc(T.freshLine) + '</span>';
     else if (T.random) h += '<span>' + t('已经活过 <b>{n}</b> 世', { n: W.lives.length }) + '</span>';
@@ -444,7 +468,6 @@
     const { W, L } = E.get();
     const c = JY.byId[L.cid];
     const Y = L.year, age = Math.max(0, Y - c.born), b = bookOf(c.book);
-    const loc = JY.LOCS[L.loc] || { name: L.locCap, desc: '' };
     const showDecision = ui.pending && ui.shown >= L.log.length;
     // 暂停时整段换成“已暂停”，宽度不变，顶栏不会挤成两行
     const pace = ui.paused ? ui.speed + '× · ' + t('已暂停') : ui.speed + '× · ' + paceText();
@@ -458,9 +481,9 @@
       + '<span class="speeds" role="group" aria-label="' + esc(t('速度')) + '">' + SPEEDS.map((s) => '<button class="b" id="c-s' + s + '" data-act="speed" data-v="' + s + '" aria-pressed="' + (ui.speed === s) + '">' + s + '×</button>').join('') + '</span>'
       + '<button class="b" id="c-next" data-act="next"' + (showDecision ? ' disabled' : '') + '>' + t('下一抉择') + ' »</button>'
       + '<button class="b" id="c-auto" data-act="auto" aria-pressed="' + ui.auto + '">' + t('自动') + '</button>'
-      + '<button class="b" id="c-theme" data-act="theme" title="' + esc(t('切换深浅色')) + '">◐</button>'
+      + themeBtn('c-theme')
       + langSelect('lang-ctl')
-      + '<button class="b" id="c-feedback" data-act="feedback">' + t('反馈') + '</button>'
+      + feedbackBtn('c-feedback', t('反馈'))
       + '<button class="b" id="c-chron" data-act="drawer">' + esc(T.chronicle) + '</button>'
       + '<button class="b" id="c-exit" data-act="home">' + t('离开') + '</button>'
       + '</div></div></header>';
@@ -473,9 +496,10 @@
       + '<div class="id-name">' + esc(c.name) + '</div><dl class="kv">'
       + '<dt>' + t('性别') + '</dt><dd>' + esc(t(c.sex)) + '</dd>'
       + '<dt>' + t('出生') + '</dt><dd>' + esc(yearText(c.born) + ' · ' + (c.birthplace || '')) + '</dd>'
-      + '<dt>' + t('现居') + '</dt><dd>' + esc(L.locCap || '') + '</dd>'
-      + '<dt>' + t('时代') + '</dt><dd>' + esc(t(E.era(Y))) + '</dd>'
-      + Object.keys(L.info).filter((k) => L.info[k]).map((k) => '<dt>' + esc(t(k)) + '</dt><dd>' + esc(L.info[k]) + '</dd>').join('')
+      // 名帖上显示哪些行，游戏可在 game.js 的 profile 里精简：{ liveIn: false, era: false, hide: ['子女', …] }
+      + (PROF.liveIn === false ? '' : '<dt>' + t('现居') + '</dt><dd>' + esc(L.locCap || '') + '</dd>')
+      + (PROF.era === false ? '' : '<dt>' + t('时代') + '</dt><dd>' + esc(t(E.era(Y))) + '</dd>')
+      + Object.keys(L.info).filter((k) => L.info[k] && !(PROF.hide || []).includes(k)).map((k) => '<dt>' + esc(t(k)) + '</dt><dd>' + esc(L.info[k]) + '</dd>').join('')
       + '<dt>' + t('出身') + '</dt><dd class="dots">' + dots(c.bg || 3) + '</dd>'
       + '</dl></div></div></div>';
     h += card(t('状态'), '0–100',
@@ -488,6 +512,7 @@
         const v = L.st[x.k];
         const shown = x.show && x.show(L, G);
         if (shown) return '<div><span>' + esc(extraLabel(x, L)) + '</span><b>' + esc(shown) + '</b></div>';
+        if (x.hideEmpty) return ''; // 例如没有欠款就不显示“欠款”这一行
         if (x.signed) return '<div><span>' + esc(statName(x.k) + ' ' + t(v >= 0 ? x.signed[0] : x.signed[1])) + '</span><b>' + v + '</b><div class="zx"><i style="left:calc(' + (v + 100) / 2 + '% - 1px)"></i></div></div>';
         return '<div><span>' + esc(extraLabel(x, L)) + '</span><b>' + esc((x.tier ? tierOf(x, v) + ' · ' : '') + v) + '</b></div>';
       }).join('')
@@ -496,10 +521,9 @@
     h += '</div>';
 
     /* 中：场景、今年的重心、生平。抉择用弹框，见 decisionModal */
-    const party = partyOf(L, c, age);
-    const partyTxt = T.sceneCap ? T.sceneCap(G) : age < 3 ? t('在襁褓里') : party.length ? t('与{who}', { who: party.map((id) => G.name(id)).join(t('、')) }) : t('独自一人');
+    const scene = sceneOf(L, c, age);
     h += '<div class="col center">';
-    h += '<div class="card scene"><canvas class="px" id="scene-cv"></canvas><div class="scene-cap">' + esc(L.locCap) + (loc.desc ? ' · ' + esc(t(loc.desc)) : '') + ' · ' + esc(partyTxt) + '</div></div>';
+    h += '<div class="card scene"><canvas class="px" id="scene-cv"></canvas><div class="scene-cap">' + esc(scene.cap) + '</div></div>';
     if (ui.result && L.year > ui.result.year + 1) ui.result = null;
     h += focusBar(L, age);   // 只在手机上显示
     h += focusCard(L, c, age); // 电脑上紧贴场景；手机上排到生平后面
@@ -558,7 +582,7 @@
       + SUI.bars.map((x) => item(x.cls, statName(x.k), st[x.k], t(x.tip || ''))).join('')
       + item('mod', T.devShort, E.devOf(L) + '%', T.devTip)
       + '</div><div class="frow">'
-      + SUI.extras.map((x) => item('', extraLabel(x, L), (x.show && x.show(L, G)) || ((x.tier ? tierOf(x, st[x.k]) + ' ' : '') + st[x.k]), x.signed ? t(st[x.k] >= 0 ? x.signed[0] : x.signed[1]) : t(x.tip || ''))).join('');
+      + SUI.extras.filter((x) => x.bar !== false).map((x) => item('', extraLabel(x, L), (x.show && x.show(L, G)) || ((x.tier ? tierOf(x, st[x.k]) + ' ' : '') + st[x.k]), x.signed ? t(st[x.k] >= 0 ? x.signed[0] : x.signed[1]) : t(x.tip || ''))).join('');
     const jump = '<button class="fjump" id="f-jump" data-act="focus-jump" aria-label="' + esc(t('查看完整的今年的重心')) + '" title="' + esc(t('查看完整的今年的重心')) + '">' + t('详情') + '↓</button>';
     if (age < 6) return h + '<span class="fpick-wrap"><span class="b fpick" aria-disabled="true" title="' + esc(t('六岁起可以选每一年的重心')) + '">' + esc(t(E.stage(age))) + '</span></span>' + jump + '</div></div>';
     const opts = E.focusOptions(age);
@@ -799,8 +823,8 @@
       const { L } = E.get();
       const c = JY.byId[L.cid];
       const age = Math.max(0, L.year - c.born);
-      const party = partyOf(L, c, age);
-      JY.drawScene(sc, { loc: L.loc, year: L.year, me: L.cid, age, party, partyAges: party.map((id) => G.ageOf(id)) });
+      const s = sceneOf(L, c, age);
+      JY.drawScene(sc, { loc: s.loc, year: L.year, me: L.cid, age, party: s.party, partyAges: s.party.map((id) => G.ageOf(id)), pets: s.pets });
     }
     if (active) { const el = document.getElementById(active); if (el) el.focus({ preventScroll: true }); }
   }
@@ -810,8 +834,8 @@
     const { L } = E.get();
     switch (a) {
       case 'theme': {
-        const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        const next = cur === 'dark' ? 'light' : 'dark';
+        const i = THEMES.findIndex((x) => x[0] === themeNow());
+        const next = THEMES[(i + 1) % THEMES.length][0];
         document.documentElement.dataset.theme = next;
         store.set(PRE + 'theme', next);
         render();

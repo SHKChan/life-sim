@@ -59,6 +59,7 @@
     lastDebt: (g) => Number(g.recall('lastDebt')) || 0,
     lastBand: (g) => Number(g.recall('lastBand')) || 0,
     income: (g) => Number(g.recall('income')) || 0,
+    expense: (g) => Number(g.recall('expense')) || 0,
   };
   const tierOf = (g) => g.recall('tier') || 5;
   const rnd = () => Math.random();
@@ -314,8 +315,9 @@
     const newLoan = Math.max(0, V.debt(g) - V.lastDebt(g)); // 今年剧情里新借的钱（房贷、彩礼……）
     let cash = CN.cash(g);
     // 读书期间家里给生活费，打点零工
+    let spent = 0; // 这一年花出去的（日常开销加还款），名帖上显示
     if (STUDY.includes(g.recall('lifePath')) && (g.recall('job') || 'none') === 'none') cash += 3000;
-    else cash += inc - cost;
+    else { cash += inc - cost; spent = cost; }
     // 欠款（房贷、借款）：每年还本金基数的 6.5%，利息按 3.5% 算
     let debt = V.debt(g);
     if (newLoan) g.remember('loanBase', V.loanBase(g) + newLoan);
@@ -323,6 +325,7 @@
       const base = Math.max(V.loanBase(g), debt);
       const payW = Math.min(debt * 1.035, base * 0.065);
       cash -= payW * 1e4;
+      spent += payW * 1e4;
       debt = Math.max(0, debt * 1.035 - payW);
       if (debt < 0.5) {
         debt = 0;
@@ -371,6 +374,7 @@
     }
     setCash(g, cash);
     g.remember('income', inc);
+    g.remember('expense', Math.round(spent));
     // 存款第一次过了一个整数关口
     const liquid = cash + V.invest(g);
     const b = band(liquid), lb = V.lastBand(g);
@@ -391,12 +395,131 @@
     let t = head + CN.hhText(g) + '。';
     if (on(g)) {
       const inc = V.income(g);
-      t += (inc > 0 ? '家里一年进账 ' + CN.fmt(inc) + '，' : '') + '存款 ' + CN.fmt(CN.cash(g) + V.invest(g));
+      t += (inc > 0 ? '家里一年进账 ' + CN.fmt(inc) + '，花出去 ' + CN.fmt(V.expense(g)) + '，' : '') + '存款 ' + CN.fmt(CN.cash(g) + V.invest(g));
       if (V.houseVal(g)) t += '，房子值 ' + CN.fmt(V.houseVal(g) * 1e4);
       if (V.debt(g)) t += '，还欠 ' + CN.fmt(V.debt(g) * 1e4);
       t += '。';
     }
     return t;
+  }
+
+  /* ---------- 宠物 ----------
+   * 记忆键 petNow = { kind: 'dog' | 'cat' | 'bird' | 'fish' | 'rabbit', name, y: 来的那一年, life: 能活几年 }。在家时场景里画它。
+   * 剧情里用 CN.adoptPet(g, 'cat', '名字')；旧剧情的 kidPet/evDog/evCat/pet 选了收养，也会自动补上。 */
+  const PET_NAMES = { dog: ['小黄', '旺财', '豆豆', '黑子', '球球'], cat: ['咪咪', '橘子', '花花', '煤球', '年糕'], bird: ['小翠', '叽叽'], fish: ['金金', '泡泡'], rabbit: ['团子', '雪球'] };
+  const PET_LIFE = { dog: 13, cat: 15, bird: 8, fish: 4, rabbit: 9 };
+  const PET_T = { dog: '小狗', cat: '小猫', bird: '鸟', fish: '鱼', rabbit: '兔子' };
+  CN.pet = (g) => g.recall('petNow') || null;
+  CN.adoptPet = (g, kind, name) => {
+    const p = { kind: kind || 'cat', name: name || CN.pick(PET_NAMES[kind] || PET_NAMES.cat), y: g.Y, life: (PET_LIFE[kind] || 12) + CN.ri(-3, 3) };
+    g.remember('petNow', p);
+    return p;
+  };
+  function pets(g) {
+    const out = [];
+    let p = CN.pet(g);
+    // 旧剧情里刚选了收养
+    if (!p) {
+      const k = g.since('kidPet') === 0 && g.recall('kidPet') === 'kept' ? 'dog' : g.since('evDog') === 0 && g.recall('evDog') === 'kept' ? 'dog'
+        : g.since('evCat') === 0 && g.recall('evCat') === 'adopted' ? 'cat' : g.since('pet') === 0 && g.recall('pet') === 'dog' ? 'dog'
+          : g.since('kidPlan') === 0 && g.recall('kidPlan') === 'dink' ? 'cat' : '';
+      if (k) p = CN.adoptPet(g, k);
+    }
+    if (p && g.Y - p.y >= p.life) {
+      out.push('陪了你 ' + (g.Y - p.y) + ' 年的' + p.name + '老了，在一个安静的早上走了。你在楼下的树边给它挖了个小坑。');
+      g.remember('petNow', null);
+    }
+    return out;
+  }
+
+  /* ---------- 身体和心里 ----------
+   * 生病不全靠剧情：每年按年纪、健康、心情算一次生病的可能。小病花点钱，大病花大钱、伤身体，身体本来就差的少数会走。
+   * 心情连着两年很低会拖垮身体，也会让大病更容易找上门。两次病之间至少隔三年。 */
+  function body(g, age) {
+    if (age < 18) return [];
+    const out = [];
+    const H = g.s('健康'), M = g.s('心情');
+    const low = M < 25 ? (Number(g.recall('lowMood')) || 0) + 1 : 0;
+    g.remember('lowMood', low);
+    if (low === 2) {
+      const fee = on(g) ? Math.round(Math.max(3000, CN.income(g) * 0.03)) : 0;
+      if (fee) CN.pay(g, fee);
+      g.stat('健康', -4);
+      g.stat('心情', 8);
+      out.push('那段时间你整夜睡不着，胸口发闷。家里人陪你去看了医生，说是心里累出来的病。吃了半年药，' + (fee ? '花了 ' + CN.fmt(fee) + '，' : '') + '慢慢缓过来了。');
+    }
+    if (g.since('illY') >= 0 && g.since('illY') < 4) return out;
+    const base = age < 40 ? 0.015 : age < 60 ? 0.035 : age < 75 ? 0.07 : 0.11;
+    const p = base * (1.7 - H / 100) * (M < 30 ? 1.5 : 1);
+    if (g.rnd() >= p) return out;
+    g.remember('illY', true);
+    const serious = g.rnd() < (age < 50 ? 0.25 : 0.4);
+    const inc = on(g) ? CN.income(g) : 0;
+    const insured = !!g.recall('evIns') && g.recall('evIns') !== 'no';
+    if (!serious) {
+      const fee = Math.round(Math.max(2000, inc * 0.04));
+      if (on(g)) CN.pay(g, fee);
+      g.stat('健康', -2);
+      out.push(CN.pick(['你住了几天院，是急性肠胃炎。', '体检查出一个结节，做了个小手术。', '腰椎间盘突出，躺了一个月。', '一场重感冒拖成了肺炎，吊了一周的水。']) + (on(g) ? '花了 ' + CN.fmt(fee) + '。' : ''));
+      return out;
+    }
+    const fee = Math.round(Math.max(30000, inc * 0.6) * (insured ? 0.4 : 1));
+    const have = on(g) ? Math.max(0, CN.cash(g)) : 0;
+    g.stat('健康', -7);
+    const what = CN.pick(age < 55 ? ['查出了早期的肿瘤', '突发心梗，送进了抢救室', '出了一场车祸，断了两根肋骨'] : ['查出了肿瘤', '突发脑梗', '心脏搭了桥', '摔了一跤，髋骨骨折']);
+    const who = ['sp', 'k1', 'mo', 'fa'].find((id) => JY.byId[id] && g.alive(id) && id !== g.me);
+    let t = '这一年你' + what + '。' + (who ? CN.who(g, who) + '在医院守了好些天。' : '');
+    if (on(g)) {
+      if (fee > have) {
+        const owe = Math.round((fee - have) / 1e3) / 10;
+        CN.pay(g, have);
+        g.remember('debt', V.debt(g) + owe);
+        t += '治病花了 ' + CN.fmt(fee) + (insured ? '（保险报了一大半）' : '') + '，存款不够，还借了 ' + CN.fmt(owe * 1e4) + '。';
+      } else { CN.pay(g, fee); t += '治病花了 ' + CN.fmt(fee) + (insured ? '，保险报了一大半' : '') + '。'; }
+    }
+    // 身体本来就差的，少数人没能挺过来
+    if (H < 30 && g.rnd() < (age < 60 ? 0.1 : 0.22)) { g.die(age < 60 ? '因病去世，走得太早' : '病重不治'); return out.concat([t + '这一次，你没能挺过来。']); }
+    out.push(t + (g.rnd() < 0.5 ? '出院那天，天很好。' : '慢慢地，你又能下楼走走了。'));
+    return out;
+  }
+
+  /* ---------- 场景框画什么 ----------
+   * 这一年剧情把你带去了别处（医院、写字楼、工厂、路上、海边、学校），就画那里和陪着你的人；
+   * 否则画你的家（村子、县城、城里的小区、宿舍、养老院），和住在一起的人、宠物。 */
+  const AWAY = ['hospital', 'office', 'factory', 'road', 'coast', 'school', 'campus'];
+  function homeLoc(g) {
+    const place = g.recall('hhPlace');
+    if (place === 'dorm') return g.age < 16 ? 'school' : STUDY.includes(g.recall('lifePath')) ? 'campus' : 'factory';
+    if (place === 'nursing') return 'home';
+    const t = g.recall('tier') || 5;
+    if (g.recall('liveWith') === 'hometown' || t >= 5) return g.recall('homeLoc') || 'home';
+    return t === 4 ? 'county' : 'home';
+  }
+  function homeCap(g) {
+    if (g.recall('hhPlace') === 'nursing') return '养老院';
+    if (g.recall('hhPlace') === 'dorm') return ((g.recall('workCity') || g.recall('homeCap') || '') + ' · 宿舍').replace(/^ · /, '');
+    const city = g.recall('liveWith') === 'kids' ? (g.recall('kidCity') || '孩子家') : (g.recall('workCity') || g.recall('homeCap') || '家');
+    return city.replace(/ · .*$/, '') + ' · ' + (g.recall('house') === 'rent' ? '租的房子' : '家');
+  }
+  function companions(g, loc) {
+    const L = L_();
+    if (L.partyY === L.year && L.party.length) return L.party.filter((id) => g.alive(id));
+    const alive = (ids) => ids.filter((id) => JY.byId[id] && g.alive(id) && id !== g.me);
+    if (loc === 'hospital') return alive(g.age < 18 ? ['mo', 'fa', 'gm'] : ['sp', 'k1', 'mo']).slice(0, 1);
+    if (loc === 'coast' || loc === 'road') return g.age < 18 ? alive(['fa', 'mo']) : alive(['sp']).concat(alive(['k1', 'k2']).filter((id) => g.ageOf(id) < 18));
+    if (loc === 'school' && g.age < 8) return alive(['mo', 'gm']).slice(0, 1);
+    return [];
+  }
+  function scene(g) {
+    const L = L_();
+    if (L.locY === L.year && AWAY.includes(L.loc)) {
+      const comp = companions(g, L.loc);
+      const desc = (JY.LOCS[L.loc] || {}).name || '';
+      return { loc: L.loc, cap: (L.locCap || desc) + ' · ' + (comp.length ? comp.map((id) => g.knows(id) || g.name(id)).join('、') + '陪着你' : '你一个人'), party: comp };
+    }
+    const p = CN.pet(g);
+    const who = g.age < 3 ? '你还在襁褓里，' + CN.hhText(g) : CN.hhText(g);
+    return { loc: homeLoc(g), cap: homeCap(g) + ' · ' + who + (p ? '，还有' + (PET_T[p.kind] || '') + p.name : ''), party: CN.household(g).slice(0, 6), pets: p ? [{ kind: p.kind }] : [] };
   }
 
   /* ---------- 挂到引擎上（game.js 的 engine 钩子调用这些） ---------- */
@@ -410,6 +533,9 @@
     },
     yearEnd: (g, age) => {
       reconcile(g, age).forEach((t) => g.log(t, 'auto'));
+      pets(g).forEach((t) => g.log(t, 'auto'));
+      body(g, age).forEach((t) => g.log(t, 'auto'));
+      if (L_().death) return;
       const first = startMoney(g, age);
       if (first) g.log(first, 'auto');
       ledger(g, age).forEach((t) => g.log(t, 'auto'));
@@ -443,6 +569,12 @@
     party: (g) => CN.household(g).slice(0, 6),
     sceneCap: (g) => CN.hhText(g),
     wealthText: (L, g) => (on(g) ? CN.fmt(CN.cash(g) + V.invest(g)) : ''),
+    // 名帖“状态”卡里的年收入、年支出、房子、欠款（没有就不显示那一行）
+    incomeText: (L, g) => (on(g) ? CN.fmt(V.income(g)) : ''),
+    expenseText: (L, g) => (on(g) && V.expense(g) ? CN.fmt(V.expense(g)) : ''),
+    debtText: (L, g) => (on(g) && V.debt(g) ? CN.fmt(V.debt(g) * 1e4) : ''),
+    houseText: (L, g) => (on(g) && V.houseVal(g) ? CN.fmt(V.houseVal(g) * 1e4) : ''),
+    scene,
   };
 
   /* 投胎时定下一开始和谁住：爸妈、哥哥姐姐；留守儿童跟爷爷奶奶；农村一半人家三代同堂 */

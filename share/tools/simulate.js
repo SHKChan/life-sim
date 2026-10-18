@@ -19,7 +19,7 @@ if (!process.argv[2] || !fs.existsSync(path.join(gameDir, 'index.html'))) {
 const html = fs.readFileSync(path.join(gameDir, 'index.html'), 'utf8');
 const only_files = (process.env.SIM_DATA || process.env.SIM_BOOKS || '').split(',').filter(Boolean);
 const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1])
-  .filter((s) => !/(ui|pixel|sharecard)\.js$/.test(s))
+  .filter((s) => !/(ui|pixel|sharecard)\.js$/.test(s) && !/^(https?:|\/)/.test(s)) // 全站顶栏 /nav.js 不是游戏的一部分
   .filter((s) => !only_files.length || !/^data\//.test(s) || /data\/(world|relations)\.js$/.test(s) || only_files.some((b) => s === 'data/' + b + '.js'));
 
 const { analyze } = require('./consequence.js');

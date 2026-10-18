@@ -24,6 +24,8 @@
   .world .go { margin-top: auto; align-self: flex-start; }
   .soon { opacity: .55; }
 </style>
+<!-- 全站顶栏（总页面 vibe-game 仓库提供；本地打开时没有，不影响游戏） -->
+<script src="/nav.js" defer></script>
 </head>
 <body>
 <!-- 游戏大厅。新增游戏：在 GAMES 里加一项（id 就是游戏目录名，也是存档前缀） -->
@@ -90,8 +92,7 @@
       + JY.LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === L ? ' selected' : '') + '>' + l[1] + '</option>'; }).join('') + '</select></label>';
   };
   var crumbs = '<div class="crumbs"><a href="' + HOME_URL + '">' + HOME_NAME + '</a><span class="sep" aria-hidden="true">›</span><span class="cur">' + tx('title') + '</span></div>';
-  var h = '<nav class="site-nav">' + crumbs + '<div class="nav-tools">' + langSel('lang-top') + '</div></nav>'
-    + '<div class="home"><div class="home-hero hub-hero"><div><h1>' + (L === 'zh' ? '浮生<i>录</i>' : L === 'ja' ? '浮生<i>録</i>' : esc(tx('title'))) + '</h1><p>' + tx('lead') + '</p></div></div>'
+  var h = '<div class="home"><div class="home-hero hub-hero"><div><h1>' + (L === 'zh' ? '浮生<i>录</i>' : L === 'ja' ? '浮生<i>録</i>' : esc(tx('title'))) + '</h1><p>' + tx('lead') + '</p></div></div>'
     + '<section><div class="section-h"><h2>' + tx('pick') + '</h2><span>' + tx('pickSub') + '</span></div><div class="worlds">'
     + GAMES.map(function (g) {
       var sv = saveLine(g.id);

@@ -186,7 +186,17 @@
     else if (h === 'veil') { px(c, x, top - 1, 6, 7, look.accent || '#e8e6e0'); px(c, x + 1, top, 4, 5, skin); px(c, x + 2, top + 2, 1, 1, '#2a2020'); px(c, x + 4, top + 2, 1, 1, '#2a2020'); }
   }
 
-  /* 画场景：opts = { loc, year, me, age, party: [id], partyAges: [age] } */
+  // 小动物：几个像素就够认出来
+  function pet(c, x, kind) {
+    const y = GROUND;
+    if (kind === 'dog') { const b = '#b07a42'; px(c, x, y - 4, 6, 3, b); px(c, x + 5, y - 6, 3, 3, b); px(c, x + 7, y - 5, 1, 1, '#2a2020'); px(c, x - 1, y - 6, 1, 3, b); px(c, x, y - 1, 1, 1, b); px(c, x + 4, y - 1, 1, 1, b); px(c, x + 5, y - 7, 1, 1, '#7a5230'); return; }
+    if (kind === 'cat') { const b = '#8a8a90'; px(c, x, y - 3, 5, 3, b); px(c, x + 4, y - 5, 3, 3, b); px(c, x + 4, y - 6, 1, 1, b); px(c, x + 6, y - 6, 1, 1, b); px(c, x + 5, y - 4, 1, 1, '#d8c050'); px(c, x - 1, y - 5, 1, 3, b); return; }
+    if (kind === 'rabbit') { const b = '#ecebe6'; px(c, x, y - 3, 5, 3, b); px(c, x + 3, y - 5, 3, 2, b); px(c, x + 3, y - 8, 1, 3, b); px(c, x + 5, y - 8, 1, 3, b); px(c, x + 5, y - 4, 1, 1, '#c04050'); return; }
+    if (kind === 'bird') { px(c, x, y - 9, 1, 9, '#6a5a4a'); px(c, x - 2, y - 10, 5, 1, '#6a5a4a'); px(c, x - 1, y - 13, 3, 3, '#5aa05a'); px(c, x + 2, y - 12, 1, 1, '#e0a030'); return; }
+    if (kind === 'fish') { px(c, x - 1, y - 7, 7, 7, 'rgba(150,200,230,.6)'); px(c, x + 1, y - 4, 3, 2, '#e07a30'); px(c, x, y - 4, 1, 2, '#e07a30'); }
+  }
+
+  /* 画场景：opts = { loc, year, me, age, party: [id], partyAges: [age], pets: [{ kind }] } */
   JY.drawScene = (canvas, opts) => {
     const c = canvas.getContext('2d');
     canvas.width = W; canvas.height = H;
@@ -204,6 +214,8 @@
       const age = i === 0 ? opts.age : (opts.partyAges ? opts.partyAges[i - 1] : 30);
       sprite(c, startX + i * 12, lookOf(id), age);
     });
+    // 宠物（可选）：opts.pets = [{ kind: 'dog' | 'cat' | 'bird' | 'fish' | 'rabbit' }]，蹲在人群右边
+    (opts.pets || []).forEach((p, i) => pet(c, startX + ids.length * 12 + i * 9, p.kind));
     // 夜晚压暗
     const light = SKIES[kind].light;
     if (light < 1) { c.fillStyle = 'rgba(10,14,30,' + (1 - light) * 0.6 + ')'; c.fillRect(0, GROUND - 30, W, H - GROUND + 30); }

@@ -38,7 +38,7 @@ function copyFile(src, dst) {
 // 把页面引用的本地 css/js 拷过去并加版本号
 function buildPage(srcHtml, srcDir, outDir) {
   let html = fs.readFileSync(srcHtml, 'utf8');
-  const refs = [...new Set([...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map((m) => m[1]).filter((r) => !/^https?:/.test(r)))];
+  const refs = [...new Set([...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map((m) => m[1]).filter((r) => !/^(https?:|\/)/.test(r)))]; // 外链和以 / 开头的全站文件（例如总页面的 /nav.js）不打包
   for (const ref of refs) {
     const buf = copyFile(path.join(srcDir, ref), path.join(outDir, ref));
     if (/(^|\/)config\.js$/.test(ref)) continue;

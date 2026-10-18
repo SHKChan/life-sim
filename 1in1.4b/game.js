@@ -52,7 +52,12 @@ JY.GAME = {
     deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
     flavorRepeat: true,
   },
-  // 场景里画哪些人、场景下面那行字：和你住在一起的人
+  version: '1.5.0',                 // 显示在每页底部；发布新内容时改
+  // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
+  profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
+  // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人
+  scene: (g) => JY.ECON.scene(g),
+  // 场景里画哪些人、场景下面那行字：和你住在一起的人（scene 没给时用）
   party: (g) => JY.ECON.party(g),
   sceneCap: (g) => JY.ECON.sceneCap(g),
   relTag: (g, id) => (JY.CN.livesWith(g, id) ? '同住' : ''),
@@ -71,6 +76,11 @@ JY.GAME = {
     extras: [
       { k: '财富', tip: '成年前是家境；成年后是你的存款和理财，按人民币显示。房子和欠款在场景下面的小结里。', tier: [[10, '贫困'], [25, '拮据'], [45, '温饱'], [65, '小康'], [85, '宽裕'], [1e9, '富足']],
         label: (L, g) => (JY.ECON.wealthText(L, g) ? '存款' : '家境'), show: (L, g) => JY.ECON.wealthText(L, g) },
+      // 下面几行只在电脑上的“状态”卡里显示（bar: false），没有就不显示（hideEmpty）
+      { k: '财富', label: '年收入', show: (L, g) => JY.ECON.incomeText(L, g), hideEmpty: true, bar: false },
+      { k: '财富', label: '年支出', show: (L, g) => JY.ECON.expenseText(L, g), hideEmpty: true, bar: false },
+      { k: '财富', label: '房产', show: (L, g) => JY.ECON.houseText(L, g), hideEmpty: true, bar: false },
+      { k: '财富', label: '欠款', show: (L, g) => JY.ECON.debtText(L, g), hideEmpty: true, bar: false },
       { k: '事业', tip: '工作上走到了哪一步', tier: [[10, '起步'], [30, '普通'], [55, '骨干'], [80, '出色'], [1e9, '顶尖']] },
     ],
     mood: '心情',

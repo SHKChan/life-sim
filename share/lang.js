@@ -218,4 +218,9 @@
     '这一世我改了命：{x}。': 'Lo que cambié: {x}.', '这一世，我照着{canon}走完了。': 'La viví como en {canon}.',
     '改命度 {dev}%，做过 {n} 个抉择。临终一句：“{words}”': 'Destino cambiado {dev}%, {n} decisiones. Últimas palabras: «{words}»',
   });
+
+  // 主题、版本、机器翻译提示
+  JY.addI18n('en', { '主题：{x}（点一下换）': 'Theme: {x} (click to switch)', '暗': 'Dark', '灰': 'Gray', '白': 'Light', '主题': 'theme', '版本': 'Version', '剧情由谷歌网页翻译自动翻译，可能不够准确。': 'Story text is machine-translated by Google and may be imperfect.' });
+  JY.addI18n('ja', { '主题：{x}（点一下换）': 'テーマ：{x}（クリックで切替）', '暗': 'ダーク', '灰': 'グレー', '白': 'ライト', '主题': 'テーマ', '版本': 'バージョン', '剧情由谷歌网页翻译自动翻译，可能不够准确。': 'ストーリーは Google 翻訳による機械翻訳です。不正確な場合があります。' });
+  JY.addI18n('es', { '主题：{x}（点一下换）': 'Tema: {x} (clic para cambiar)', '暗': 'Oscuro', '灰': 'Gris', '白': 'Claro', '主题': 'tema', '版本': 'Versión', '剧情由谷歌网页翻译自动翻译，可能不够准确。': 'La historia está traducida automáticamente por Google y puede tener errores.' });
 })();

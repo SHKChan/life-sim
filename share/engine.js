@@ -126,7 +126,8 @@
     chron(t, mod) { if (t) W.chron.push({ y: G.Y, t, mod: !!mod }); },
     name(id) { return JY.byId[id] ? JY.byId[id].name : id; },
     slot(n) { return JY.SLOTS[n] ? JY.SLOTS[n](G) : n; },
-    move(loc, cap) { if (!L) return; L.loc = loc; L.locCap = cap || (JY.LOCS[loc] ? JY.LOCS[loc].name : loc); },
+    // locY / partyY：哪一年去的这个地方、哪一年有人陪着（游戏的 scene 钩子据此判断“今年是不是出门了”）
+    move(loc, cap) { if (!L) return; L.loc = loc; L.locCap = cap || (JY.LOCS[loc] ? JY.LOCS[loc].name : loc); L.locY = L.year; },
     info(k, v) { if (L) L.info[k] = v; },
     rel(rel, who, note) {
       if (!L) return;
@@ -167,7 +168,7 @@
       });
       return out;
     },
-    party(ids) { if (L) L.party = ids.slice(0, 3); },
+    party(ids) { if (L) { L.party = ids.slice(0, 3); L.partyY = L.year; } },
     rnd() { return Math.random(); },
     // 随机人生模式：这一世里新出现一个人（配偶、孩子……），data 格式同生成器产出的人物
     spawn(data) { if (!W) return null; E.register(data); (W.gen = W.gen || []).push(data); return data.id; },

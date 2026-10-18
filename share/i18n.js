@@ -32,6 +32,7 @@
   JY.setLang = (l) => {
     if (!ok(l)) return;
     try { localStorage.setItem(KEY, l); } catch (e) { /* 忽略 */ }
+    if (l === 'zh' && typeof document !== 'undefined' && /googtrans=/.test(document.cookie)) clearGt();
     try { const u = new URL(location.href); u.searchParams.delete('lang'); location.replace(u.toString()); } catch (e) { location.reload(); }
   };
   // 中文以外：金额按美元显示（一美元约七元）
@@ -61,5 +62,35 @@
     const tag = (src) => '<script src="lang/' + lang + '/' + src + (v ? '?' + v : '') + '"><\/script>';
     document.write(tag('game.js') + '<script>JY.resetData()<\/script>' + files.map(tag).join(''));
   };
+  /* 剧情的机器翻译：没有人工翻译的语言，用谷歌网页翻译把页面上剩下的中文（剧情）翻过去。
+   * 界面文字已经按词表翻好，谷歌遇到英文会原样留着。国内用中文玩，用不到这一步。
+   * 原理：写 googtrans 这个 cookie 指定目标语言，再载入谷歌的翻译脚本，它会自动翻译并跟着页面变化继续翻。 */
+  const GT = { en: 'en', ja: 'ja', es: 'es' };
+  const clearGt = () => {
+    const host = location.hostname;
+    ['', '; domain=' + host, '; domain=.' + host.split('.').slice(-2).join('.')].forEach((d) => { document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/' + d; });
+  };
+  JY.machineTranslate = () => {
+    if (typeof document === 'undefined' || !/^https?:$/.test(location.protocol)) return;
+    if (lang === 'zh' || !GT[lang] || !JY.GAME || JY.hasLangData()) { if (/googtrans=/.test(document.cookie)) clearGt(); return; }
+    document.cookie = 'googtrans=/zh-CN/' + GT[lang] + '; path=/';
+    JY.MT = true;
+    // 谷歌会在页面顶上加一条横幅、把 body 往下推，这里藏掉
+    const st = document.createElement('style');
+    st.textContent = '.goog-te-banner-frame,.skiptranslate iframe,#goog-gt-tt,.goog-te-balloon-frame{display:none!important}body{top:0!important}.goog-text-highlight{background:none!important;box-shadow:none!important}#gt-el{display:none}';
+    document.head.appendChild(st);
+    const box = document.createElement('div');
+    box.id = 'gt-el';
+    document.body.appendChild(box);
+    window.JYgtInit = () => { try { new window.google.translate.TranslateElement({ pageLanguage: 'zh-CN', autoDisplay: false }, 'gt-el'); } catch (e) { /* 打不开谷歌就保持中文 */ } };
+    const s = document.createElement('script');
+    s.src = 'https://translate.google.com/translate_a/element.js?cb=JYgtInit';
+    s.async = true;
+    document.body.appendChild(s);
+  };
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => JY.machineTranslate());
+    else setTimeout(() => JY.machineTranslate(), 0);
+  }
   if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = { zh: 'zh-CN', en: 'en', ja: 'ja', es: 'es' }[lang];
 })();
