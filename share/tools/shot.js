@@ -10,8 +10,11 @@
  *   guojing-4-dark-peek   停在抉择时，把抉择框收起
  *   guojing-4-dark-menu   收起抉择框，再打开年度重心下拉
  *   guojing-4-dark-jump   收起抉择框，点简化框里的“详情↓”跳到完整的今年的重心（手机宽度）
+ *   random-0-dark-home    停在游戏首页（看顶上的导航）
+ *   guojing-4-dark-feedback 收起抉择框，打开问题反馈
  *   guojing-0-dark-run    不暂停，开 16× 让时间自己走（配合 SHOT_WAIT=毫秒 设定走多久，默认 7000）
  * 宽度小于 500 时用 390px 宽的 iframe 模拟手机（Chrome 无界面窗口最窄约 500px）。
+ * 界面语言默认中文，SHOT_LANG=en|ja|es 截其他语言。
  * 会在游戏目录里生成临时文件 _shot.html / _phone.html，截完删除。
  */
 'use strict';
@@ -39,6 +42,7 @@ const driver = `<script>
   const id = m[0], steps = Number(m[1] || 0), theme = m[2], stage = m[3];
   if (theme) document.documentElement.dataset.theme = theme;
   const click = (i) => { const el = document.getElementById(i); if (el) el.click(); };
+  if (stage === 'home') return;
   click(id === 'random' ? 'h-random' : 'pick-' + id); // 随机人生模式的游戏用 random
   if (stage === 'wake') return;
   click('w-begin');
@@ -54,10 +58,13 @@ const driver = `<script>
   if (stage === 'menu') click('f-open');
   if (stage === 'end' || stage === 'share') click('rv-close');
   if (stage === 'share') click('e-share');
+  if (stage === 'feedback') { click('d-peek'); click('c-feedback'); }
 })();
 </script>`;
 let html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-html = html.replace('<div id="app"></div>', '<div id="app"></div><script>try { localStorage.clear(); } catch (e) {}</script>');
+// 截图默认用中文（无界面 Chrome 的浏览器语言是英文）；SHOT_LANG=en 截英文界面
+const lang = process.env.SHOT_LANG || 'zh';
+html = html.replace('<script src="config.js"></script>', '<script>try { localStorage.clear(); localStorage.setItem("vibe.lang", ' + JSON.stringify(lang) + '); } catch (e) {}</script><script src="config.js"></script>');
 html = html.replace('<script src="config.js"></script>', '<script src="config.js"></script><script>window.JY_CONFIG = Object.assign({}, window.JY_CONFIG, { fontCss: undefined });</script>');
 html = html.replace('</body>', driver + '</body>');
 const shotFile = path.join(dir, '_shot.html');

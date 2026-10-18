@@ -50,6 +50,7 @@
   let quiet = false; // 世界事件改动的标记不算玩家的功劳
 
   const val = (x) => (typeof x === 'function' ? x(G) : x);
+  const tt = (s, v) => (JY.t ? JY.t(s, v) : s); // 界面用语的翻译（share/i18n.js），剧情文字不走这里
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const nodeYear = (c, n) => (n.y != null ? n.y : c.born + n.age);
@@ -111,8 +112,8 @@
       const c = JY.byId[id];
       if (!c) return id;
       const r = G.knows(id);
-      const a = age && c.born <= G.Y ? '（' + (G.Y - c.born) + ' 岁）' : '';
-      return (r ? '你的' + r : '') + c.name + a;
+      const a = age && c.born <= G.Y ? tt('（{n} 岁）', { n: G.Y - c.born }) : '';
+      return (r ? tt('你的{r}', { r: tt(r) }) : '') + c.name + a;
     },
     log(t, kind) { if (L && t) L.log.push({ y: L.year, a: G.age, t, k: kind || '', loc: L.loc }); },
     chron(t, mod) { if (t) W.chron.push({ y: G.Y, t, mod: !!mod }); },
@@ -400,6 +401,7 @@
     const n = E.node(L.queue[0]);
     const ch = n.choices[i];
     const c = JY.byId[L.cid];
+    const label = val(ch.t); // 选项文字可以是函数，按选的那一刻算
     L.queue.shift();
     L.done[n.id] = 1;
     if (n.once) W.flags['enc:' + n.id] = true;
@@ -411,14 +413,14 @@
     if (!ch.canon) d = ok ? (ch.dev != null ? ch.dev : 15) : (ch.fail && ch.fail.dev != null ? ch.fail.dev : 3);
     L.dev += d;
     const isPause = JY.PAUSES.includes(n) || (c.arc.pauses || []).includes(n);
-    if (isPause) L.answers.push({ age: G.age, q: val(n.ask || n.text), a: ch.t });
+    if (isPause) L.answers.push({ age: G.age, q: val(n.ask || n.text), a: label });
     else L.marks[L.year] = L.death ? 'd' : !ok ? 'b' : (ch.canon || d === 0) ? 'j' : 'q';
     if (L.death) L.marks[L.year] = 'd';
-    const res = val(br.res) || (ok ? '' : '没有成功。');
-    if (!isPause) L.picks.push({ y: L.year, age: G.age, t: n.t, c: ch.t, canon: !!ch.canon, ok, check: !!ch.check, dev: d, res, loc: L.loc, party: L.party.slice(), enc: JY.ENCOUNTERS.includes(n) });
-    const tail = ch.check ? (ok ? '（成功）' : '（失败）') : '';
-    G.log('【' + n.t + '】' + ch.t + tail + (res ? '。' + res : ''), isPause ? 'pause' : ch.canon ? 'pick' : ok ? 'mod' : 'fail');
-    if (!isPause && !ch.canon && ok && d > 0) G.chron(val(ch.chron) || (c.name + '：' + ch.t + '。'), true);
+    const res = val(br.res) || (ok ? '' : tt('没有成功。'));
+    if (!isPause) L.picks.push({ y: L.year, age: G.age, t: n.t, c: label, canon: !!ch.canon, ok, check: !!ch.check, dev: d, res, loc: L.loc, party: L.party.slice(), enc: JY.ENCOUNTERS.includes(n) });
+    const tail = ch.check ? (ok ? tt('（成功）') : tt('（失败）')) : '';
+    G.log('【' + n.t + '】' + label + tail + (res ? '。' + res : ''), isPause ? 'pause' : ch.canon ? 'pick' : ok ? 'mod' : 'fail');
+    if (!isPause && !ch.canon && ok && d > 0) G.chron(val(ch.chron) || (c.name + '：' + label + '。'), true);
     E.save();
     return { ok, p, res, check: ch.check, canon: !!ch.canon, dev: d, pause: isPause };
   };
@@ -494,7 +496,7 @@
 
   /* 终局回顾：出生（或醒来）、关键抉择、加星的生平、命终 */
   E.moments = (c) => {
-    const ms = [{ y: L.start, age: L.wakeAge, loc: L.startLoc || c.home, party: [], t: L.wakeAge > 0 ? '醒来' : '出生', text: L.intro, k: 'intro' }];
+    const ms = [{ y: L.start, age: L.wakeAge, loc: L.startLoc || c.home, party: [], t: L.wakeAge > 0 ? tt('醒来') : tt('出生'), text: L.intro, k: 'intro' }];
     const picks = L.picks.filter((p) => !p.enc || (!p.canon && p.ok && p.dev > 0));
     const key = picks.filter((p) => !p.canon && p.ok && p.dev > 0);
     let chosen = key.slice();
@@ -503,7 +505,7 @@
     for (let i = 0; i < room && rest.length; i++) chosen.push(rest.splice(Math.floor(rest.length * i / room) % rest.length, 1)[0]);
     chosen = chosen.slice(0, 18).sort((a, b) => a.y - b.y);
     chosen.forEach((p) => ms.push({ y: p.y, age: p.age, loc: p.loc, party: p.party || [], t: p.t, text: p.c + '。' + (p.res || ''), k: !p.ok ? 'fail' : p.canon ? 'canon' : 'mod' }));
-    L.log.filter((e) => e.star).forEach((e) => ms.push({ y: e.y, age: e.a, loc: e.loc || L.loc, party: [], t: '你记下的一刻', text: e.t, k: 'star' }));
+    L.log.filter((e) => e.star).forEach((e) => ms.push({ y: e.y, age: e.a, loc: e.loc || L.loc, party: [], t: tt('你记下的一刻'), text: e.t, k: 'star' }));
     ms.sort((a, b) => a.y - b.y);
     ms.push({ y: L.year, age: L.year - c.born, loc: L.loc, party: L.party.slice(), t: CONF().endTitle, text: c.name + '，' + L.death + '。', k: 'death' });
     return ms;
@@ -514,9 +516,9 @@
     const c = JY.byId[id];
     if (!c) return { dead: false, t: '' };
     const d = W.dead[id];
-    if (d) return { dead: true, t: '卒于' + ((JY.GAME && JY.GAME.year) || '纪年') + ' ' + d.y + ' · ' + d.cause };
-    if (c.exists && !c.exists(G)) return { dead: true, t: '世上没有这个人' };
-    if (c.born > G.Y) return { dead: false, unborn: true, t: '尚未出生' };
+    if (d) return { dead: true, t: tt('卒于{y}', { y: tt((JY.GAME && JY.GAME.year) || '纪年') + ' ' + d.y }) + ' · ' + d.cause };
+    if (c.exists && !c.exists(G)) return { dead: true, t: tt('世上没有这个人') };
+    if (c.born > G.Y) return { dead: false, unborn: true, t: tt('尚未出生') };
     const ms = (c.ms || []).filter((m) => m[0] <= G.Y && (!m[2] || m[2](G)));
     return { dead: false, t: ms.length ? val(ms[ms.length - 1][1]) : c.origin, age: G.Y - c.born };
   };

@@ -70,6 +70,40 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; display: b
 .b.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 500; }
 .b.big { padding: 10px 20px; font-size: 15px; }
 .b:disabled { opacity: .45; cursor: default; }
+/* 顶栏按钮紧凑一点；暂停键和速度说明固定宽度，暂停前后顶栏不会挤成两行 */
+.ctl .b { padding: 6px 10px; }
+.speeds { display: inline-flex; flex: 0 0 auto; }
+.speeds .b { padding: 6px 7px; border-radius: 0; margin-left: -1px; }
+.speeds .b:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+.speeds .b:last-child { border-radius: 0 4px 4px 0; }
+.ctl .pause-b { min-width: 5.6em; text-align: center; }
+.when .pace { display: inline-block; min-width: 9.5em; }
+.when .pace.paused { color: var(--mod); }
+/* 顶栏一行放不下标题时先藏标题（“离开”同样回首页），再窄就藏速度说明（速度键和暂停键本身看得出状态） */
+.top-in.wide { max-width: none; }
+@media (max-width: 1479px) and (min-width: 821px) { .top .logo { display: none; } .when .yr-bar { width: 120px; } }
+@media (max-width: 1240px) and (min-width: 821px) { .when .pace { display: none; } .when .yr-bar { width: 90px; } }
+
+/* 网站导航：首页顶上一条，每一页底部一条（都不吸顶） */
+.site-nav, .site-foot { max-width: 1440px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.site-nav { border-bottom: 1px solid var(--line); }
+.site-foot { margin-top: 24px; border-top: 1px solid var(--line); padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.crumbs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.crumbs a { color: var(--soft); text-decoration: none; }
+.crumbs a:hover { color: var(--fg); text-decoration: underline; }
+.crumbs .sep { color: var(--muted); }
+.crumbs .cur { color: var(--fg); }
+.nav-tools { display: flex; align-items: center; gap: 8px; }
+/* 语言：原生下拉框，套成按钮的样子 */
+.lang-wrap { display: inline-flex; align-items: center; gap: 4px; background: var(--btn); border: 1px solid var(--line); border-radius: 4px; padding: 0 0 0 8px; font-size: 14px; color: var(--fg); white-space: nowrap; }
+.lang-wrap:hover { border-color: var(--muted); }
+.lang-wrap span { color: var(--muted); font-size: 13px; }
+.lang-sel { appearance: none; -webkit-appearance: none; background: transparent; border: 0; color: inherit; font: inherit; padding: 6px 10px 6px 2px; cursor: pointer; }
+.lang-sel option { background: var(--panel); color: var(--fg); }
+/* 反馈框 */
+.fb-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-ctx { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; color: var(--soft); }
+.fb-ctx input { margin-top: 3px; }
 
 /* ---------- 三栏 ---------- */
 .shell { max-width: 1440px; margin: 0 auto; padding: 24px 20px 64px; display: grid; gap: 22px;
@@ -293,6 +327,9 @@ details.what p { margin-top: 6px; }
 @media (max-width: 820px) {
   .top-in { padding: 6px 16px; gap: 6px 14px; }
   .top .logo { display: none; }
+  .site-nav, .site-foot { padding: 8px 16px; font-size: 13px; }
+  .site-foot { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } /* 别被右下角“顶部”按钮挡住 */
+  .when .pace { min-width: 0; }
   .agebox span { font-size: 14px; }
   .agebox b { font-size: 24px; }
   .when { flex: 1; }
@@ -344,6 +381,7 @@ details.what p { margin-top: 6px; }
 .share-main small { font-size: 12.5px; font-weight: 400; opacity: .9; }
 .share-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .share-grid .b { color: var(--fg); text-align: center; text-decoration: none; padding: 10px 8px; font-size: 14.5px; white-space: normal; }
+.share-grid .b.primary { color: var(--bg); }
 .card-img { width: 100%; max-width: 380px; align-self: center; border-radius: 4px; box-shadow: 0 6px 24px rgba(0, 0, 0, .3); }
 
 /* ---------- 手机 ---------- */
