@@ -112,6 +112,11 @@
 | `parentsNear` | `'far'` `'with'` `'back'` | 青年 | 29 岁时怎么照顾爸妈（中年的 `parentsCare` 可以参考它） |
 | `skill` `workStyle` `promoted` `burnout` `last34` | 见 `youth.js` 末尾说明 | 青年 | 手艺、打工头几年怎么过、升没升职、加班还是休息、35 岁前的选择 |
 | `ev*`（如 `evDog` `evLoan` `evHop` `evInvest` `evRentOffer`） | 各意外自己的取值 | `events.js` 的意外 | 意外的选择，由对应的回响意外读。别的阶段不要用 `ev` 开头的键名。`evRentOffer` 为 `true` 时会出现“房东卖房”的抉择，买下会把 `house` 设成 `'mortgage'` |
+| `nanny` `kidPet` `cityKid` `momBack` | 见 `childhood.js` 开头 | 童年 | 奶奶来带你、小时候养的宠物、进城孩子回不回村、留守时爷爷奶奶不在了爸妈回来 |
+| `will` `willAmt` `willSpent` | `'kids'` `'spouse'` `'sell'` `'spend'` `'donate'` `'kin'` `'carer'` `'none'`；元；元 | 老年（78 岁） | 遗嘱留给谁、卖房或捐出的金额、八十一岁前花掉的钱 |
+| `liveWith` | `'alone'` `'kids'` `'nursing'` `'hometown'` | 老年 | 晚年住哪儿。`'alone'` 是住自己家（可能和老伴一起）；`economy.js` 按它对“和谁住” |
+| `spCare` `gkCare` `afterWidow` `oldNanny` `robotBuy` `scamLoss` `heartBill` `gkGift` `gk2No` | 见 `oldage.js` | 老年 | 照顾老伴、带孙辈、丧偶后怎么过、九十三岁请住家保姆、机器人、被骗的钱、心梗的医药费、给孙辈的红包、二孩没生孩子 |
+| `sp2` | 人物 id | 老年 | 晚年再婚的老伴，和 `sp` 一样算同住 |
 | `money0` | 布尔 | `economy.js` | 已经有自己的钱了（十八岁或开始工作起）。之前“财富”表示家境 |
 | `cash` `invest` `investStyle` | 元、元、`'safe'` `'fund'` `'stock'` `'gold'` | `economy.js`，剧情用 `CN.pay` `CN.earn` `CN.invest` `CN.withdraw` | 存款、理财。**剧情不要直接 remember 这几个键**，用工具函数 |
 | `houseVal` `loanBase` | 万 | `economy.js`，剧情用 `CN.buyHouse` `CN.sellHouse` | 房子值多少、贷款本金基数（算每年还款） |

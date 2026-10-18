@@ -20,6 +20,8 @@
 ├── index.html           浮生录大厅（列出所有游戏，显示各自的存档进度）
 ├── share/               所有游戏共用的代码，改动会影响每个游戏
 │   ├── engine.js        规则引擎：世界状态、年度推演、剧情节点、判定、生死、存档
+│   ├── i18n.js          多语言：选语言、JY.t() 翻译界面文字、换语言时载入翻译过的剧情
+│   ├── lang.js          共用界面的英、日、西词表（键是中文原文）
 │   ├── pixel.js         像素场景与头像（程序绘制）
 │   ├── sharecard.js     分享图（画布）与文字总结
 │   ├── ui.js            全部界面：首页、醒来、这一生、临终、终局回顾、墓志、分享、大事记
@@ -28,12 +30,13 @@
 │       ├── simulate.js  无界面跑几百个人生，检查数据（含选项数、后果检查）
 │       ├── consequence.js 列出每个抉择的每个选项有没有后果
 │       ├── relations.js   静态找“熟人写成陌生人”（辅助，simulate 里有更准的运行时检查）
-│       ├── shot.js      无界面 Chrome 截图（含手机宽度）
+│       ├── shot.js      无界面 Chrome 截图（含手机宽度；SHOT_LANG=en 截其他语言）
 │       └── build.js     打包到 dist/
-├── 1in1.4b/             十四亿分之一（随机人生模式），结构同下；data/ 按人生阶段分文件，另有 scenes.js 画现代场景
+├── 1in1.4b/             十四亿分之一（随机人生模式），结构同下；data/ 按人生阶段分文件，另有 scenes.js 画现代场景，economy.js 算钱、房子、和谁住
 ├── jianghuyimeng/       江湖一梦：只放这个游戏独有的东西
-│   ├── index.html       页面，按顺序引用 config → game → ../share/engine → data/* → ../share/pixel、sharecard、ui
-│   ├── config.js        部署配置（网址、站名、字体），上线后可直接改
+│   ├── index.html       页面，按顺序引用 config → ../share/i18n、lang → game → ../share/engine → data/* → JY.loadLangData() → ../share/pixel、sharecard、ui
+│   ├── config.js        部署配置（网址、站名、字体、导航、反馈），上线后可直接改
+│   ├── lang/<语言>/     剧情翻译：game.js（界面用词）+ data/ 每个文件的翻译版（同名、同顺序）
 │   ├── game.js          游戏设定 JY.GAME：标题、界面用词、书名颜色、分享文案、存档前缀
 │   ├── data/            故事数据（world.js + 每本书一个文件）
 │   ├── docs/SPEC.md     内容规范：时间线、数据格式、写作要求。写剧情前必读
@@ -96,6 +99,14 @@
 **两种记忆**：
 - 改命标记 `g.set / g.f`：存在世界 `W` 里，跨世、跨人物。
 - 这一世的记忆 `g.remember / g.recall / g.since`：存在 `L.mem`，这一世结束就没了。通用奇遇的“回响”靠它。
+
+**钱和同住的人**（十四亿分之一，`1in1.4b/data/economy.js`）：成年后有真实的存款、理财、房子、欠款（人民币，其他语言显示美元），每年末按职业、城市、家里几口人记账；“财富”属性从净资产换算。“和谁住”是一份 id 列表，出生、离家、结婚、生子、接爸妈、孩子离家、住养老院都会改它，场景画的人、场景下那行字、家人卡的“同住”都读它。引擎为此加了几个可选钩子：`GAME.engine.onStat / yearEnd / deathLine / flavorRepeat`，`GAME.party / sceneCap / relTag / lint / stateCalls`。详见 `1in1.4b/docs/SPEC.md`。
+
+**逻辑检查**：`GAME.lint(g, 文字, 种类)` 按此刻的状态检查每一行生平和抉择正文（已婚写成单身、有人同住写成独居、一岁吃牛肉面、九十岁领舞……），`simulate.js` 报“前后矛盾、不合年龄的文字”，必须清零。
+
+**多语言**：界面文字以中文为准，写成 `t('中文')`，英日西词表在 `share/lang.js`；游戏用词和剧情的翻译在 `<游戏>/lang/<语言>/`：`game.js` 覆盖 `JY.GAME` 的用词并用 `JY.addI18n` 加属性名、重心名等的翻译，其余是 `data/` 每个文件的完整翻译版（代码、id、标记名、记忆键、属性名、重心名、地点 id 一律不改，只翻译给玩家看的字）。`game.js` 的 `langs` 列出有剧情翻译的语言；没列出的语言只翻译界面、剧情用中文。改了中文剧情，翻译版要跟着改（或重新翻译那个文件）。`SIM_LANG=en node share/tools/simulate.js <游戏> 10` 测翻译版，会报“没翻译的中文”。
+
+**导航和反馈**：首页顶上和每一页底部有导航（总页面 → 浮生录大厅 → 本游戏）、语言下拉和“问题反馈”。地址在各游戏 `config.js`：`homeUrl` `hubUrl` `feedbackRepo`（GitHub Issues 预填链接）`feedbackApi`（以后有后端时直接 POST）。
 
 ## 内容规范速查
 
@@ -204,11 +215,8 @@ node share/tools/build.js                          # 打包
 
 ### 用户提过、以后再做的
 
-- **反馈提交到 GitHub Issues**：
+- **反馈不要账号**（现在是预填 GitHub Issues 链接 + 复制）：
   - 最简单的做法是拼一个 `https://github.com/<owner>/<repo>/issues/new?title=…&body=…` 链接，正文预填人物、纪年、版本号。缺点是玩家要有 GitHub 账号，而且国内打开 GitHub 不稳定。
   - 不要账号的做法要一个后端。部署在 Cloudflare 时，用同一个 Worker 加一个 `/api/feedback` 接口，用只给这个仓库 Issues 写权限的细粒度令牌，通过 GitHub API 建 issue。令牌只放在 Worker 的密钥里，绝不写进前端。要加频率限制，防止刷屏。
   - 仓库地址放进 `config.js`（例如 `feedbackRepo`），没填就不显示反馈按钮。
-- **多语言**：预设简体中文、English、Español、日本語。
-  - 界面用词：`game.js` 里现有的用词字段，按语言分成多份；`share/` 里写死的中文（按钮、说明）先抽成一张词表，按语言切换。
-  - 剧情文字：在 `data/` 下按语言分目录，或者给每个文本字段加多语言版本。这是 400 多个节点的翻译量，最大的一块工作。
-  - 语言选择存在 `localStorage`，首次按浏览器语言选默认值。分享文字和分享图也要跟着换。
+- **多语言**：机制已做好（见“架构要点”）。简体中文、English、日本語、Español 四种，语言存在 `localStorage` 的 `vibe.lang`，首次按浏览器语言选。剧情翻译按游戏、按语言逐步补齐，`game.js` 的 `langs` 记录已经翻译完的语言。
