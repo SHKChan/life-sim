@@ -47,5 +47,19 @@
     if (a >= 1e4) return neg + '¥' + (a >= 1e6 ? Math.round(a / 1e4) : (a / 1e4).toFixed(1).replace(/\.0$/, '')) + ' 万';
     return neg + '¥' + a.toLocaleString('en-US');
   };
+  /* 剧情翻译：<游戏>/lang/<语言>/ 下放 game.js（界面用词）和 data/ 里每个文件的翻译版（同名）。
+   * index.html 在中文数据文件之后调用 JY.loadLangData()：当前语言在 JY.GAME.langs 里时，
+   * 先清空中文数据，再按同样的顺序载入翻译版。没翻译的语言就继续用中文剧情。 */
+  JY.hasLangData = () => lang !== 'zh' && !!(JY.GAME && (JY.GAME.langs || []).includes(lang));
+  JY.loadLangData = () => {
+    if (!JY.hasLangData() || typeof document === 'undefined') return;
+    // 只换调用处之前的数据文件（之后的，例如画场景的 scenes.js，没有文字，不用换）
+    const all = [].slice.call(document.getElementsByTagName('script'));
+    const upto = document.currentScript ? all.indexOf(document.currentScript) : all.length;
+    const files = all.slice(0, upto).filter((s) => /^data\//.test(s.getAttribute('src') || '')).map((s) => s.getAttribute('src').replace(/^data\//, '').replace(/\?.*$/, ''));
+    const v = (document.querySelector('script[src*="i18n.js"]') || { getAttribute: () => '' }).getAttribute('src').split('?')[1] || '';
+    const tag = (src) => '<script src="lang/' + lang + '/' + src + (v ? '?' + v : '') + '"><\/script>';
+    document.write(tag('game.js') + '<script>JY.resetData()<\/script>' + files.map(tag).join(''));
+  };
   if (typeof document !== 'undefined' && document.documentElement) document.documentElement.lang = { zh: 'zh-CN', en: 'en', ja: 'ja', es: 'es' }[lang];
 })();

@@ -24,6 +24,13 @@
   JY.addRelations = (list) => { JY.RELATIONS.push(...list); };
   // 随机人生模式（GAME.random）：所有随机生成的人共用这一套人生节点
   JY.addLifeNodes = (list) => { JY.LIFE_NODES.push(...list); };
+  // 换语言：翻译过的数据文件（<游戏>/lang/<语言>/）载入前先清空中文数据，再整套重新注册（见 share/i18n.js 的 loadLangData）
+  JY.resetData = () => {
+    Object.assign(JY, {
+      CHARS: [], byId: {}, EVENTS: [], ENCOUNTERS: [], FLAGS: {}, SLOTS: {},
+      FOCUS: [], FLAVOR: {}, LOCS: {}, PAUSES: [], ERAS: [], LIFE_NODES: [], RELATIONS: [],
+    });
+  };
 
   /* 每个游戏可以在 JY.GAME 里改这些设定；没写就用江湖一梦的默认值 */
   const CONF = () => Object.assign({

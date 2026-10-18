@@ -42,16 +42,26 @@ function buildPage(srcHtml, srcDir, outDir) {
   for (const ref of refs) {
     const buf = copyFile(path.join(srcDir, ref), path.join(outDir, ref));
     if (/(^|\/)config\.js$/.test(ref)) continue;
-    html = html.split('"' + ref + '"').join('"' + ref + '?v=' + hash(buf) + '"');
+    // 翻译文件由 i18n.js 动态载入、沿用它的版本号，所以 i18n.js 的版本号把各游戏的 lang/ 目录也算进去
+    const v = /(^|\/)i18n\.js$/.test(ref) ? hash(Buffer.concat([buf, langBuf()])) : hash(buf);
+    html = html.split('"' + ref + '"').join('"' + ref + '?v=' + v + '"');
   }
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, path.basename(srcHtml)), html);
   return refs;
 }
 
+// 所有游戏 lang/ 目录里文件的内容（算 i18n.js 的版本号）
+function langBuf() {
+  const bufs = [];
+  const walk = (d) => { if (!fs.existsSync(d)) return; for (const f of fs.readdirSync(d).sort()) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else bufs.push(fs.readFileSync(p)); } };
+  all.forEach((g) => walk(path.join(repo, g, 'lang')));
+  return Buffer.concat(bufs);
+}
+
 for (const g of games) {
   const refs = buildPage(path.join(repo, g, 'index.html'), path.join(repo, g), path.join(dist, g));
-  for (const extra of ['fonts', 'assets']) {
+  for (const extra of ['fonts', 'assets', 'lang']) {
     const src = path.join(repo, g, extra);
     if (fs.existsSync(src)) fs.cpSync(src, path.join(dist, g, extra), { recursive: true });
   }

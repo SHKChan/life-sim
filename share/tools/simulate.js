@@ -36,6 +36,22 @@ for (const s of scripts) {
   if (/^data\//.test(s)) dataSrc[s] = code;
   try { vm.runInContext(code, ctx, { filename: s }); } catch (e) { console.error('载入失败 ' + s + '：' + e.stack); process.exit(1); }
 }
+// 测某个语言的翻译：SIM_LANG=en 时，在中文数据之后清空、换上 lang/en/ 下的翻译版（同浏览器里的 JY.loadLangData）
+const SIM_LANG = process.env.SIM_LANG || '';
+if (SIM_LANG && SIM_LANG !== 'zh') {
+  ctx.JY.LANG = SIM_LANG;
+  const dir = path.join(gameDir, 'lang', SIM_LANG);
+  if (!fs.existsSync(dir)) { console.error('没有这个语言的翻译：' + dir); process.exit(2); }
+  const files = ['game.js', '!reset'].concat(scripts.filter((s) => /^data\//.test(s) && s !== 'data/scenes.js').map((s) => s.replace(/^data\//, '')));
+  for (const f of files) {
+    if (f === '!reset') { ctx.JY.resetData(); for (const k of Object.keys(dataSrc)) delete dataSrc[k]; continue; }
+    const p = path.join(dir, f);
+    if (!fs.existsSync(p)) { console.error('缺少翻译文件：' + p); process.exit(1); }
+    const code = fs.readFileSync(p, 'utf8');
+    if (f !== 'game.js') dataSrc['data/' + f] = code;
+    try { vm.runInContext(code, ctx, { filename: 'lang/' + SIM_LANG + '/' + f }); } catch (e) { console.error('载入失败 ' + p + '：' + e.stack); process.exit(1); }
+  }
+}
 const JY = ctx.JY, E = JY.engine;
 
 const rounds = Number(process.argv[3]) || 30;
@@ -140,7 +156,10 @@ function runLife(id, mode) {
     for (; linted < L.log.length; linted++) { const e = L.log[linted]; if (!/^(world|wmod|intro)$/.test(e.k)) lintText(e.k || 'line', e.t, 'log'); }
   }
   function lintText(where, t, kind) {
-    if (!LINT || !t) return;
+    if (!t) return;
+    // 英文、西班牙文的翻译里不该再出现汉字
+    if (/^(en|es)$/.test(SIM_LANG) && /[㐀-鿿]/.test(t)) { const k = '没翻译的中文（' + where + '）：' + t.slice(0, 60); lintHits[k] = (lintHits[k] || 0) + 1; }
+    if (!LINT) return;
     const msg = LINT(JY.G, t, kind);
     if (msg) { const k = msg + '：' + t.slice(0, 50); lintHits[k] = (lintHits[k] || 0) + 1; }
   }

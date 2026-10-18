@@ -134,6 +134,8 @@
     ['k1', 'k2', 'k3'].forEach((id) => { if (JY.byId[id] && g.alive(id) && !hh.includes(id)) { const a = g.ageOf(id); if (a >= 18 && a <= 21) c += 30000; } });
     const house = g.recall('house');
     const atParents = ['fa', 'mo'].some((id) => hh.includes(id)) && !g.recall('parentsIn');
+    // 晚年住到孩子家，不交房租
+    if (g.recall('liveWith') === 'kids') return Math.round(Math.max(c * 0.5, Math.min(c, CN.income(g) * 0.7)) * 0.6);
     if (!atParents && (house === 'rent' || ((house === 'none' || !house) && g.recall('hhPlace') !== 'dorm'))) c += RENT[t] || RENT[3];
     // 钱少就省着花（最低省到一半），钱多就多花一点（人情、车、看病、旅行）
     const inc = CN.income(g);
@@ -179,7 +181,7 @@
   CN.riskName = (style) => RISK_T[style] || '';
 
   /* ---------- 和谁住 ---------- */
-  const ORDER = ['sp', 'k1', 'k2', 'k3', 'fa', 'mo', 'gp', 'gm', 'sib0', 'sib1', 'gk1', 'gk2', 'gk3'];
+  const ORDER = ['sp', 'sp2', 'k1', 'k2', 'k3', 'fa', 'mo', 'gp', 'gm', 'sib0', 'sib1', 'gk1', 'gk2', 'gk3'];
   const hhRaw = (g) => (g.recall('hh') || []).slice();
   CN.household = (g) => hhRaw(g).filter((id) => JY.byId[id] && g.alive(id))
     .sort((a, b) => (ORDER.indexOf(a) + 99) % 99 - (ORDER.indexOf(b) + 99) % 99);
@@ -229,8 +231,15 @@
       del(PARENTS);
       g.remember('leftHome', true);
       const study = STUDY.includes(g.recall('lifePath')) || g.recall('lifePath') === 'army';
-      g.remember('hhPlace', study ? 'dorm' : '');
-      notes.push(study ? '你收拾行李离开了家，住进了集体宿舍。' : '你离开家，在' + (g.recall('workCity') || '外地') + '租了一间房，开始一个人过。');
+      // 进厂、学徒多半住厂里的宿舍
+      const plant = !study && (g.recall('job') === 'worker' || age < 18);
+      const married = g.recall('love') === 'married' && has('sp');
+      g.remember('hhPlace', study || (plant && !married) ? 'dorm' : '');
+      const city = g.recall('workCity') || '外地';
+      notes.push(study ? '你收拾行李离开了家，住进了集体宿舍。'
+        : married ? '你们离开老家，在' + city + '安了家。'
+          : plant ? '你离开家，住进了' + city + '一家厂里的宿舍。上下铺，八个人一间。'
+            : '你离开家，在' + city + '租了一间房，开始一个人过。');
     }
     // 读完书，从宿舍搬出来
     if (g.recall('hhPlace') === 'dorm' && !STUDY.includes(g.recall('lifePath')) && g.recall('lifePath') !== 'army') g.remember('hhPlace', '');
@@ -268,9 +277,10 @@
     });
     // 晚年住哪儿
     const lw = g.recall('liveWith');
-    if (lw === 'nursing') { hh = hh.filter((id) => id === 'sp'); g.remember('hhPlace', 'nursing'); }
+    if (lw === 'nursing') { hh = hh.filter((id) => id === 'sp' || id === 'sp2'); g.remember('hhPlace', 'nursing'); }
     else if (g.recall('hhPlace') === 'nursing') g.remember('hhPlace', '');
-    if (lw === 'kids') { ['k1', 'k2', 'k3'].forEach((id) => { if (g.alive(id) && (id === 'k1' || has(id))) add(id); }); ['gk1', 'gk2'].forEach(add); }
+    // 和孩子住：住进谁家由剧情的 CN.liveWith 定；只补上后来出生的孙辈
+    if (lw === 'kids' && ['k1', 'k2', 'k3'].some(has)) ['gk1', 'gk2', 'gk3'].forEach((id) => { const k = JY.byId[id]; if (k && k.born === g.Y) add(id); });
     g.remember('hh', hh);
     return notes;
   }
@@ -363,7 +373,7 @@
     const lines = L.log.filter((e) => e.y === L.year && !/^(world|wmod)$/.test(e.k)).length;
     const decade = age >= 20 && age % 10 === 0 && on(g);
     if (!decade && (lines > 0 || g.rnd() < 0.5)) return '';
-    const place = g.recall('hhPlace') ? '' : (g.recall('workCity') || g.recall('homeCap') || '').replace(/ · .*$/, '');
+    const place = g.recall('hhPlace') ? '' : (g.recall('liveWith') === 'kids' ? g.recall('kidCity') || '' : g.recall('workCity') || g.recall('homeCap') || '').replace(/ · .*$/, '');
     const head = age < 3 ? '这一年，你还在襁褓里，' : '这一年，你' + (place ? '在' + place + '，' : '');
     let t = head + CN.hhText(g) + '。';
     if (on(g)) {

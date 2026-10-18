@@ -27,52 +27,85 @@
 </head>
 <body>
 <!-- 游戏大厅。新增游戏：在 GAMES 里加一项（id 就是游戏目录名，也是存档前缀） -->
-<div class="home">
-  <div class="home-hero hub-hero"><div><h1>浮生<i>录</i></h1>
-    <p>人生模拟器合集。选一个背景，投一次胎，从出生活到离世。每一世都只有一次，选过的路会一直跟着你。</p></div></div>
-  <section>
-    <div class="section-h"><h2>选一个世界</h2><span>每个世界的存档各自独立，保存在这个浏览器里</span></div>
-    <div class="worlds" id="worlds"></div>
-  </section>
-  <section class="how">
-    <div><b>怎么玩</b>时间一年一年地走，遇到大事会停下来让你选。选项没有对错，只有后果。</div>
-    <div><b>一局多久</b>1× 时一年约一分钟，可以开到 16× 或者直接跳到下一个抉择。</div>
-    <div><b>分享</b>走完一生，会生成一张生平卡片和一段文字，可以发给朋友。</div>
-  </section>
-</div>
+<div id="hub"></div>
+<script src="share/i18n.js"></script>
 <script>
 (function () {
   'use strict';
+  // 所有游戏的总页面（网站导航的第一级）。部署到别处时改这里
+  var HOME_URL = 'https://www.vibe-game.com/', HOME_NAME = 'Vibe Game';
   var GAMES = [
-    { id: '1in1.4b', name: '十四亿分之一', color: '#d0473a', tags: ['现代中国', '随机投胎', '2026 年出生'],
-      d: '按真实的人口比例，随机投胎到中国某个省、某座城或某个村、某种家庭。中考、高考、打工、买房、成家、养老，过完普通人的一生。' },
-    { id: 'jianghuyimeng', name: '江湖一梦', color: '#c9a24a', tags: ['金庸', '射雕三部曲', '改写原著'],
-      d: '射雕、神雕、倚天放进同一个江湖。重生成书里有名有姓的人，照原著走，或者改写自己和别人的命运。' },
+    { id: '1in1.4b', color: '#d0473a',
+      name: { zh: '十四亿分之一', en: 'One in 1.4 Billion', ja: '十四億分の一', es: 'Uno entre 1400 millones' },
+      tags: { zh: ['现代中国', '随机投胎', '2026 年出生'], en: ['Modern China', 'Random birth', 'Born in 2026'], ja: ['現代中国', 'ランダム転生', '2026年生まれ'], es: ['China moderna', 'Nacimiento al azar', 'Nacido en 2026'] },
+      d: { zh: '按真实的人口比例，随机投胎到中国某个省、某座城或某个村、某种家庭。中考、高考、打工、买房、成家、养老，过完普通人的一生。',
+        en: 'Be born at random somewhere in China, in true population proportions: a province, a city or village, a family. Exams, work, a home, marriage, old age: live an ordinary life to its end.',
+        ja: '実際の人口比のとおりに、中国のどこかの省、町か村、ある家庭にランダムに生まれる。受験、仕事、住まい、結婚、老後。ふつうの人の一生を最後まで生きる。',
+        es: 'Nace al azar en algún lugar de China, según la población real: una provincia, una ciudad o aldea, una familia. Exámenes, trabajo, casa, matrimonio, vejez: vive una vida corriente hasta el final.' } },
+    { id: 'jianghuyimeng', color: '#c9a24a',
+      name: { zh: '江湖一梦', en: 'A Dream of Jianghu', ja: '江湖一夢', es: 'Un sueño del Jianghu' },
+      tags: { zh: ['金庸', '射雕三部曲', '改写原著'], en: ['Jin Yong', 'Condor Trilogy', 'Rewrite the story'], ja: ['金庸', '射鵰三部作', '原作を書き換える'], es: ['Jin Yong', 'Trilogía del Cóndor', 'Reescribe la historia'] },
+      d: { zh: '射雕、神雕、倚天放进同一个江湖。重生成书里有名有姓的人，照原著走，或者改写自己和别人的命运。',
+        en: 'The three Condor novels share one martial world. Be reborn as a named character, follow the book, or rewrite your fate and others\'.',
+        ja: '射鵰・神鵰・倚天を一つの江湖に。本の中の名のある人物に生まれ変わり、原作どおりに生きるか、自分と他人の運命を書き換える。',
+        es: 'Las tres novelas del Cóndor en un mismo mundo marcial. Renace como un personaje con nombre, sigue el libro o reescribe tu destino y el de otros.' } },
   ];
+  var L = JY.LANG || 'zh';
+  var TX = {
+    title: { zh: '浮生录', en: 'Floating Lives', ja: '浮生録', es: 'Vidas Flotantes' },
+    lead: { zh: '人生模拟器合集。选一个背景，投一次胎，从出生活到离世。每一世都只有一次，选过的路会一直跟着你。',
+      en: 'A collection of life simulators. Pick a setting, be born, and live from birth to death. Each life happens once, and every path you take stays with you.',
+      ja: '人生シミュレーター集。舞台を選んで生まれ、誕生から死までを生きる。どの人生も一度きり。選んだ道はずっとついてくる。',
+      es: 'Una colección de simuladores de vida. Elige un escenario, nace y vive de principio a fin. Cada vida es única y cada camino te acompaña.' },
+    pick: { zh: '选一个世界', en: 'Choose a world', ja: '世界を選ぶ', es: 'Elige un mundo' },
+    pickSub: { zh: '每个世界的存档各自独立，保存在这个浏览器里', en: 'Each world saves separately, in this browser', ja: '保存は世界ごとに別々で、このブラウザに残ります', es: 'Cada mundo se guarda por separado, en este navegador' },
+    how1: { zh: ['怎么玩', '时间一年一年地走，遇到大事会停下来让你选。选项没有对错，只有后果。'], en: ['How to play', 'Time moves year by year and stops for big decisions. No choice is right or wrong; each has consequences.'], ja: ['遊び方', '時間は一年ずつ進み、大きな出来事で止まって選択を求める。正解はなく、結果があるだけ。'], es: ['Cómo se juega', 'El tiempo avanza año a año y se detiene ante las grandes decisiones. No hay respuestas correctas, solo consecuencias.'] },
+    how2: { zh: ['一局多久', '1× 时一年约一分钟，可以开到 16× 或者直接跳到下一个抉择。'], en: ['How long', 'At 1× a year takes about a minute. Speed up to 16× or jump to the next decision.'], ja: ['所要時間', '1倍速で一年約一分。16倍速にしたり、次の選択まで飛ばしたりできる。'], es: ['Cuánto dura', 'A 1× un año dura un minuto. Acelera hasta 16× o salta a la siguiente decisión.'] },
+    how3: { zh: ['分享', '走完一生，会生成一张生平卡片和一段文字，可以发给朋友。'], en: ['Share', 'At the end you get a life card and a short summary to send to friends.'], ja: ['シェア', '一生を終えると、人生カードと文章ができて友だちに送れる。'], es: ['Compartir', 'Al final obtienes una tarjeta y un resumen para enviar a tus amigos.'] },
+    enter: { zh: '进入', en: 'Enter', ja: '入る', es: 'Entrar' }, cont: { zh: '继续', en: 'Continue', ja: '続ける', es: 'Continuar' },
+    living: { zh: '正在过的一生', en: 'Current life', ja: '進行中の人生', es: 'Vida en curso' }, age: { zh: '{n} 岁', en: '{n} y/o', ja: '{n}歳', es: '{n} años' },
+    lived: { zh: '已经活过 {n} 世', en: 'Lives lived: {n}', ja: '生きた人生：{n}', es: 'Vidas vividas: {n}' },
+    lang: { zh: '语言', en: 'Language', ja: '言語', es: 'Idioma' },
+  };
+  var tx = function (k) { var v = TX[k]; return v[L] || v.zh; };
+  var pick = function (o) { return o[L] || o.zh; };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  document.title = tx('title');
   // 读各游戏的存档，显示活过几世、有没有正在过的一生（读不到就不显示）
   function saveLine(id) {
     try {
       var s = JSON.parse(localStorage.getItem(id + '.save.v2') || 'null');
-      if (!s || !s.W) return '';
+      if (!s || !s.W) return { t: '', live: false };
       var bits = [];
       if (s.L) {
         var me = (s.W.gen || []).find(function (d) { return d.id === s.L.cid; });
-        bits.push('<b>正在过的一生' + (me ? '：' + esc(me.name) + '，' + (s.L.year - me.born) + ' 岁' : '') + '</b>');
+        bits.push('<b>' + tx('living') + (me ? ': ' + esc(me.name) + ', ' + tx('age').replace('{n}', s.L.year - me.born) : '') + '</b>');
       }
-      if (s.W.lives && s.W.lives.length) bits.push('已经活过 ' + s.W.lives.length + ' 世');
-      return bits.join(' · ');
-    } catch (e) { return ''; }
+      if (s.W.lives && s.W.lives.length) bits.push(tx('lived').replace('{n}', s.W.lives.length));
+      return { t: bits.join(' · '), live: !!s.L };
+    } catch (e) { return { t: '', live: false }; }
   }
-  document.getElementById('worlds').innerHTML = GAMES.map(function (g) {
-    var save = saveLine(g.id);
-    return '<a class="world" href="' + g.id + '/" style="--c:' + g.color + '">'
-      + '<div class="nm">' + esc(g.name) + '</div>'
-      + '<div class="tags">' + g.tags.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</div>'
-      + '<div class="d">' + esc(g.d) + '</div>'
-      + (save ? '<div class="save">' + save + '</div>' : '')
-      + '<span class="b primary go">' + (save.indexOf('正在') >= 0 ? '继续' : '进入') + '</span></a>';
-  }).join('');
+  var langSel = function (id) {
+    return '<label class="lang-wrap" title="' + tx('lang') + '"><span aria-hidden="true">文</span><select class="lang-sel" id="' + id + '" aria-label="' + tx('lang') + '">'
+      + JY.LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === L ? ' selected' : '') + '>' + l[1] + '</option>'; }).join('') + '</select></label>';
+  };
+  var crumbs = '<div class="crumbs"><a href="' + HOME_URL + '">' + HOME_NAME + '</a><span class="sep" aria-hidden="true">›</span><span class="cur">' + tx('title') + '</span></div>';
+  var h = '<nav class="site-nav">' + crumbs + '<div class="nav-tools">' + langSel('lang-top') + '</div></nav>'
+    + '<div class="home"><div class="home-hero hub-hero"><div><h1>' + (L === 'zh' ? '浮生<i>录</i>' : L === 'ja' ? '浮生<i>録</i>' : esc(tx('title'))) + '</h1><p>' + tx('lead') + '</p></div></div>'
+    + '<section><div class="section-h"><h2>' + tx('pick') + '</h2><span>' + tx('pickSub') + '</span></div><div class="worlds">'
+    + GAMES.map(function (g) {
+      var sv = saveLine(g.id);
+      return '<a class="world" href="' + g.id + '/" style="--c:' + g.color + '">'
+        + '<div class="nm">' + esc(pick(g.name)) + '</div>'
+        + '<div class="tags">' + pick(g.tags).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</div>'
+        + '<div class="d">' + esc(pick(g.d)) + '</div>'
+        + (sv.t ? '<div class="save">' + sv.t + '</div>' : '')
+        + '<span class="b primary go">' + (sv.live ? tx('cont') : tx('enter')) + '</span></a>';
+    }).join('') + '</div></section>'
+    + '<section class="how">' + ['how1', 'how2', 'how3'].map(function (k) { var v = tx(k); return '<div><b>' + v[0] + '</b>' + v[1] + '</div>'; }).join('') + '</section></div>'
+    + '<footer class="site-foot">' + crumbs + '<div class="nav-tools">' + langSel('lang-foot') + '</div></footer>';
+  document.getElementById('hub').innerHTML = h;
+  document.addEventListener('change', function (e) { if (e.target.classList.contains('lang-sel')) JY.setLang(e.target.value); });
 })();
 </script>
 </body>
