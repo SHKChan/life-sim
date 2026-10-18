@@ -331,6 +331,8 @@
     marry: (g, o) => {
       o = o || {};
       const sex = CN.sexOf(g) === '男' ? '女' : '男';
+      const W = JY.engine.get().W;
+      if (W && W.dead) delete W.dead.sp; // 再婚：新配偶用同一个 id，先清掉前一位的去世记录
       const sp = person(Object.assign({ id: 'sp', sex, born: g.Y - g.age + ri(-3, 3), origin: o.origin || '' }, o));
       g.spawn(sp);
       g.rel(sex === '女' ? '妻子' : '丈夫', 'sp', o.note || '');

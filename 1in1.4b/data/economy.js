@@ -109,6 +109,7 @@
       const luck = job === 'boss' || job === 'creator' ? 0.4 + rnd() * 1.4 : 1;
       mine = base * (TIER_INC[tierOf(g)] || 0.8) * career * luck;
       if (g.recall('side')) mine += 10000;
+      mine += Number(g.recall('rental')) || 0; // 第二套房的租金
     }
     let sp = 0;
     if (g.recall('love') === 'married' && JY.byId.sp && g.alive('sp')) {
@@ -151,10 +152,12 @@
     const pay = price * down * 1e4;
     const loan = Math.round(price * (1 - down));
     setCash(g, CN.cash(g) - pay);
-    g.remember('houseVal', price);
-    if (loan > 0) { g.remember('debt', V.debt(g) + loan); g.remember('loanBase', V.loanBase(g) + loan); }
-    g.remember('house', loan > 0 ? 'mortgage' : 'own');
-    if (o.city) { g.info('住处', o.city); g.move('home', o.city + ' · 新家'); }
+    // second: 第二套房（出租或投资），房子的价值加上去，不改住处
+    g.remember('houseVal', (o.second ? V.houseVal(g) : 0) + price);
+    // 记下这笔贷款，并同步 lastDebt，免得年末记账再把它当成新借的钱算一次
+    if (loan > 0) { g.remember('debt', V.debt(g) + loan); g.remember('loanBase', V.loanBase(g) + loan); g.remember('lastDebt', V.debt(g)); }
+    if (!o.second || g.recall('house') !== 'own') g.remember('house', loan > 0 ? 'mortgage' : 'own');
+    if (o.city && !o.second) { g.info('住处', o.city); g.move('home', o.city + ' · 新家'); }
     syncWealth(g);
   };
   CN.sellHouse = (g) => {
@@ -255,7 +258,8 @@
       if (['mortgage', 'own'].includes(g.recall('house')) && !g.recall('parentsIn') && (has('fa') || has('mo'))) { del(PARENTS); notes.push('你们搬进了自己的家，从爸妈那里分了出来。'); }
     } else if (has('sp')) del(['sp']);
     // 接爸妈来住（剧情里选了“接来同住”）
-    if ((g.recall('parentsCare') === 'self' || g.recall('parentsNear') === 'with') && !g.recall('parentsIn') && (g.alive('fa') || g.alive('mo'))) {
+    const care = g.recall('parentsCare');
+    if ((care === 'self' || (g.recall('parentsNear') === 'with' && !['nursing', 'sibling', 'far'].includes(care))) && !g.recall('parentsIn') && (g.alive('fa') || g.alive('mo'))) {
       add('fa'); add('mo');
       g.remember('parentsIn', true);
     }
@@ -356,6 +360,15 @@
       if (!g.recall('kidHelp')) { g.remember('kidHelp', true); out.push('退休金不太够花。孩子每个月往你卡里打一笔钱，嘴上说是给你买水果的。'); }
     }
     if (cash < 0 && CN.cash(g) >= 0 && age < 65) out.push('这一年入不敷出，存款见底了。');
+    // 透支不能一直挂着：亏空记成欠款（找家里、亲戚借的，或者信用卡），以后按年还
+    if (cash < -20000) {
+      const owe = Math.round(-cash / 1e3) / 10;
+      g.remember('debt', V.debt(g) + owe);
+      g.remember('loanBase', V.loanBase(g) + owe);
+      g.remember('lastDebt', V.debt(g));
+      cash = 0;
+      out.push('钱不够花，你借了 ' + CN.fmt(owe * 1e4) + '，记在欠款里慢慢还。');
+    }
     setCash(g, cash);
     g.remember('income', inc);
     // 存款第一次过了一个整数关口

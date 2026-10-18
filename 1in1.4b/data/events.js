@@ -277,7 +277,7 @@
         { t: '分期买一台', dev: 15, fx: (g) => { CN.pay(g, 36000); g.stat('健康', 1); g.remember('evRobot', 'bought'); }, res: '它到家的第一天，把你的袜子按颜色排好了。' },
       ] },
     { id: 'e_hometown_newyear', y: Y, minAge: 18, maxAge: 60, t: '过年',
-      cond: (g) => !!g.recall('workCity') && g.recall('workCity') !== g.recall('city') && parentsAlive(g) && !withParents(g),
+      cond: (g) => !!g.recall('workCity') && g.recall('workCity') !== g.recall('city') && parentsAlive(g) && !withParents(g) && g.recall('parentsCare') !== 'nursing',
       text: '腊月二十，抢票软件开了一整夜，回老家的票还是候补。',
       choices: [
         { t: '加钱买站票也要回', canon: true, fx: (g) => { CN.pay(g, 2000); g.stat('人缘', 2); g.stat('健康', -1); g.remember('evNewYear', 'home'); }, res: '站了九个小时。推开家门，饭桌上摆着你最爱吃的菜。' },

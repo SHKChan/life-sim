@@ -500,7 +500,7 @@
         if (g.recall('olympiad')) s += 4;
         if (g.recall('cityKid') === 'class') s += 2;
         s += Math.round((g.rnd() - 0.5) * 18);
-        g.remember('zkScore', s >= 68 ? 'high' : s >= 50 ? 'mid' : 'low');
+        g.remember('zkScore', s >= 86 ? 'high' : s >= 70 ? 'mid' : 'low'); // 分数线按真实比例：约两成上好高中，一半出头上普高
         CN.setEdu(g, 'junior', '初中');
         atSchool(g, '中考考场');
       },
