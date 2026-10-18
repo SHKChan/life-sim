@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 十四亿分之一 | https://www.vibe-game.com/life-sim/1in1.4b/ | `1in1.4b/` | 按真实人口比例随机投胎到中国某个省市、某种家庭，2026 年出生，过完普通人的一生。有真实的钱、房子、和谁住在一起 |
 | 江湖一梦 | https://www.vibe-game.com/life-sim/jianghuyimeng/ | `jianghuyimeng/` | 射雕三部曲放进同一个江湖，重生成书中人物，改写原著里的命运 |
-| 江湖一梦 · 群侠（制作中） | https://www.vibe-game.com/life-sim/jianghuyimeng/qunxia/ | `jianghuyimeng/qunxia/` | 文字武侠 RPG：做一个无名小卒，自由游历江湖、拜师学艺、招募队友、集齐信物 |
+| 江湖一梦 · 群侠 | https://www.vibe-game.com/life-sim/jianghuyimeng/qunxia/ | `jianghuyimeng/qunxia/` | 文字武侠 RPG：做一个无名小卒，自由游历江湖、拜师学艺、招募队友、集齐信物 |
 
 - 语言：中文、English、日本語、Español。界面文字预先翻译，剧情用谷歌网页翻译。
 - 主题：暗、灰、白三种。手机、电脑都能玩。

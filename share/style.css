@@ -117,6 +117,13 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; display: b
 .lang-wrap span { color: var(--muted); font-size: 13px; }
 .lang-sel { appearance: none; -webkit-appearance: none; background: transparent; border: 0; color: inherit; font: inherit; padding: 6px 10px 6px 2px; cursor: pointer; }
 .lang-sel option { background: var(--panel); color: var(--fg); }
+/* 首页“其他玩法”卡片 */
+.modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.mode-card { display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--brand); border-radius: var(--r); color: inherit; text-decoration: none; }
+.mode-card:hover { border-color: var(--brand); }
+.mode-card b { font-family: var(--f-head); font-size: 20px; margin-right: 8px; }
+.mode-card p { margin: 0; color: var(--soft); font-size: 14.5px; }
+.mode-card .b { align-self: flex-start; }
 /* 反馈框 */
 .fb-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
 .fb-ctx { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; color: var(--soft); }

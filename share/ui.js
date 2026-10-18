@@ -419,6 +419,10 @@
       h += '<div class="confirm"><span>' + esc(T.random ? t('会清空{x}和正在过的这一生，不能撤销。', { x: T.livesTitle }) : t('重开会清空这个{w}的全部历史和{x}，不能撤销。', { w: T.world, x: T.livesTitle })) + '</span>'
         + '<button class="b" id="h-reset-yes" data-act="reset-yes">' + t('清空并重开') + '</button><button class="b" id="h-reset-no" data-act="reset-no">' + t('算了') + '</button></div>';
     }
+    // 同一个游戏的其他玩法（game.js 的 modes：[{ t, d, href, tag }]），例如江湖一梦的群侠模式
+    if (T.modes && T.modes.length) {
+      h += '<section class="modes">' + T.modes.map((m) => '<a class="mode-card" href="' + esc(m.href) + '"><div><b>' + esc(m.t) + '</b>' + (m.tag ? '<span class="tag mod">' + esc(m.tag) + '</span>' : '') + '</div><p>' + esc(m.d) + '</p><span class="b primary">' + t('进入') + ' ›</span></a>').join('') + '</section>';
+    }
     if (!L && !T.random) {
       h += '<section><div class="section-h"><h2>' + esc(T.pickTitle) + '</h2><span>' + (avail.length ? esc(t('{n} 人可选。已经死去或已经活过的人不能再选；{y}已过的人，会从现在的年纪醒来。', { n: avail.length, y: T.year })) : '') + '</span>'
         + (T.wakeAge && avail.length ? '<button class="b" id="h-birth" data-act="from-birth" aria-pressed="' + ui.fromBirth + '" title="' + esc(t('不勾时从 {n} 岁醒来，之前的年份照{c}过完。', { n: T.wakeAge, c: T.canon })) + '">' + (ui.fromBirth ? '☑ ' : '☐ ') + esc(t('从出生开始')) + '</button>' : '')

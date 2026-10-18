@@ -51,6 +51,14 @@
         en: 'The three Condor novels share one martial world. Be reborn as a named character, follow the book, or rewrite your fate and others\'.',
         ja: '射鵰・神鵰・倚天を一つの江湖に。本の中の名のある人物に生まれ変わり、原作どおりに生きるか、自分と他人の運命を書き換える。',
         es: 'Las tres novelas del Cóndor en un mismo mundo marcial. Renace como un personaje con nombre, sigue el libro o reescribe tu destino y el de otros.' } },
+    // href：入口不在 <id>/ 时写明；save: false 表示存档格式不同，不在大厅里显示进度
+    { id: 'qunxia', href: 'jianghuyimeng/qunxia/', save: false, color: '#c8566a',
+      name: { zh: '江湖一梦 · 群侠', en: 'Jianghu: Wandering Heroes', ja: '江湖一夢・群侠', es: 'Jianghu: Héroes errantes' },
+      tags: { zh: ['文字武侠 RPG', '倚天年间', '新'], en: ['Text wuxia RPG', 'Heaven Sword era', 'New'], ja: ['テキスト武侠RPG', '倚天の時代', '新作'], es: ['RPG wuxia de texto', 'Era de la Espada', 'Nuevo'] },
+      d: { zh: '做一个无名小卒，自由游历江湖：拜师学艺、招募队友、回合制比武，收齐十四件信物。品德决定你是侠是魔。',
+        en: 'Play a nobody roaming the martial world: learn from masters, recruit companions, fight turn-based duels and gather fourteen relics. Your virtue decides hero or demon.',
+        ja: '名もなき若者として江湖を自由に旅する。師に学び、仲間を集め、ターン制で戦い、十四の信物を集める。品徳が侠か魔かを決める。',
+        es: 'Sé un don nadie que recorre el mundo marcial: aprende de maestros, recluta compañeros, combate por turnos y reúne catorce reliquias. Tu virtud decide héroe o demonio.' } },
   ];
   var L = JY.LANG || 'zh';
   var TX = {
@@ -95,8 +103,8 @@
   var h = '<div class="home"><div class="home-hero hub-hero"><div><h1>' + (L === 'zh' ? '浮生<i>录</i>' : L === 'ja' ? '浮生<i>録</i>' : esc(tx('title'))) + '</h1><p>' + tx('lead') + '</p></div></div>'
     + '<section><div class="section-h"><h2>' + tx('pick') + '</h2><span>' + tx('pickSub') + '</span></div><div class="worlds">'
     + GAMES.map(function (g) {
-      var sv = saveLine(g.id);
-      return '<a class="world" href="' + g.id + '/" style="--c:' + g.color + '">'
+      var sv = g.save === false ? { t: '', live: false } : saveLine(g.id);
+      return '<a class="world" href="' + (g.href || g.id + '/') + '" style="--c:' + g.color + '">'
         + '<div class="nm">' + esc(pick(g.name)) + '</div>'
         + '<div class="tags">' + pick(g.tags).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('') + '</div>'
         + '<div class="d">' + esc(pick(g.d)) + '</div>'
