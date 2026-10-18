@@ -5,15 +5,18 @@
   'use strict';
   const JY = (window.JY = window.JY || {});
   const CFG = window.JY_CONFIG || {};
-  const GAME = JY.GAME || {};
+  const t = JY.t || ((x, v) => (v ? x.replace(/{(w+)}/g, (m, k) => v[k]) : x));
+  // 游戏用词按当前语言覆盖（JY.GAME.i18n.<语言>），同 ui.js
+  const GAME = Object.assign({}, JY.GAME || {}, (JY.GAME && JY.GAME.i18n && JY.GAME.i18n[JY.LANG]) || {});
   // 分享卡和文字总结的用词、字段可以由 GAME.share 覆盖：sub(life) 姓名上方的小字，fields(life) 四个字段，summary(life) 文字总结（不含链接）
   const SH = GAME.share || {};
-  const DEV = GAME.devName || '改命度';
-  const FATE = GAME.fateLabel || (GAME.canon || '原著') + '命数';
-  const LEG = GAME.legend || ['照' + (GAME.canon || '原著'), '改了命'];
+  const CANON = GAME.canon || t('原著');
+  const DEV = GAME.devName || t('改命度');
+  const FATE = GAME.fateLabel || t('{c}命数', { c: CANON });
+  const LEG = GAME.legend || [t('照{c}选', { c: CANON }), t('改了命')];
   const BOOKS = GAME.books || {};
-  const TITLE = GAME.title || '人生';
-  const YEAR = GAME.year || '纪年';
+  const TITLE = GAME.title || t('人生');
+  const YEAR = GAME.year || t('纪年');
   const ACCENT = {};
   const CODE = {};
   Object.keys(BOOKS).forEach((k) => { ACCENT[k] = BOOKS[k].card || BOOKS[k].color; CODE[k] = BOOKS[k].code; });
@@ -31,12 +34,14 @@
     try { return new URL(u).host; } catch (e) { return u; }
   };
 
+  // 按宽度折行：汉字、假名一个字一断，拉丁文按单词断
   function wrap(c, text, x, y, maxW, lh, maxLines) {
     let line = '';
     let lines = [];
-    for (const ch of String(text || '')) {
-      const t = line + ch;
-      if (c.measureText(t).width > maxW && line) { lines.push(line); line = ch; } else line = t;
+    const parts = String(text || '').match(/[　-鿿＀-￯]|[^s　-鿿＀-￯]+s*|s+/g) || [];
+    for (const ch of parts) {
+      const next = line + ch;
+      if (c.measureText(next).width > maxW && line) { lines.push(line.trimEnd()); line = ch.trimStart(); } else line = next;
     }
     if (line) lines.push(line);
     if (maxLines && lines.length > maxLines) {
@@ -87,7 +92,7 @@
     let y = 100;
     c.fillStyle = accent;
     c.font = '700 13px ' + F_BODY;
-    c.fillText('生平记录', 30, y);
+    c.fillText(t('生平记录'), 30, y);
     const pc = document.createElement('canvas');
     JY.drawPortrait(pc, life.id, age);
     c.imageSmoothingEnabled = false;
@@ -96,25 +101,25 @@
     c.strokeRect(30.5, y + 16.5, 110, 132);
     c.fillStyle = accent;
     c.font = '700 13px ' + F_BODY;
-    c.fillText(SH.sub ? SH.sub(life) : life.book + ' · ' + life.sex, 164, y + 34);
+    c.fillText(SH.sub ? SH.sub(life) : life.book + ' · ' + t(life.sex), 164, y + 34);
     c.fillStyle = INK;
     c.font = '900 46px ' + F_HEAD;
     c.fillText(life.name, 162, y + 88);
     c.font = '14px ' + F_MONO;
     c.fillStyle = '#3c4744';
-    c.fillText(YEAR + ' ' + life.born + ' — ' + life.to + ' · 享年 ' + age, 164, y + 118);
+    c.fillText(YEAR + ' ' + life.born + ' — ' + life.to + ' · ' + t('享年 {n}', { n: age }), 164, y + 118);
     c.font = '13px ' + F_BODY;
     c.fillStyle = MUTED;
-    c.fillText('卒于' + (life.deathLoc || ''), 164, y + 142);
+    c.fillText(t('卒于{y}', { y: life.deathLoc || '' }), 164, y + 142);
 
     // 字段
     y = 290;
     const info = life.info || {};
     const fields = SH.fields ? SH.fields(life) : [
-      ['出生于', life.birthplace || ''],
-      ['门派', info['门派'] || '无'],
-      ['身份', info['身份'] || ''],
-      ['结局', life.cause, true],
+      [t('出生于'), life.birthplace || ''],
+      [t('门派'), info['门派'] || t('无')],
+      [t('身份'), info['身份'] || ''],
+      [t('结局'), life.cause, true],
     ];
     fields.forEach((f, i) => {
       const x = i % 2 ? 316 : 30;
@@ -140,7 +145,7 @@
     y = Math.max(y + 12, 520);
     c.font = '11px ' + F_BODY;
     c.fillStyle = MUTED;
-    c.fillText('人生图 · 一格一年 · 金色' + LEG[0] + ' · 青色' + LEG[1], 30, y);
+    c.fillText(t('人生图 · 一格一年 · 金色{a} · 青色{b}', { a: LEG[0], b: LEG[1] }), 30, y);
     const span = Math.max(80, age + 3);
     const cell = 16, gap = 3, cols = 12;
     for (let a = 0; a < span; a++) {
@@ -159,8 +164,8 @@
     c.fillText(DEV, 304, y + 120);
     c.font = '12.5px ' + F_BODY;
     c.fillStyle = MUTED;
-    c.fillText('做过 ' + life.picks.length + ' 个抉择', 304, y + 142);
-    c.fillText(FATE + '：', 304, y + 166);
+    c.fillText(t('做过 {n} 个抉择', { n: life.picks.length }), 304, y + 142);
+    c.fillText(FATE + t('：'), 304, y + 166);
     const fateH = wrap(c, life.fateText, 304, y + 186, 266, 18, 5);
     const mapBottom = y + 12 + Math.ceil(span / cols) * (cell + gap);
     y = Math.max(mapBottom, y + 186 + fateH) + 30;
@@ -169,10 +174,10 @@
     if (life.changes.length) {
       c.font = '12px ' + F_BODY;
       c.fillStyle = MUTED;
-      c.fillText(GAME.changedMine || '因我而变', 30, y);
+      c.fillText(GAME.changedMine || t('因我而变'), 30, y);
       c.font = '700 13.5px ' + F_BODY;
       c.fillStyle = '#2a7d84';
-      y += 22 + wrap(c, life.changes.slice(0, 4).map((k) => JY.FLAGS[k] || k).join('；'), 30, y + 22, 540, 20, 3);
+      y += 22 + wrap(c, life.changes.slice(0, 4).map((k) => JY.FLAGS[k] || k).join(t('；')), 30, y + 22, 540, 20, 3);
     }
     Ht = y + 76;
 
@@ -205,11 +210,11 @@
       lines.push((GAME.shareLead || '') + (withUrl !== false && u ? u : ''));
       return lines.join('\n');
     }
-    lines.push('【' + TITLE + '】这一世，我重生成了《' + life.book + '》里的' + life.name + '。');
-    lines.push(YEAR + ' ' + life.born + '—' + life.to + '，享年 ' + age + '，' + life.cause + '。');
-    lines.push((GAME.canon || '原著') + '里的' + life.name + '：' + life.fateText);
-    lines.push(ch.length ? '这一世我改了命：' + ch.slice(0, 3).join('；') + '。' : '这一世，我照着' + (GAME.canon || '原著') + '走完了。');
-    lines.push('改命度 ' + life.dev + '%，做过 ' + life.picks.length + ' 个抉择。临终一句：“' + life.words + '”');
+    lines.push(t('【{title}】这一世，我重生成了《{book}》里的{name}。', { title: TITLE, book: life.book, name: life.name }));
+    lines.push(t('{year} {from}—{to}，享年 {age}，{cause}。', { year: YEAR, from: life.born, to: life.to, age, cause: life.cause }));
+    lines.push(t('{canon}里的{name}：', { canon: CANON, name: life.name }) + life.fateText);
+    lines.push(ch.length ? t('这一世我改了命：{x}。', { x: ch.slice(0, 3).join(t('；')) }) : t('这一世，我照着{canon}走完了。', { canon: CANON }));
+    lines.push(t('改命度 {dev}%，做过 {n} 个抉择。临终一句：“{words}”', { dev: life.dev, n: life.picks.length, words: life.words }));
     const url = JY.siteUrl();
     lines.push((GAME.shareLead || '') + (withUrl !== false && url ? url : ''));
     return lines.join('\n');
