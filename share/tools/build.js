@@ -2,6 +2,7 @@
 /* 打包成纯静态站点：
  *   node share/tools/build.js                 打包全部游戏（含 game.js 的目录）
  *   node share/tools/build.js jianghuyimeng   只打包这一个
+ *   node share/tools/build.js --base=life-sim 放在子路径下（网址是 域名/life-sim/），文件输出到 dist/life-sim/
  * 输出 dist/：
  *   dist/index.html          游戏大厅（根目录 index.html）
  *   dist/share/...           共用代码
@@ -15,12 +16,17 @@ const path = require('path');
 const crypto = require('crypto');
 
 const repo = path.join(__dirname, '..', '..');
-const dist = path.join(repo, 'dist');
+const out = path.join(repo, 'dist');
+const baseArg = process.argv.slice(2).find((a) => a.startsWith('--base='));
+const base = baseArg ? baseArg.slice(7).replace(/^\/+|\/+$/g, '') : '';
+const dist = base ? path.join(out, base) : out;
+const pre = base ? '/' + base : '';
 const all = fs.readdirSync(repo).filter((d) => fs.existsSync(path.join(repo, d, 'game.js')) && fs.existsSync(path.join(repo, d, 'index.html')));
-const games = process.argv.slice(2).length ? process.argv.slice(2) : all;
+const named = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const games = named.length ? named : all;
 for (const g of games) if (!all.includes(g)) { console.error('找不到游戏目录：' + g); process.exit(2); }
 
-fs.rmSync(dist, { recursive: true, force: true });
+fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
 
 const hash = (buf) => crypto.createHash('md5').update(buf).digest('hex').slice(0, 8);
@@ -54,17 +60,17 @@ for (const g of games) {
 if (fs.existsSync(path.join(repo, 'index.html'))) buildPage(path.join(repo, 'index.html'), repo, dist);
 if (fs.existsSync(path.join(repo, 'share', 'fonts'))) fs.cpSync(path.join(repo, 'share', 'fonts'), path.join(dist, 'share', 'fonts'), { recursive: true });
 // Cloudflare Pages / Workers 静态资源认这个文件（其他托管会忽略它）：缓存规则同 deploy/nginx.conf
-fs.writeFileSync(path.join(dist, '_headers'), [
-  '/*.html', '  Cache-Control: no-cache',
-  '/', '  Cache-Control: no-cache',
-  '/*/', '  Cache-Control: no-cache',
-  '/*/config.js', '  Cache-Control: no-cache',
-  '/share/*', '  Cache-Control: public, max-age=31536000, immutable',
-  '/*/data/*', '  Cache-Control: public, max-age=31536000, immutable',
-  '/*/game.js', '  Cache-Control: public, max-age=31536000, immutable',
+fs.writeFileSync(path.join(out, '_headers'), [
+  pre + '/*.html', '  Cache-Control: no-cache',
+  pre + '/', '  Cache-Control: no-cache',
+  pre + '/*/', '  Cache-Control: no-cache',
+  pre + '/*/config.js', '  Cache-Control: no-cache',
+  pre + '/share/*', '  Cache-Control: public, max-age=31536000, immutable',
+  pre + '/*/data/*', '  Cache-Control: public, max-age=31536000, immutable',
+  pre + '/*/game.js', '  Cache-Control: public, max-age=31536000, immutable',
   '',
 ].join('\n'));
 
 let total = 0;
-(function walk(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); const st = fs.statSync(p); if (st.isDirectory()) walk(p); else total += st.size; } })(dist);
-console.log('已生成 dist/，共 ' + (total / 1024).toFixed(0) + ' KB。');
+(function walk(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); const st = fs.statSync(p); if (st.isDirectory()) walk(p); else total += st.size; } })(out);
+console.log('已生成 dist/' + (base ? base + '/' : '') + '，共 ' + (total / 1024).toFixed(0) + ' KB。');
