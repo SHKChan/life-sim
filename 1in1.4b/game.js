@@ -46,7 +46,20 @@ JY.GAME = {
     wakeBoost: [],
     endTitle: '离世',
     devMode: 'ratio',
+    // 钱和同住的人在 data/economy.js 里算
+    onStat: (g, k, d) => JY.ECON.onStat(g, k, d),
+    yearEnd: (g, age) => JY.ECON.yearEnd(g, age),
+    deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
+    flavorRepeat: true,
   },
+  // 场景里画哪些人、场景下面那行字：和你住在一起的人
+  party: (g) => JY.ECON.party(g),
+  sceneCap: (g) => JY.ECON.sceneCap(g),
+  relTag: (g, id) => (JY.CN.livesWith(g, id) ? '同住' : ''),
+  // simulate.js 的逻辑检查（已婚写成单身、一岁吃牛肉面……），规则在 data/economy.js
+  lint: (g, t, kind) => JY.ECON.lint(g, t, kind),
+  // 这些函数会改“和谁住”“房子”，后果检查把它们当作有后果
+  stateCalls: ['CN.marry', 'CN.haveKid', 'CN.goCity', 'CN.goHome', 'CN.setJob', 'CN.setEdu', 'CN.buyHouse', 'CN.sellHouse', 'CN.liveWith', 'CN.moveOut', 'CN.invest'],
   // 属性怎么显示
   statsUI: {
     bars: [
@@ -56,7 +69,8 @@ JY.GAME = {
       { k: '人缘', cls: 'qing', tip: '和家人、朋友、同事的关系。求人、劝人、留人，看它。' },
     ],
     extras: [
-      { k: '财富', tip: '家底和收入', tier: [[10, '贫困'], [25, '拮据'], [45, '温饱'], [65, '小康'], [85, '宽裕'], [1e9, '富足']] },
+      { k: '财富', tip: '成年前是家境；成年后是你的存款和理财，按人民币显示。房子和欠款在场景下面的小结里。', tier: [[10, '贫困'], [25, '拮据'], [45, '温饱'], [65, '小康'], [85, '宽裕'], [1e9, '富足']],
+        label: (L, g) => (JY.ECON.wealthText(L, g) ? '存款' : '家境'), show: (L, g) => JY.ECON.wealthText(L, g) },
       { k: '事业', tip: '工作上走到了哪一步', tier: [[10, '起步'], [30, '普通'], [55, '骨干'], [80, '出色'], [1e9, '顶尖']] },
     ],
     mood: '心情',

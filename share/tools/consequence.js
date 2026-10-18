@@ -44,6 +44,9 @@ function analyze(JY, dataSrc) {
     if (readFlags.length) return { k: 'flag', d: readFlags.join(',') };
     if (ch.fatal || /\.(kill|die)\(/.test(src)) return { k: 'life', d: 'kill/die' };
     if (/\.(rel|unrel|info|move)\(/.test(src)) return { k: 'state', d: 'rel/info/move' };
+    // 游戏自己的工具函数（game.js 的 stateCalls，例如结婚、买房、搬家）也算有后果
+    const call = ((JY.GAME && JY.GAME.stateCalls) || []).find((name) => src.includes(name + '('));
+    if (call) return { k: 'state', d: call };
     if (flags.length) return { k: 'dead', d: flags.join(',') };
     if (/\.stat\(/.test(src)) return { k: 'stat', d: '' };
     return { k: 'none', d: '' };

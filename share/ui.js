@@ -42,6 +42,8 @@
     ],
     mood: '心境',
   }, T.statsUI || {});
+  // 附属属性的名字：可以随状态变（例如成年前叫“家境”，成年后叫“存款”）
+  const extraLabel = (x, L) => (typeof x.label === 'function' ? x.label(L, G) : x.label || x.k);
   const tierOf = (x, v) => { if (!x.tier) return ''; const t = x.tier.find((p) => v < p[0]) || x.tier[x.tier.length - 1]; return t[1]; };
   const bookOf = (b) => Object.assign({ short: b || '', code: 'BOOK', color: '#888', ink: '#111' }, T.books[b] || {});
   const PRE = T.id + '.';
@@ -79,6 +81,7 @@
     return '<div class="stat ' + cls + '"><span>' + label + '</span><span class="bar"><i style="width:' + v + '%"></i></span><b>' + v + '</b></div>';
   }
   function partyOf(L, c, age) {
+    if (T.party) return T.party(G).filter((id) => G.alive(id)); // 游戏自己定场景里画谁（例如和你住在一起的人）
     if (L.party && L.party.length) return L.party.filter((id) => G.alive(id));
     if (age < 12) return (c.family || []).filter((f) => f.id && G.alive(f.id)).slice(0, 2).map((f) => f.id);
     return [];
@@ -389,8 +392,10 @@
       + '<div class="sub-stats">'
       + SUI.extras.map((x) => {
         const v = L.st[x.k];
+        const shown = x.show && x.show(L, G);
+        if (shown) return '<div><span>' + esc(extraLabel(x, L)) + '</span><b>' + esc(shown) + '</b></div>';
         if (x.signed) return '<div><span>' + x.k + ' ' + (v >= 0 ? x.signed[0] : x.signed[1]) + '</span><b>' + v + '</b><div class="zx"><i style="left:calc(' + (v + 100) / 2 + '% - 1px)"></i></div></div>';
-        return '<div><span>' + x.k + '</span><b>' + (x.tier ? tierOf(x, v) + ' · ' : '') + v + '</b></div>';
+        return '<div><span>' + esc(extraLabel(x, L)) + '</span><b>' + (x.tier ? tierOf(x, v) + ' · ' : '') + v + '</b></div>';
       }).join('')
       + '<div><span>' + T.devName + '</span><b>' + E.devOf(L) + '%</b></div>'
       + '</div></div>';
@@ -398,7 +403,7 @@
 
     /* 中：场景、今年的重心、生平。抉择用弹框，见 decisionModal */
     const party = partyOf(L, c, age);
-    const partyTxt = age < 3 ? '在襁褓里' : party.length ? '与' + party.map((id) => G.name(id)).join('、') : '独自一人';
+    const partyTxt = T.sceneCap ? T.sceneCap(G) : age < 3 ? '在襁褓里' : party.length ? '与' + party.map((id) => G.name(id)).join('、') : '独自一人';
     h += '<div class="col center">';
     h += '<div class="card scene"><canvas class="px" id="scene-cv"></canvas><div class="scene-cap">' + esc(L.locCap) + (loc.desc ? ' · ' + esc(loc.desc) : '') + ' · ' + esc(partyTxt) + '</div></div>';
     if (ui.result && L.year > ui.result.year + 1) ui.result = null;
@@ -458,7 +463,7 @@
       + SUI.bars.map((x) => item(x.cls, x.k, st[x.k], x.tip || '')).join('')
       + item('mod', T.devShort, E.devOf(L) + '%', T.devTip)
       + '</div><div class="frow">'
-      + SUI.extras.map((x) => item('', x.k, (x.tier ? tierOf(x, st[x.k]) + ' ' : '') + st[x.k], x.signed ? (st[x.k] >= 0 ? x.signed[0] : x.signed[1]) : (x.tip || ''))).join('');
+      + SUI.extras.map((x) => item('', extraLabel(x, L), (x.show && x.show(L, G)) || ((x.tier ? tierOf(x, st[x.k]) + ' ' : '') + st[x.k]),x.signed ? (st[x.k] >= 0 ? x.signed[0] : x.signed[1]) : (x.tip || ''))).join('');
     const jump = '<button class="fjump" id="f-jump" data-act="focus-jump" aria-label="查看完整的今年的重心" title="查看完整的今年的重心">详情↓</button>';
     if (age < 6) return h + '<span class="fpick-wrap"><span class="b fpick" aria-disabled="true" title="六岁起可以选每一年的重心">' + E.stage(age) + '</span></span>' + jump + '</div></div>';
     const opts = E.focusOptions(age);
@@ -509,6 +514,8 @@
         dead = !!st.dead;
         v = st.dead ? '已故' : st.unborn ? '' : st.age + ' 岁';
         n = st.t + (f.note ? ' · ' + f.note : '');
+        const tag = T.relTag && !dead ? T.relTag(G, f.id) : '';
+        if (tag) n = tag + ' · ' + n;
       }
       rows.push('<div class="row fam"><span class="k">' + esc(f.rel) + '</span><span class="nm">' + esc(nm) + '</span><span class="v">' + v + '</span><span class="n' + (dead ? ' dead' : '') + '">' + esc(n) + '</span></div>');
     });

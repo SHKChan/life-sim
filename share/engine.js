@@ -36,6 +36,11 @@
     wakeBoost: ['武学', '声望'],      // 中途醒来时按年纪补的属性
     endTitle: '命终',                 // 终局回顾最后一屏的标题
     devMode: 'sum',                   // 改命度怎么算：sum 累加每个改命选项的 dev（封顶 100）；ratio 按“和大多数人不一样的选择”占几成
+    // 以下都是可选的钩子，没写就按原来的规则：
+    // onStat(g, k, d)：g.stat 改属性之前调用，返回 false 表示游戏自己处理了（例如把“财富”换算成钱）
+    // yearEnd(g, age)：每年末、年度重心结算之后调用（记账、同住的人、年度小结）
+    // deathLine(g, id, cause)：别人去世时生平里那一行的写法（例如带上“你的爷爷”和岁数）
+    // flavorRepeat：闲笔都用过一遍以后，允许再用（长寿的人晚年不会一行字都没有）
   }, (JY.GAME && JY.GAME.engine) || {});
   JY.STATS = CONF().stats;
   const KEY = () => ((JY.GAME && JY.GAME.id) || 'game') + '.save.v2';
@@ -85,13 +90,29 @@
       if (W.dead[id] || !JY.byId[id]) return;
       W.dead[id] = { y: G.Y, cause };
       G.chron(JY.byId[id].name + '，' + cause + '。', !canon);
-      if (L) G.log(JY.byId[id].name + '，' + cause + '。', canon ? 'death' : 'wmod');
+      if (L) G.log(deathText(id, cause), canon ? 'death' : 'wmod');
     },
     die(cause) { if (L) L.death = cause; },
     stat(k, d) {
       if (!L || !(k in L.st)) return;
+      const h = CONF().onStat;
+      if (h && h(G, k, d) === false) return;
       const lo = CONF().signedStats.includes(k) ? -100 : 0;
       L.st[k] = clamp(Math.round(L.st[k] + d), lo, 100);
+    },
+    // 直接把属性设成某个值（给 onStat 之类的钩子用，不再触发钩子）
+    setStat(k, v) {
+      if (!L || !(k in L.st)) return;
+      const lo = CONF().signedStats.includes(k) ? -100 : 0;
+      L.st[k] = clamp(Math.round(v), lo, 100);
+    },
+    // 某人在“我”这里怎么称呼：“你的爷爷王建国”。age 为真时加上岁数。不认识就只写名字
+    who(id, age) {
+      const c = JY.byId[id];
+      if (!c) return id;
+      const r = G.knows(id);
+      const a = age && c.born <= G.Y ? '（' + (G.Y - c.born) + ' 岁）' : '';
+      return (r ? '你的' + r : '') + c.name + a;
     },
     log(t, kind) { if (L && t) L.log.push({ y: L.year, a: G.age, t, k: kind || '', loc: L.loc }); },
     chron(t, mod) { if (t) W.chron.push({ y: G.Y, t, mod: !!mod }); },
@@ -147,6 +168,12 @@
 
   /* ---------- 世界推演 ---------- */
   function fate(c) { return val(c.death); }
+  // 别人去世时生平里的那一行
+  function deathText(id, cause) {
+    const h = CONF().deathLine;
+    const t = h ? h(G, id, cause) : '';
+    return t || JY.byId[id].name + '，' + cause + '。';
+  }
 
   function worldYear(Y) {
     const out = [];
@@ -174,10 +201,11 @@
       if (c.exists && !c.exists(G)) return;
       const d = fate(c);
       if (d && d.y <= Y) {
-        W.dead[c.id] = { y: Y, cause: d.cause };
         const t = c.name + '，' + d.cause + '。';
+        const line = L ? deathText(c.id, d.cause) : t; // 先写这一行再记死亡，钩子里还能算出岁数和关系
+        W.dead[c.id] = { y: Y, cause: d.cause };
         if (c.minor !== true) G.chron(t, !!d.mod);
-        out.push({ t, mod: !!d.mod, id: c.id });
+        out.push({ t: line, mod: !!d.mod, id: c.id });
       }
     });
     return out;
@@ -408,7 +436,12 @@
       if (x.sex && x.sex !== c.sex) return false;
       return !x.cond || x.cond(G);
     });
-    if (!fresh.length) return null;
+    if (!fresh.length) {
+      // 都用过了：允许重用，先清掉这些键的“用过”记号
+      if (!CONF().flavorRepeat || pool.every((p) => !L.seen[p.key])) return null;
+      pool.forEach((p) => { delete L.seen[p.key]; });
+      return flavorLine(c, age);
+    }
     const p = pick(fresh);
     L.seen[p.key] = 1;
     const x = p.x;
@@ -426,6 +459,7 @@
     if (F && F.fx) F.fx(G, age);
     const cf = CONF(), H = cf.healthStat, ls = cf.lifespan;
     ls.decline.forEach(([from, d]) => { if (age >= from) G.stat(H, -d); });
+    if (cf.yearEnd) cf.yearEnd(G, age);
     const lines = L.marks[Y] ? 1 : 1 + (Math.random() < 0.55 ? 1 : 0);
     for (let i = 0; i < lines; i++) { const t = flavorLine(c, age); if (t) G.log(t, 'flavor'); }
     if (L.st[H] <= 0) L.death = cf.healthDeath;

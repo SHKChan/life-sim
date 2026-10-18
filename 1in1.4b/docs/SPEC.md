@@ -112,6 +112,50 @@
 | `parentsNear` | `'far'` `'with'` `'back'` | 青年 | 29 岁时怎么照顾爸妈（中年的 `parentsCare` 可以参考它） |
 | `skill` `workStyle` `promoted` `burnout` `last34` | 见 `youth.js` 末尾说明 | 青年 | 手艺、打工头几年怎么过、升没升职、加班还是休息、35 岁前的选择 |
 | `ev*`（如 `evDog` `evLoan` `evHop` `evInvest` `evRentOffer`） | 各意外自己的取值 | `events.js` 的意外 | 意外的选择，由对应的回响意外读。别的阶段不要用 `ev` 开头的键名。`evRentOffer` 为 `true` 时会出现“房东卖房”的抉择，买下会把 `house` 设成 `'mortgage'` |
+| `money0` | 布尔 | `economy.js` | 已经有自己的钱了（十八岁或开始工作起）。之前“财富”表示家境 |
+| `cash` `invest` `investStyle` | 元、元、`'safe'` `'fund'` `'stock'` `'gold'` | `economy.js`，剧情用 `CN.pay` `CN.earn` `CN.invest` `CN.withdraw` | 存款、理财。**剧情不要直接 remember 这几个键**，用工具函数 |
+| `houseVal` `loanBase` | 万 | `economy.js`，剧情用 `CN.buyHouse` `CN.sellHouse` | 房子值多少、贷款本金基数（算每年还款） |
+| `income` | 元 | `economy.js` | 去年全家的收入，只读 |
+| `hh` | id 列表 | `economy.js`，剧情用 `CN.liveWith` `CN.moveOut` | 和你住在一起的人。读用 `CN.livesWith` `CN.alone` `CN.hhCount` `CN.hhText` |
+| `hhPlace` | `''` `'dorm'` `'nursing'` | `economy.js` | 住宿舍、住养老院 |
+| `parentsIn` `leftHome` | 布尔 | `economy.js` | 已经把爸妈接来同住；已经离开爸妈家 |
+| `spWork` | `'home'` | 剧情 | 配偶不上班（全职带孩子），收入按零算 |
+
+### 钱、房子、和谁住（`data/economy.js`）
+
+每一世都要算的账在 `economy.js`，剧情文件直接用 `JY.CN` 上的工具函数：
+
+```js
+CN.fmt(元)                         // '¥3,200'、'¥12.5 万'；界面换成其他语言时显示美元
+CN.cash(g) CN.net(g) CN.income(g)  // 存款、净资产、今年全家的年收入（元）
+CN.pay(g, 元) CN.earn(g, 元)        // 花钱、进账（成年后才有效，未成年时什么都不做）
+CN.price(g, tier)                  // 一套普通住房的价格（万）：一线 600、省会 200、地级市 90、县城 55、农村 25
+CN.buyHouse(g, { tier, city, down, price })  // 买房；down 首付比例（默认 0.3，1 是全款），会扣首付、记房贷
+CN.sellHouse(g)                    // 卖房，钱进存款
+CN.invest(g, 元, 'fund') CN.withdraw(g)       // 理财：safe 存定期、fund 基金、stock 股票、gold 黄金，每年按风险涨跌
+CN.liveWith(g, ['fa', 'mo'])       // 这些人搬来和你住（接爸妈、和孩子住）
+CN.moveOut(g, ['fa'])              // 这些人搬走
+CN.livesWith(g, id) CN.alone(g) CN.hhCount(g) CN.hhText(g)   // 是否同住、是不是一个人住、家里几口人（含自己）、“和妻子、女儿住在一起”
+CN.who(g, id, true)                // “你的爷爷王建国（81 岁）”，提到亲人时用它
+```
+
+- 成年后每年末自动记账：按职业、城市、事业算收入（配偶也算），按家里几口人、城市算开销，交房租，还房贷，存款有利息，理财涨跌。属性“财富”从净资产换算（0–100），所以 `check: ['财富', 50]` 这样的判定照样能用。
+- 旧写法 `g.stat('财富', ±n)` 成年后会换算成一笔钱（一点约等于全家年收入的 6%）。**新写的剧情涉及具体的钱，用 `CN.pay` / `CN.earn` 并在文字里写出金额**（`'花了 ' + CN.fmt(x)`），不要再叠加 `g.stat('财富')`。
+- 金额按 2026 年的物价写，不算通胀。写数之前看一眼 `CN.income(g)`、`CN.cash(g)`，别让存款三万的人一口气掏出五十万；钱不够的选项写 `cond` 或者写成借钱（`g.remember('debt', 欠的万数)`）。
+- 和谁住每年自动对一遍：出生时和爸妈（留守是爷爷奶奶）住，上大学、去外地工作就离家，结婚后配偶住进来，买了房就和爸妈分开，孩子出生就同住、十八岁离家，选了“接爸妈来住”（`parentsCare: 'self'`、`parentsNear: 'with'`）爸妈就搬进来，晚年 `liveWith` 决定住养老院还是和孩子住。场景里画的人、场景下面那行字、家人卡里的“同住”都读它。
+- **写“一个人”“家里冷清”“要不要把爸妈接来”“给你介绍对象”之前，先用 `cond` 或文字变体读状态**：`CN.alone(g)`、`CN.livesWith(g, 'mo')`、`g.recall('love')`。`simulate.js` 的逻辑检查会报“已婚却写成单身”“有人同住却写成独居”“已经和爸妈同住还问要不要接来”。
+- 提到亲人、同龄人去世或出事，用 `CN.who(g, id, true)` 写出关系和岁数。别人去世那一行引擎已经自动写成“你的爷爷王建国病逝，享年 82 岁”。
+
+### 年龄要对得上
+
+- 0 岁不会说话、走路；1 岁才会走、2 岁左右说第一句话；3 岁前不吃大人的饭菜（火锅、牛肉面、烧烤）、不喝奶茶咖啡。
+- 闲笔里写“你吃了一碗……”“你学会了……”“你骑车……”的，写成对象 `{ t, minAge, maxAge }`。地区闲笔（`RG`）默认 `minAge: 6`。
+- 八十五岁以后不跳广场舞、不领舞、不骑车爬山；七十五岁以后不上班加班（返聘写到七十岁为止）。
+- `simulate.js` 会用 `game.js` 的 `lint` 规则检查这些，报“前后矛盾、不合年龄的文字”，必须清零。
+
+### 基调
+
+日子有难处，也有盼头。写难处时给一点暖意或转机（一顿饭、一句话、一件小事办成了），不要一路灰到底。死亡和疾病照写，但别让一世里坏事扎堆。
 
 名帖字段（`g.info`）：`户籍`、`家庭`、`学历`、`职业`、`婚姻`、`住处`、`子女`、`志向`、`心结`、`心愿`、`遗愿`。墓志页和分享卡读 `学历`、`职业`、`婚姻`、`住处`。
 

@@ -110,10 +110,13 @@ function runLife(id, mode) {
   let guard = 0;
   let res = E.peek();
   if (res.type === 'idle') res = E.nextYear();
+  let linted = 0;
   while (guard++ < 400) {
+    lintLog();
     if (res.type === 'death') break;
     if (res.type === 'node') {
       const n = res.node;
+      lintText(n.id, JY.val(n.text), 'node');
       seenNodes[n.id] = (seenNodes[n.id] || 0) + 1;
       const opts = E.choices(n);
       minVisible[n.id] = Math.min(minVisible[n.id] == null ? 99 : minVisible[n.id], opts.length);
@@ -131,6 +134,16 @@ function runLife(id, mode) {
     res = E.nextYear();
   }
   if (guard >= 400) problems.push(id + ' 人生超过 400 年没结束');
+  // 逻辑检查：游戏的 lint 钩子按此刻的状态看每一行生平（例如已婚却写成孤身一人、一岁吃牛肉面）
+  function lintLog() {
+    const L = E.get().L;
+    for (; linted < L.log.length; linted++) { const e = L.log[linted]; if (!/^(world|wmod|intro)$/.test(e.k)) lintText(e.k || 'line', e.t, 'log'); }
+  }
+  function lintText(where, t, kind) {
+    if (!LINT || !t) return;
+    const msg = LINT(JY.G, t, kind);
+    if (msg) { const k = msg + '：' + t.slice(0, 50); lintHits[k] = (lintHits[k] || 0) + 1; }
+  }
   const L = E.get().L;
   const age = L.year - JY.byId[id].born;
   const words = '测试';
@@ -145,6 +158,8 @@ function runLife(id, mode) {
 
 // 随机人生模式：每轮投胎若干次，统计这些人一生的走向
 const RANDOM = !!(JY.GAME && JY.GAME.random);
+const LINT = JY.GAME && JY.GAME.lint;
+const lintHits = {};
 const dist = {};
 const ages = [], devs = [];
 function tally(life) {
@@ -209,6 +224,12 @@ if (sh.length) {
   console.log('\n熟人写成陌生人的奇遇 ' + sh.length + ' 处（奇遇要用 g.knows 写变体，或在 cond 里排除熟人）：');
   sh.sort().forEach((k) => console.log('   ' + k));
   problems.push('有 ' + sh.length + ' 处奇遇把熟人写成陌生人');
+}
+const lh = Object.keys(lintHits);
+if (lh.length) {
+  console.log('\n前后矛盾、不合年龄的文字 ' + lh.length + ' 处（game.js 的 lint 规则）：');
+  lh.sort().slice(0, 80).forEach((k) => console.log('   ' + k + '（' + lintHits[k] + ' 次）'));
+  problems.push('有 ' + lh.length + ' 处文字和此刻的状态矛盾');
 }
 const few = Object.keys(minVisible).filter((k) => minVisible[k] < 2 || maxVisible[k] > 4);
 if (few.length) {
