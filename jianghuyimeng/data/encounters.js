@@ -701,4 +701,167 @@
       paid: { t: '你打听到那伙地痞是城里一家武馆的人。武馆后来关了门，馆主托人送来一封赔罪的信。', fx: (g) => g.stat('悟性', 2) },
     }),
   ]);
+  /* ---------- 晚年（45 岁以后）：收徒、门户、论剑、闭关、著书、归隐、传人 ----------
+   * 人人都会碰到，按门派、声望、武学、去处分出不同的事。
+   * 为了不让一年里抉择扎堆：本人这一年有原著抉择时不来；一件晚年的事之后隔两三年才来下一件（lateNow / lateGap）。
+   * 每件事的选择记在这一世（lt_*），几年后由回响 e_echo_lt_* 兑现。 */
+  const LATE = [];
+  const lateBase = {};
+  const meC = (g) => JY.byId[g.me];
+  const arcYear = (c, n) => (n.y != null ? n.y : c.born + n.age);
+  // 本人的原著剧情都走完了（归隐、传人只在这之后，免得和原著后面的大事打架）
+  const arcDone = (g) => !!g.me && g.Y > JY.engine.lastYear(meC(g));
+  const lateOk = (g, id) => {
+    const S = JY.engine.get(), L = S && S.L;
+    if (!L) return false;
+    if (g.recall('lateNow') === id && g.since('lateNow') === 0) return true; // 今年已经排上了
+    const c = meC(g);
+    if (c.arc.nodes.some((n) => !n.auto && arcYear(c, n) === g.Y && !L.done[n.id])) return false;
+    const s = g.since('lateNow');
+    return s < 0 || s >= (g.recall('lateGap') || 3);
+  };
+  // 同一年只排一件：从这一世随机定下的起点开始，轮到第一件条件满足、还没发生过的
+  const lateFirst = (g, id) => {
+    const L = JY.engine.get().L;
+    const off = pk(g, 'lateOrd', LATE.map((x, i) => i));
+    for (let k = 0; k < LATE.length; k++) {
+      const x = LATE[(off + k) % LATE.length];
+      if (L.done[x] || !lateBase[x](g)) continue;
+      return x === id;
+    }
+    return false;
+  };
+  const late = (e) => {
+    LATE.push(e.id);
+    lateBase[e.id] = e.cond;
+    e.always = true;
+    e.cond = (g) => {
+      if (!lateOk(g, e.id) || !lateBase[e.id](g)) return false;
+      if (g.recall('lateNow') === e.id && g.since('lateNow') === 0) return true;
+      if (!lateFirst(g, e.id)) return false;
+      g.remember('lateNow', e.id);
+      g.remember('lateGap', 2 + Math.floor(g.rnd() * 2));
+      return true;
+    };
+    return e;
+  };
+  const BIG_SECT = /全真|丐帮|峨嵋|武当|少林|明教|昆仑|华山|崆峒|天鹰/;
+  const LT_PUPIL = (g) => pk(g, 'ltPupil', ['一个姓陆的后生', '一个山里来的孤儿', '一个镖师的儿子', '一个书生模样的年轻人', '一个话不多的姑娘']);
+  const LT_PLACE = (g) => pk(g, 'ltPlace', ['泰山', '君山', '黄鹤楼', '嵩山脚下', '洞庭湖上']);
+  const LT_BOOK = (g) => pk(g, 'ltBook', ['一部拳经', '一卷剑谱', '一本内功心法', '一册暗器图谱']);
+  const ngOf = (g) => g.recall('ng') || 0;
+  const pupilName = (g) => LT_PUPIL(g).replace(/^一个/, '');
+
+  JY.addEncounters([
+    late({ id: 'e_late_pupil', y: [-50, 200], minAge: 45, t: '传艺', cond: (g) => g.s('武学') >= 50 && out(g),
+      text: (g) => LT_PUPIL(g) + '跟了你三年，挑水劈柴，从不叫苦。今天' + (/姑娘/.test(LT_PUPIL(g)) ? '她' : '他') + '跪在你面前，说想学真本事。你的功夫，教到几成？',
+      choices: [
+        { t: '倾囊相授', dev: 0, fx: (g) => { g.stat('情义', 3); g.rel('衣钵弟子', pupilName(g), '你倾囊相授'); g.remember('lt_pupil', 'all'); }, res: '你把压箱底的几招也拆开来教了。徒弟练到半夜，你在窗外看着。' },
+        { t: '教七成，留一手', canon: true, fx: (g) => { g.rel('门下弟子', pupilName(g), '跟你学了七成'); g.remember('lt_pupil', 'half'); }, res: '你教了七成。剩下的三成，你想再看看徒弟的心性。' },
+        { t: '只教做人，不教杀人的招', dev: 0, fx: (g) => { g.stat('正邪', 3); g.remember('lt_pupil', 'heart'); }, res: '徒弟学了几套强身的拳脚，还有一肚子你讲的道理。' },
+      ] }),
+    late({ id: 'e_late_sect', y: [-50, 200], minAge: 45, maxAge: 75, t: '长老', cond: (g) => BIG_SECT.test(sect()) && g.s('声望') >= 40,
+      text: (g) => sect() + '里的老一辈走了好几个。门中要推一个人坐执法长老的位子，管门规、断是非。好几双眼睛都看着你。',
+      choices: [
+        { t: '坐上去', check: ['声望', 50], dev: 0, fx: (g) => { g.info('身份', sect() + '长老'); g.remember('lt_sect', 'seat'); }, res: '你坐上了那把椅子。第二天就有人来告状。',
+          fail: { fx: (g) => { g.stat('心境', -3); g.remember('lt_sect', 'lost'); }, res: '推举的时候，站在你身后的人比你想的少。', dev: 0 } },
+        { t: '让给同门', canon: true, fx: (g) => { g.stat('情义', 3); g.remember('lt_sect', 'yield'); }, res: '你把位子让了出去。那人握着你的手，半天没说话。' },
+        { t: '推一个年轻人上去', dev: 0, fx: (g) => { g.stat('声望', 2); g.remember('lt_sect', 'young'); }, res: '老人们都摇头。你说，总要有人接着。' },
+      ] }),
+    late({ id: 'e_late_hall', y: [-50, 200], minAge: 45, maxAge: 75, t: '门户', cond: (g) => !BIG_SECT.test(sect()) && g.s('武学') >= 55 && g.s('声望') >= 30 && out(g),
+      text: '常有人上门求教。有个老朋友劝你：不如挂一块匾，收几个徒弟，自己开一处门户。',
+      choices: [
+        { t: '挂匾，开门收徒', dev: 0, fx: (g) => { g.info('身份', '一派之主'); g.remember('lt_hall', 'open'); }, res: '匾挂上的那天，来了十几个人。一半是来拜师的，一半是来看热闹的。' },
+        { t: '不开，照旧过日子', canon: true, fx: (g) => { g.stat('心境', 2); g.remember('lt_hall', 'no'); }, res: '你把老朋友送到门口。他走远了还回头喊，说你这人没出息。' },
+        { t: '只在村口教孩子们扎马步', dev: 0, fx: (g) => { g.stat('情义', 3); g.remember('lt_hall', 'kids'); }, res: '每天天一亮，村口就站着一排孩子，腿抖得像筛糠。' },
+      ] }),
+    late({ id: 'e_late_lunjian', y: [-50, 200], minAge: 45, maxAge: 80, t: '论剑', cond: (g) => g.s('武学') >= 70 && g.s('声望') >= 40 && out(g) && ![22, 57].includes(g.Y),
+      text: (g) => '江湖上的人约在' + LT_PLACE(g) + '比武论剑，请帖送到了你手上。帖子上写着：天下英雄，一较高低。',
+      choices: [
+        { t: '去，争个名次', check: ['武学', 82], dev: 0, fx: (g) => { g.stat('声望', 5); g.remember('lt_lj', 'won'); }, res: (g) => '你在' + LT_PLACE(g) + '连胜三场。下山时，满山的人都认得你了。',
+          fail: { fx: (g) => { g.stat('根骨', -4); g.stat('声望', -2); g.remember('lt_lj', 'lost'); }, res: '你输在一个年轻人手里。他收招的时候，朝你行了一礼。', dev: 0 } },
+        { t: '去，只看不比', canon: true, fx: (g) => { g.stat('悟性', 2); g.remember('lt_lj', 'watch'); }, res: '你坐在人群里看了三天。有一招，你记了下来。' },
+        { t: '不去', dev: 0, fx: (g) => { g.stat('心境', 2); g.remember('lt_lj', 'skip'); }, res: '你把请帖压在茶碗底下。茶凉了，你也没再看它。' },
+      ] }),
+    late({ id: 'e_late_guan', y: [-50, 200], minAge: 45, maxAge: 85, t: '闭关', cond: (g) => g.s('武学') >= 60,
+      text: (g) => (g.recall('zhm') ? '那年走火入魔的事，你还记得。' : '') + '你觉得功夫卡在一道关口上，好几年没有长进。闭关，能冲过去；冲不过去，伤的是自己。',
+      choices: [
+        { t: '闭死关，三年不出', check: ['心境', 55], dev: 0,
+          fx: (g) => { g.stat('武学', 6); g.remember('ng', Math.min(100, ngOf(g) + 12)); g.remember('lt_guan', 'out'); }, res: '三年后你推开石门，阳光刺得睁不开眼。你知道，那道关过去了。',
+          fail: { fx: (g) => { g.stat('根骨', -8); g.remember('ns', Math.min(3, (g.recall('ns') || 0) + 1)); g.remember('lt_guan', 'hurt'); }, res: '第二年冬天，你在关里吐了一口血。外面的人撞开门，把你抬了出来。', dev: 0 } },
+        { t: '闭关一季，量力而行', canon: true, fx: (g) => { g.stat('武学', 2); g.remember('ng', Math.min(100, ngOf(g) + 4)); g.remember('lt_guan', 'short'); }, res: '一季下来，关口松动了一点。' },
+        { t: '不闭关了，这个年纪随它去', dev: 0, fx: (g) => { g.stat('心境', 4); g.remember('lt_guan', 'no'); }, res: '你把蒲团收进了柜子。' },
+      ] }),
+    late({ id: 'e_late_book', y: [-50, 200], minAge: 50, t: '著书', cond: (g) => g.s('武学') >= 60 && g.s('悟性') >= 45,
+      text: (g) => '你这一辈子琢磨出来的东西，都在你脑子里。你要是走了，它们也就没了。有人劝你写成' + LT_BOOK(g) + '。',
+      choices: [
+        { t: '写下来，留给后人', dev: 0, fx: (g) => { g.info('著述', LT_BOOK(g).replace(/^一/, '')); g.remember('lt_book', 'book'); }, res: '你写了一个冬天，磨秃了三支笔。' },
+        { t: '写好了又烧掉', dev: 0, fx: (g) => { g.stat('心境', 3); g.remember('lt_book', 'burn'); }, res: '你看着纸页在火里卷起来。武功落到坏人手里，比失传更糟。' },
+        { t: '不写，口传给信得过的人', canon: true, fx: (g) => { g.stat('情义', 2); g.remember('lt_book', 'oral'); }, res: '你讲，那人背。一个字一个字地背。' },
+      ] }),
+    late({ id: 'e_late_retire', y: [-50, 200], minAge: 55, t: '归隐', cond: (g) => arcDone(g) && g.s('声望') >= 25 && out(g),
+      text: '江湖上的新面孔越来越多，你认得的人越来越少。这一天，你收拾好行李，站在门口想了很久。',
+      choices: [
+        { t: '找一座山，隐居', dev: 0, fx: (g) => { g.move('hut'); g.info('身份', '隐士'); g.remember('lt_ret', 'hide'); }, res: '你在山里搭了几间草屋。来路上的脚印，第二天就被雪盖住了。' },
+        { t: '回故乡去', dev: 0, fx: (g) => { g.move(meC(g).home); g.remember('lt_ret', 'home'); }, res: '你走了一个多月。村口的路，比你记得的窄。' },
+        { t: '留在江湖，哪也不去', canon: true, fx: (g) => { g.stat('声望', 1); g.remember('lt_ret', 'stay'); }, res: '你把行李又解开了。' },
+      ] }),
+    late({ id: 'e_late_heir', y: [-50, 200], minAge: 62, t: '传人', cond: (g) => arcDone(g) && g.s('武学') >= 50,
+      text: '你最近常常觉得累。一身功夫、几件旧物，总要交给一个人。',
+      choices: [
+        { t: '交给你的徒弟', cond: (g) => g.recall('lt_pupil') === 'all' || g.recall('lt_pupil') === 'half', canon: true,
+          fx: (g) => { g.info('传人', pupilName(g)); g.remember('lt_heir', 'pupil'); }, res: '你把旧剑交到徒弟手里。徒弟双手接着，手在抖。' },
+        { t: '下山挑一个少年', dev: 0, fx: (g) => { g.info('传人', '山下挑来的少年'); g.remember('lt_heir', 'boy'); }, res: '你在集上看了半个月，挑中一个替人出头挨了打的孩子。' },
+        { t: '谁也不传，带走', cond: (g) => g.recall('lt_pupil') !== 'all' && g.recall('lt_pupil') !== 'half', canon: true, fx: (g) => { g.stat('心境', 2); g.remember('lt_heir', 'none'); }, res: '你想，江湖上的功夫够多了，不差你这一门。' },
+        { t: '写信给老朋友，托他代你挑', dev: 0, fx: (g) => { g.stat('情义', 2); g.remember('lt_heir', 'friend'); }, res: '信送出去了。你不知道回信来时，自己还在不在。' },
+      ] }),
+  ]);
+
+  /* ---------- 晚年的回响 ---------- */
+  JY.addEncounters([
+    echo('e_echo_lt_pupil', (g) => [g.recall('lt_pupil'), g.since('lt_pupil')], '弟子', 6, 50, {
+      all: { t: (g) => '你的衣钵弟子出师了，在江湖上打出了名头。人家问起师承，徒弟总是先报你的名字。', fx: (g) => g.stat('声望', 4) },
+      half: { t: '你的徒弟和人比武，输在你没教的那一招上。徒弟回来问你，你没有说话。那天夜里，你把剩下的三成也教了。', fx: (g) => { g.stat('心境', -2); g.stat('情义', 2); } },
+      heart: { t: '灾年，你那个只学了强身拳脚的徒弟开仓放粮。乡里人给你送来一块匾，你挂在了柴房里。', fx: (g) => g.stat('正邪', 4) },
+    }),
+    echo('e_echo_lt_sect', (g) => [g.recall('lt_sect'), g.since('lt_sect')], '门中', 5, 50, {
+      seat: { t: '你管了几年门里的事，头发白得快。门规严了，来拜师的人也多了。', fx: (g) => { g.stat('声望', 3); g.stat('心境', -2); } },
+      lost: { t: '当年没推你的人，有两个来向你赔不是。你给他们倒了茶。', fx: (g) => g.stat('心境', 3) },
+      yield: { t: '坐了那个位子的同门，凡有大事都先来问你。', fx: (g) => g.stat('情义', 3) },
+      young: { t: '你推上去的那个年轻人，把门里打理得井井有条。老人们不再摇头了。', fx: (g) => g.stat('声望', 2) },
+    }),
+    echo('e_echo_lt_hall', (g) => [g.recall('lt_hall'), g.since('lt_hall')], '门户', 5, 50, {
+      open: { t: '你的门户有了二十几个弟子。逢年过节，院子里坐不下。', fx: (g) => { g.stat('声望', 3); g.stat('情义', 2); } },
+      no: { t: '那个劝你开门户的老朋友又来了。这回他只带了一壶酒，什么也没劝。', fx: (g) => g.stat('心境', 2) },
+      kids: { t: '当年村口扎马步的孩子里，有一个去从了军。他回乡时，先来给你磕了个头。', fx: (g) => g.stat('情义', 3) },
+    }),
+    echo('e_echo_lt_lj', (g) => [g.recall('lt_lj'), g.since('lt_lj')], '论剑之后', 4, 50, {
+      won: { t: '论剑之后，常有年轻人上门讨教。你一年要打发十几个。', fx: (g) => g.stat('声望', 2) },
+      lost: { t: '那一场输了以后，你把那一招拆了几年，今年终于拆明白了。', fx: (g) => g.stat('武学', 3) },
+      watch: { t: '你在论剑时记下的那一招，今年在你手里变了个样子。', fx: (g) => g.stat('武学', 2) },
+      skip: { t: '听说那年论剑，有人打断了腿，有人结了仇。你庆幸自己没去。', fx: (g) => g.stat('心境', 2) },
+    }),
+    echo('e_echo_lt_guan', (g) => [g.recall('lt_guan'), g.since('lt_guan')], '出关以后', 3, 50, {
+      out: { t: '出关以后，你走路没有声音了。年轻人和你过招，总说看不清你的手。', fx: (g) => g.stat('声望', 2) },
+      hurt: { t: '闭关落下的伤，一到冬天就发作。你咳着嗽，还是每天打坐。', fx: (g) => g.stat('根骨', -2) },
+      short: { t: '那一季闭关松动的关口，今年自己开了。', fx: (g) => g.stat('武学', 2) },
+      no: { t: '你不再闭关以后，睡得比从前好。', fx: (g) => g.stat('根骨', 1) },
+    }),
+    echo('e_echo_lt_book', (g) => [g.recall('lt_book'), g.since('lt_book')], '那部书', 6, 55, {
+      book: { t: '你写下的东西被人传抄了好几份。有人照着练成了，也有人练岔了气。', fx: (g) => g.stat('声望', 4) },
+      burn: { t: '有人上门求你写的东西。你说烧了，他不信，在门口坐了三天才走。', fx: (g) => g.stat('心境', 1) },
+      oral: { t: '你口传的那个人，把你的话一句一句背给你听，一个字也没错。', fx: (g) => g.stat('情义', 3) },
+    }),
+    echo('e_echo_lt_ret', (g) => [g.recall('lt_ret'), g.since('lt_ret')], '晚景', 3, 55, {
+      hide: { t: '山下的人只知道山上住着一个会治跌打的老人，没人知道你是谁。', fx: (g) => g.stat('心境', 5) },
+      home: { t: '故乡的老人大多不在了。你在老屋前坐了一下午，有个孩子给你端来一碗水。', fx: (g) => g.stat('情义', 2) },
+      stay: { t: '江湖上新起来的那些人，你一个也不认得了。他们倒都认得你。', fx: (g) => g.stat('声望', 1) },
+    }),
+    echo('e_echo_lt_heir', (g) => [g.recall('lt_heir'), g.since('lt_heir')], '传人', 3, 64, {
+      pupil: { t: '你的传人在江湖上走动，用的是你教的功夫。有人认出来，说这一路功夫，多年没见过了。', fx: (g) => g.stat('心境', 3) },
+      boy: { t: '你挑的那个少年，练功比谁都笨，也比谁都肯下死力气。你看着他，想起年轻时的自己。', fx: (g) => g.stat('心境', 3) },
+      none: { t: '你的功夫，这世上只剩你一个人会了。你不觉得可惜。', fx: (g) => g.stat('心境', 2) },
+      friend: { t: '老朋友回信了，信里写着一个少年的名字。少年跟着信后脚就到了。', fx: (g) => { g.stat('情义', 2); g.info('传人', '老朋友荐来的少年'); } },
+    }),
+  ]);
 })();

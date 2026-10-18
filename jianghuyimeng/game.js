@@ -5,12 +5,21 @@
 window.JY = window.JY || {};
 window.JY.GAME = {
   id: 'jianghuyimeng',              // 存档键名前缀，每个游戏不同
-  version: '1.3.0',                 // 显示在每页底部；发布新内容时改
+  version: '1.4.0',                 // 显示在每页底部；发布新内容时改
   title: '江湖一梦',
   titleHtml: '江湖<i>一</i>梦',      // 标题里 <i> 包住的字用品牌色
   brand: '#c8566a',                 // 品牌色：标题强调字、少量按钮
   intro: '射雕、神雕、倚天，三部书放进同一个江湖。你会重生成书里有名有姓的一个人，一年一年活到命终。你知道这个人原本的结局，可以照着走，也可以改。改掉的事会留在这个江湖里，下一世还看得到。',
   freshLine: '<b>一个新的江湖。</b>纪年从郭靖出生那年算起。',
+
+  wakeAge: 10,                      // 默认从 10 岁醒来（之前的年份照原著过完）；首页可以勾“从出生开始”
+
+  // 规则：寿限 = base + 根骨 × k。内功深的人老得慢（data/world.js 的 JY.CULTIVATE，每年末结算练功、内伤、走火入魔）
+  engine: {
+    lifespan: { base: 62, k: 0.4, rate: 0.025, decline: [[50, 1], [68, 1]] },
+    hookDeathFirst: true,
+    yearEnd: (g, age) => { if (window.JY.CULTIVATE) window.JY.CULTIVATE(g, age); },
+  },
 
   // 界面用词
   year: '纪年',                     // 年份前缀：纪年 18

@@ -48,6 +48,7 @@
     // yearEnd(g, age)：每年末、年度重心结算之后调用（记账、同住的人、年度小结）
     // deathLine(g, id, cause)：别人去世时生平里那一行的写法（例如带上“你的爷爷”和岁数）
     // flavorRepeat：闲笔都用过一遍以后，允许再用（长寿的人晚年不会一行字都没有）
+    // hookDeathFirst：yearEnd 钩子里 g.die 的死法优先，不再被“伤病”“寿终”覆盖
   }, (JY.GAME && JY.GAME.engine) || {});
   JY.STATS = CONF().stats;
   const KEY = () => ((JY.GAME && JY.GAME.id) || 'game') + '.save.v2';
@@ -275,9 +276,17 @@
     return true;
   });
 
-  E.startLife = (id) => {
+  // 醒来的那一年。opts.fromAge（可选）：不从出生开始，从这个年纪醒来，之前的年份按原著结算（不晚于原著最后一个节点和原定死期）
+  E.wakeYear = (c, opts) => {
+    const s = E.startYear(c), a = opts && opts.fromAge;
+    if (!a || !c.arc) return s;
+    const d = fate(c);
+    const cap = Math.min(E.lastYear(c), d ? d.y - 1 : 1e9);
+    return Math.max(s, Math.min(c.born + a, cap));
+  };
+  E.startLife = (id, opts) => {
     const c = JY.byId[id];
-    const start = E.startYear(c);
+    const start = E.wakeYear(c, opts);
     L = null;
     const from = W.chron.length;
     for (let Y = W.year + 1; Y <= start - 1; Y++) { W.year = Y; worldYear(Y); npcYear(Y); }
@@ -291,15 +300,20 @@
     };
     JY.STATS.forEach((k, i) => { L.st[k] = c.st[i]; });
     // 中途醒来：之前的节点按原著走过，只结算属性与去处
+    // mine：这些年里自己走过的节点，醒来页上列一列（年纪、标题、原著选了什么、结果）
+    const mine = [];
+    const first = (x) => { const t = String(val(x) || ''); const m = t.match(/^[^。！？]*[。！？]/); return m ? m[0] : t; };
     quiet = true;
     c.arc.nodes.forEach((n) => {
       if (nodeYear(c, n) >= start) return;
       L.done[n.id] = 1;
       if (n.cond && !n.cond(G)) return;
       if (n.loc) G.move(n.loc);
-      if (n.auto) { if (n.fx) n.fx(G); return; }
+      const my = nodeYear(c, n);
+      if (n.auto) { if (n.fx) n.fx(G); mine.push({ y: my, age: my - c.born, t: n.t, text: first(n.text) }); return; }
       const ch = n.choices.find((x) => x.canon && !x.fatal && (!x.cond || x.cond(G)));
       if (ch && ch.fx) ch.fx(G);
+      if (ch) mine.push({ y: my, age: my - c.born, t: n.t, c: val(ch.t), text: first(ch.res) });
     });
     quiet = false;
     if (start > c.born) {
@@ -319,8 +333,9 @@
     L.intro = val(c.arc.intro);
     L.startLoc = L.loc;
     G.log(L.intro, 'intro');
+    if (opts && opts.fromAge && start > c.born) G.log(tt('这些年照{c}过去了。你醒来时，已经 {n} 岁。', { c: tt((JY.GAME && JY.GAME.canon) || '原著'), n: start - c.born }), 'intro');
     E.save();
-    return { before, start };
+    return { before, start, mine };
   };
 
   E.defaultFocus = (c, age) => {
@@ -472,7 +487,8 @@
     if (cf.yearEnd) cf.yearEnd(G, age);
     const lines = L.marks[Y] ? 1 : 1 + (Math.random() < 0.55 ? 1 : 0);
     for (let i = 0; i < lines; i++) { const t = flavorLine(c, age); if (t) G.log(t, 'flavor'); }
-    if (L.st[H] <= 0) L.death = cf.healthDeath;
+    if (L.death && cf.hookDeathFirst) { /* yearEnd 钩子里定下的死法（例如走火入魔）不被寿终覆盖 */ }
+    else if (L.st[H] <= 0) L.death = cf.healthDeath;
     else {
       const lim = ls.base + L.st[H] * ls.k;
       if (age > lim && Math.random() < (age - lim) * ls.rate) L.death = cf.naturalDeath;

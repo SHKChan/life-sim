@@ -72,6 +72,7 @@
   const ui = {
     screen: 'home', speed: Number(store.get(PRE + 'speed')) || 1, paused: false, auto: false, timer: null,
     shown: 0, pending: null, result: null, wake: null, life: null, words: null,
+    fromBirth: store.get(PRE + 'fromBirth') === '1', // 游戏设了 wakeAge 时，首页可以改回“从出生开始”
     drawer: false, drawerMod: false, confirm: false, logAll: false,
     review: null, reviewTimer: null, share: null, peek: false,
     frac: 0, yBase: 0, autoT: null, feedback: null,
@@ -352,8 +353,11 @@
     ui.review = null;
     render();
   }
+  // 游戏的 wakeAge：默认从这个年纪醒来，之前的年份按原著结算；首页勾了“从出生开始”就不用
+  const wakeOpts = () => (T.wakeAge && !T.random && !ui.fromBirth ? { fromAge: T.wakeAge } : undefined);
+  const wakeYearOf = (c) => (E.wakeYear ? E.wakeYear(c, wakeOpts()) : E.startYear(c));
   function start(id) {
-    ui.wake = id ? E.startLife(id) : E.startRandom();
+    ui.wake = id ? E.startLife(id, wakeOpts()) : E.startRandom();
     ui.screen = 'wake';
     ui.shown = 0; ui.pending = null; ui.result = null; ui.logAll = false;
     render();
@@ -397,7 +401,7 @@
       + '<p>' + esc(T.intro) + '</p></div>'
       + '<div>' + themeBtn('h-theme', true) + '</div></div>';
     h += '<div class="world-line">';
-    if (fresh) h += '<span>' + esc(T.freshLine) + '</span>';
+    if (fresh) h += '<span>' + T.freshLine + '</span>'; // 游戏自己写的用词，可以带 <b>
     else if (T.random) h += '<span>' + t('已经活过 <b>{n}</b> 世', { n: W.lives.length }) + '</span>';
     else h += '<span><b>' + esc(T.world + T.year) + ' ' + Math.max(0, W.year) + '</b> · ' + esc(t(E.era(W.year))) + ' · ' + t('已经活过 {n} 世', { n: W.lives.length }) + '</span>';
     if (L) {
@@ -416,10 +420,12 @@
         + '<button class="b" id="h-reset-yes" data-act="reset-yes">' + t('清空并重开') + '</button><button class="b" id="h-reset-no" data-act="reset-no">' + t('算了') + '</button></div>';
     }
     if (!L && !T.random) {
-      h += '<section><div class="section-h"><h2>' + esc(T.pickTitle) + '</h2><span>' + (avail.length ? esc(t('{n} 人可选。已经死去或已经活过的人不能再选；{y}已过的人，会从现在的年纪醒来。', { n: avail.length, y: T.year })) : '') + '</span></div>';
+      h += '<section><div class="section-h"><h2>' + esc(T.pickTitle) + '</h2><span>' + (avail.length ? esc(t('{n} 人可选。已经死去或已经活过的人不能再选；{y}已过的人，会从现在的年纪醒来。', { n: avail.length, y: T.year })) : '') + '</span>'
+        + (T.wakeAge && avail.length ? '<button class="b" id="h-birth" data-act="from-birth" aria-pressed="' + ui.fromBirth + '" title="' + esc(t('不勾时从 {n} 岁醒来，之前的年份照{c}过完。', { n: T.wakeAge, c: T.canon })) + '">' + (ui.fromBirth ? '☑ ' : '☐ ') + esc(t('从出生开始')) + '</button>' : '')
+        + '</div>';
       if (avail.length) {
         h += '<div class="picks">' + avail.map((c) => {
-          const s = E.startYear(c), a = s - c.born;
+          const s = wakeYearOf(c), a = s - c.born;
           return '<button class="pick" id="pick-' + c.id + '" data-act="start" data-id="' + c.id + '">'
             + '<canvas class="px" data-portrait="' + c.id + '" data-age="' + Math.max(18, a) + '"></canvas>'
             + '<div><div class="nm">' + esc(c.name) + '</div><div class="meta">' + esc(bookOf(c.book).short) + ' · ' + esc(t(c.sex)) + ' · ' + esc(t('生于{y}', { y: yearText(c.born) }))
@@ -450,6 +456,13 @@
       h += card(esc(t('你醒来之前的{w}', { w: T.world })), esc(t('{n} 件事', { n: before.length })),
         '<ul class="before">' + last.map((e) => '<li class="' + (e.mod ? 'mod' : '') + '">' + esc(yearText(e.y) + ' · ' + e.t) + '</li>').join('') + '</ul>'
         + (before.length > last.length ? '<p class="empty" style="padding:8px 0 0">' + esc(t('更早的事在{w}大事记里。', { w: T.world })) + '</p>' : ''));
+    }
+    const mine = (ui.wake.mine || []).filter((m) => m.c || m.text);
+    if (mine.length) {
+      // 醒来之前自己走过的那些年（按原著）
+      const ml = mine.slice(-12);
+      h += card(esc(t('醒来之前的你')), esc(t('{n} 件事，照{c}走过', { n: mine.length, c: T.canon })),
+        '<ul class="before">' + ml.map((m) => '<li>' + esc(ageText(m.age) + ' · ' + (/岁$/.test(m.t) ? '' : m.t + ' · ') + (m.c ? m.c + '。' : '') + (m.text || '')) + '</li>').join('') + '</ul>');
     }
     h += '<div class="card"><div class="id-body" style="padding:0"><canvas class="px" data-portrait="' + c.id + '" data-age="' + age + '"></canvas><div>'
       + '<div class="id-name">' + esc(c.name) + '</div><div style="color:var(--muted);font-size:14px">' + [bookOf(c.book).short, t(c.sex), c.birthplace, age <= 0 ? t('刚刚出生') : t('醒来时 {n} 岁', { n: age })].filter(Boolean).map(esc).join(' · ') + '</div></div></div>'
@@ -843,6 +856,7 @@
       }
       case 'random': { const av = E.available(); if (av.length) start(av[Math.floor(Math.random() * av.length)].id); break; }
       case 'start': start(d.id); break;
+      case 'from-birth': ui.fromBirth = !ui.fromBirth; store.set(PRE + 'fromBirth', ui.fromBirth ? '1' : '0'); render(); break;
       case 'reborn': start(null); break;
       case 'begin': begin(); break;
       case 'resume': resume(); break;
