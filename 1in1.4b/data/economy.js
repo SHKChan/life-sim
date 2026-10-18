@@ -415,12 +415,16 @@
     g.remember('petNow', p);
     return p;
   };
+  // 童年收养的那只：名字和童年剧情里的一样（childhood.js 的 CN.kidPetName）；农村多是狗，城里多是猫
+  function adoptKidPet(g) { CN.adoptPet(g, g.recall('hukou') === 'rural' ? 'dog' : 'cat', CN.kidPetName ? CN.kidPetName(g) : undefined); return []; }
   function pets(g) {
     const out = [];
     let p = CN.pet(g);
     // 旧剧情里刚选了收养
     if (!p) {
-      const k = g.since('kidPet') === 0 && g.recall('kidPet') === 'kept' ? 'dog' : g.since('evDog') === 0 && g.recall('evDog') === 'kept' ? 'dog'
+      const kid = g.since('kidPet') === 0 && g.recall('kidPet') === 'kept';
+      if (kid) return out.concat(adoptKidPet(g));
+      const k = g.since('evDog') === 0 && g.recall('evDog') === 'kept' ? 'dog'
         : g.since('evCat') === 0 && g.recall('evCat') === 'adopted' ? 'cat' : g.since('pet') === 0 && g.recall('pet') === 'dog' ? 'dog'
           : g.since('kidPlan') === 0 && g.recall('kidPlan') === 'dink' ? 'cat' : '';
       if (k) p = CN.adoptPet(g, k);

@@ -64,7 +64,7 @@ JY.GAME = {
   // simulate.js 的逻辑检查（已婚写成单身、一岁吃牛肉面……），规则在 data/economy.js
   lint: (g, t, kind) => JY.ECON.lint(g, t, kind),
   // 这些函数会改“和谁住”“房子”，后果检查把它们当作有后果
-  stateCalls: ['CN.marry', 'CN.haveKid', 'CN.goCity', 'CN.goHome', 'CN.setJob', 'CN.setEdu', 'CN.buyHouse', 'CN.sellHouse', 'CN.liveWith', 'CN.moveOut', 'CN.invest'],
+  stateCalls: ['CN.marry', 'CN.haveKid', 'CN.goCity', 'CN.goHome', 'CN.setJob', 'CN.setEdu', 'CN.buyHouse', 'CN.sellHouse', 'CN.liveWith', 'CN.moveOut', 'CN.invest', 'CN.adoptPet'],
   // 属性怎么显示
   statsUI: {
     bars: [

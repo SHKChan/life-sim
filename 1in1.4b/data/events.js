@@ -129,14 +129,14 @@
         { t: '删掉，关掉评论', dev: 15, fx: (g) => { g.stat('心情', 1); g.remember('evViral', 'deleted'); }, res: '有人截了图，转了好几轮。慢慢地，也就没人提了。' },
       ] },
     { id: 'e_subway_faint', y: Y, minAge: 16, maxAge: 72, t: '晕倒的人', cond: (g) => tier(g) <= 3,
-      text: '早高峰的地铁上，一个中年男人突然倒在你脚边，脸色发青。车厢里的人都往后退。',
+      text: (g) => pk(g, ['早高峰的地铁上', '晚高峰的地铁上', '周末的地铁上'], 88) + '，一个' + pk(g, ['中年男人', '穿工装的大叔', '背着电脑包的年轻人'], 89) + '突然倒在你脚边，脸色发青。车厢里的人都往后退。',
       choices: [
         { t: '大声喊人，打急救电话', canon: true, fx: (g) => { g.stat('人缘', 1); g.remember('evFaint', 'called'); }, res: '列车到站，急救的人冲了进来。他被抬上担架的时候，手指动了一下。' },
         { t: '跪下来给他做心肺复苏', dev: 30, check: ['学识', 45], fx: (g) => { g.stat('人缘', 4); g.set('evSavedLife'); g.remember('evFaint', 'cpr'); }, res: '按到第三轮，他咳了一声，睁开了眼睛。',
           fail: { fx: (g) => { g.stat('心情', -4); g.remember('evFaint', 'tried'); }, res: '你按了很久，直到急救的人接手。后来你一直不知道他有没有活下来。' } },
         { t: '低头看手机，等别人处理', dev: 0, fx: (g) => { g.stat('心情', -2); g.remember('evFaint', 'away'); }, res: '下一站，你换了一节车厢。' },
       ] },
-    { id: 'e_lottery', y: Y, minAge: 18, maxAge: 85, t: '彩票', cond: (g) => money(g), text: '楼下彩票站的老板说，昨天这里刚出了个二等奖。',
+    { id: 'e_lottery', y: Y, minAge: 18, maxAge: 85, t: '彩票', cond: (g) => money(g), text: (g) => pk(g, ['楼下彩票站的老板说，昨天这里刚出了个二等奖。', '公司楼下新开了一家彩票站，门口贴着红纸：本站喜中二等奖。', '你在便利店排队结账，前面的大爷一口气买了二十注。', '家族群里有人发了一张彩票，说是梦里梦见的号码。'], 80),
       choices: [
         { t: '不买，走了', canon: true, fx: (g) => { g.remember('evLottery', 'never'); }, res: '你买了一瓶水就走了。' },
         { t: '买两注，就当买个盼头', dev: 10, fx: (g) => { if (g.rnd() < 0.03) { CN.earn(g, 160000); g.stat('心情', 8); g.remember('evLottery', 'won'); } else { CN.pay(g, 4); g.remember('evLottery', 'habit'); } },
@@ -200,16 +200,16 @@
         { t: '拿一半存款追进去', dev: 20, fx: (g) => { const a = CN.invest(g, round(cash(g) / 2, 1000), 'stock'); g.stat('心情', 2); g.remember('evInvest', 'chased'); g.remember('evInvestAmt', a); }, res: (g) => '你买进了 ' + fmt(g.recall('evInvestAmt')) + '。第二天它涨了两个点，你一晚上看了三十次手机。' },
         { t: '每月定投一点，十年不看', dev: 15, fx: (g) => { const a = CN.invest(g, round(cash(g) * 0.2, 1000), 'fund'); g.remember('evInvest', 'dca'); g.remember('evInvestAmt', a); }, res: '你设好了自动扣款，然后卸载了那个软件。' },
       ] },
-    { id: 'e_cat_adopt', y: Y, minAge: 20, maxAge: 80, t: '流浪猫', text: '小区的流浪猫生了一窝小猫。物业贴出通知，下周要统一清理。',
+    { id: 'e_cat_adopt', y: Y, minAge: 20, maxAge: 80, t: '流浪猫', cond: (g) => !CN.pet(g), text: (g) => pk(g, ['小区的车棚里', '单位锅炉房的后面', '楼下的灌木丛里'], 81) + '，流浪猫生了一窝小猫。' + pk(g, ['物业贴出通知，下周要统一清理。', '有人在群里说太吵了，该处理掉。', '天越来越冷，夜里能听见它们叫。'], 82),
       choices: [
         { t: '领养一只', dev: 15, fx: (g) => { g.stat('心情', 4); g.remember('evCat', 'adopted'); }, res: '它是一只三花，第一天就钻进了你的被窝。' },
         { t: '在业主群里帮它们找主人', dev: 10, fx: (g) => { g.stat('人缘', 2); g.remember('evCat', 'rehomed'); }, res: '五只小猫，三天就被领走了。' },
         { t: '和别人一样看看就走', canon: true, fx: (g) => g.stat('心情', -1), res: '下个星期，猫窝空了。' },
       ] },
-    { id: 'e_neighbor', y: Y, minAge: 22, maxAge: 80, t: '楼上', cond: (g) => tier(g) <= 4, text: '楼上新搬来一户人家，每天晚上十一点开始拖椅子。',
+    { id: 'e_neighbor', y: Y, minAge: 22, maxAge: 80, t: '楼上', cond: (g) => tier(g) <= 4, text: (g) => '楼上新搬来一户人家，' + ['每天晚上十一点开始拖椅子。', '半夜总有咚咚的声音，一下一下的。', '天天晚上弹钢琴，弹到十一点。'][Math.floor(rr(g, 84) * 3)],
       choices: [
         { t: '忍一忍，买副耳塞', canon: true, fx: (g) => { g.stat('心情', -1); g.remember('evNeighbor', 'endured'); }, res: '耳塞很管用，就是早上的闹钟也听不见了。' },
-        { t: '拎一袋水果上门聊聊', dev: 15, fx: (g) => { g.stat('人缘', 3); g.remember('evNeighbor', 'friend'); }, res: '开门的是个老太太，说她孙子晚上在家练跳绳。她给你泡了一杯茶。' },
+        { t: '拎一袋水果上门聊聊', dev: 15, fx: (g) => { g.stat('人缘', 3); g.remember('evNeighbor', 'friend'); }, res: (g) => ['开门的是个老太太，说她腿脚不好，椅子是拖着走的。她给你泡了一杯茶。', '开门的是个老太太，说她孙子晚上在家练跳绳。她给你泡了一杯茶。', '开门的是个小姑娘，说下个月考级。她妈妈给你泡了一杯茶，说以后九点就停。'][Math.floor(rr(g, 84) * 3)] },
         { t: '拿扫把杆捅天花板', dev: 15, fx: (g) => { g.stat('心情', 1); g.stat('人缘', -2); g.remember('evNeighbor', 'feud'); }, res: '楼上安静了。电梯里碰见，谁也不看谁。' },
       ] },
     { id: 'e_witness', y: Y, minAge: 20, maxAge: 72, t: '车祸', text: '路口一辆车闯红灯，撞倒了一个骑电动车的人。司机下车看了看，说是对方冲出来的。你看得清清楚楚。',
@@ -227,7 +227,7 @@
         { t: '捐两百，转发', canon: true, fx: (g) => { CN.pay(g, 200); g.remember('evIll', 'shared'); }, res: '链接下面的留言越来越多。' },
         { t: '请假去医院看他', dev: 20, fx: (g) => { g.stat('人缘', 3); CN.pay(g, 2000); g.remember('evIll', 'visited'); }, res: (g) => '你塞给他一个 ' + fmt(2000) + ' 的红包。他瘦得认不出来了，你们聊起初中时偷偷养在课桌里的蚕。' },
       ] },
-    { id: 'e_lost_child', y: Y, minAge: 16, maxAge: 78, t: '走失的孩子', text: '商场门口，一个四五岁的小男孩站着哭，说找不到妈妈了。',
+    { id: 'e_lost_child', y: Y, minAge: 16, maxAge: 78, t: '走失的孩子', text: (g) => pk(g, ['商场门口', '地铁站出口', '公园的湖边', '超市的收银台旁'], 83) + '，一个四五岁的小男孩站着哭，说找不到妈妈了。',
       choices: [
         { t: '带他去找保安和警察', canon: true, fx: (g) => { g.stat('人缘', 1); g.remember('evKid', 'police'); }, res: '广播响了两遍，他妈妈跑了过来，抱住他就哭。' },
         { t: '陪着他在原地等，拍照发到本地群里', dev: 20, fx: (g) => { g.stat('人缘', 3); g.set('evFoundKid'); g.remember('evKid', 'waited'); }, res: '二十分钟后，他妈妈看到群里的照片找来了。她要给你钱，你没要。' },
@@ -291,7 +291,7 @@
         { t: '买了一个疗程', dev: 15, fx: (g) => { CN.pay(g, 8800); g.remember('evLecture', 'bought'); }, res: '一个疗程八千八。他们说，第二个疗程打八折。' },
         { t: '站起来问他：有没有批文', dev: 20, fx: (g) => { g.stat('人缘', 2); g.remember('evLecture', 'exposed'); }, res: '讲台上的人愣住了。几个老邻居跟着你一起走了出去。' },
       ] },
-    { id: 'e_square_dance', y: Y, minAge: 55, maxAge: 82, t: '广场', text: '傍晚的广场上，一群人跟着音乐在跳舞。领舞的阿姨冲你招手。',
+    { id: 'e_square_dance', y: Y, minAge: 55, maxAge: 82, t: '广场', text: (g) => pk(g, ['傍晚的广场上', '小区的空地上', '公园的亭子边'], 85) + '，一群人跟着音乐在' + pk(g, ['跳舞', '跳健身操', '打太极'], 86) + '。领头的' + pk(g, ['阿姨', '大爷'], 87) + '冲你招手。',
       choices: [
         { t: '在旁边看看就好', canon: true, fx: (g) => { g.stat('心情', 1); g.remember('evDance', 'watched'); }, res: '音乐很响，你跟着拍了几下腿。' },
         { t: '加进去跳', dev: 15, fx: (g) => { g.stat('健康', 2); g.stat('人缘', 2); g.remember('evDance', 'joined'); }, res: '你踩错了好几拍，没人笑你。散场的时候，有人塞给你一瓶水。' },
@@ -593,6 +593,250 @@
         fx: (g) => { const hit = g.s('健康') < 60; g.remember('evInsHit', hit); if (hit) CN.earn(g, 300000); else CN.pay(g, (Number(g.recall('evInsAmt')) || 3000) * 2); } },
       cheap: { t: (g) => (g.s('健康') < 70 ? '那年住院，那份几百块的医疗险报了 ' + fmt(20000) + '。你说，这六百块花得值。' : '那份几百块的医疗险，你年年续着，一直没用上。'), fx: (g) => { if (g.s('健康') < 70) CN.earn(g, 20000); } },
       no: { t: (g) => (g.s('健康') < 60 ? '你住了一次院，花了 ' + fmt(80000) + '，全是自己掏的。出院那天，你想起了那次喝茶。' : '那个卖保险的老同学转了行，开了一家茶馆。你去过两次，他都没收你的钱。'), fx: (g) => { if (g.s('健康') < 60) CN.pay(g, 80000); g.stat('人缘', 1); } },
+    }),
+  ]);
+
+  /* ---------- 宠物、日子里的小事：每一世读到的细节不一样 ----------
+   * pk(g, [...], 盐) 在同一年里固定、换一世就变，所以正文和结果读到的是同一个名字、同一个数。
+   * 回响里要用到的细节（名字、金额、种类），在选项里 remember 下来（键名都以 ev 开头）。 */
+  const seedOf = (g) => { const c = JY.byId[g.me]; const s = ((c && c.name) || '') + (g.recall('city') || ''); let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1000003; return h; };
+  const rr = (g, salt) => { const x = Math.sin(g.Y * 12.9898 + salt * 78.233 + seedOf(g) * 0.0137) * 43758.5453; return x - Math.floor(x); };
+  const pk = (g, arr, salt) => arr[Math.floor(rr(g, salt) * arr.length)];
+  const hiEdu = (g) => ['bachelor', 'master', 'phd'].includes(g.recall('edu'));
+  const pet = (g) => CN.pet(g);
+  const petName = (g) => (pet(g) ? pet(g).name : '它');
+  const PET_W = { dog: '狗', cat: '猫', bird: '鸟', fish: '鱼', rabbit: '兔子' };
+  // 宠物店里的品种：[种类, 价格]
+  const BREED = { 布偶猫: ['cat', 8000], 英短: ['cat', 3000], 暹罗猫: ['cat', 4000], 柯基: ['dog', 6000], 柴犬: ['dog', 7000], 比熊: ['dog', 3000], 金毛: ['dog', 4000] };
+  const breed = (g) => pk(g, Object.keys(BREED), 41);
+  const petYear = (g, kind) => round((kind === 'dog' ? 6000 : 4000) * (tier(g) <= 1 ? 1.3 : 1), 500);
+  const crop = (g) => pk(g, { 西南: ['猕猴桃', '茶叶', '花椒'], 华南: ['荔枝', '百香果', '茶叶'], 华东: ['草莓', '茶叶', '蓝莓'], 华中: ['小龙虾', '脐橙', '莲藕'], 华北: ['苹果', '小米', '大棚蔬菜'], 东北: ['大米', '木耳', '蓝莓'], 西北: ['苹果', '枸杞', '牛羊肉'] }[g.recall('region')] || ['大棚蔬菜', '水果'], 42);
+  const myPay = (g) => (CN.jobPay && job(g) ? CN.jobPay(g, job(g)) : round(inc(g) / 12, 100));
+  const DEPOSIT = { 1: 10000, 2: 5000, 3: 3000, 4: 2000, 5: 1000 };
+  const stakeAmt = (g) => round(Math.min(100000, cash(g) * 0.25), 10000);
+  const roadAmt = (g) => round(Math.min(20000, Math.max(1000, cash(g) * 0.03)), 1000);
+  const vetBill = (g) => round((tier(g) <= 2 ? 6000 : tier(g) === 3 ? 3000 : 1500) * (1 + rr(g, 47)), 500);
+
+  JY.addEncounters([
+    // —— 宠物：住在哪儿、有没有钱，碰到的不一样 ——
+    { id: 'e_pet_shop', y: Y, minAge: 22, maxAge: 60, t: '宠物店',
+      cond: (g) => money(g) && !pet(g) && (big(g) || g.recall('family') === 'rich') && g.recall('hhPlace') !== 'dorm',
+      text: (g) => { const b = breed(g), k = BREED[b]; return pk(g, ['下班路过一家宠物店，', '周末逛商场，', '小区门口新开了一家宠物店，'], 43) + '玻璃后面有一只' + b + '，标价 ' + fmt(k[1]) + '。店员说，打针、驱虫另算，一年吃喝看病还要 ' + fmt(petYear(g, k[0])) + ' 左右。' + (CN.alone(g) ? '你一个人住，晚上回家没人说话。' : ''); },
+      choices: [
+        { t: (g) => '买下这只' + breed(g) + '（' + fmt(BREED[breed(g)][1] + 1500) + '，连针带笼子）', dev: 15, cond: (g) => cash(g) >= BREED[breed(g)][1] * 3,
+          fx: (g) => { const b = breed(g), k = BREED[b]; CN.pay(g, k[1] + 1500); CN.adoptPet(g, k[0], pk(g, k[0] === 'cat' ? ['奶糖', '布丁', '可乐', '芝麻'] : ['可乐', '豆包', '元宝', '乐乐'], 44)); g.remember('evPetGet', 'bought'); g.stat('心情', 4); },
+          res: (g) => '你给它起名叫' + petName(g) + '。一共花了 ' + fmt(BREED[breed(g)][1] + 1500) + '。回家的路上，它在航空箱里叫了一路。' },
+        { t: '去救助站领养一只（疫苗、绝育约 ¥800）', dev: 10,
+          fx: (g) => { const k = BREED[breed(g)][0]; CN.pay(g, 800); CN.adoptPet(g, k, pk(g, ['小土', '豆包', '二丫', '阿福', '黑妞'], 45)); g.remember('evPetGet', 'shelter'); g.stat('心情', 3); g.stat('人缘', 1); },
+          res: (g) => '救助站的志愿者来家里看了一次，才让你把' + petName(g) + '领走。它是一只' + PET_W[pet(g).kind] + '，左耳缺了一小块。疫苗、绝育花了 ¥800。' },
+        { t: '算了，没时间，也怕养不好', canon: true, fx: (g) => { g.remember('evPetGet', 'no'); }, res: '你隔着玻璃看了它一会儿，走了。' },
+      ] },
+    { id: 'e_pet_village', y: Y, minAge: 12, maxAge: 70, t: '狗崽',
+      cond: (g) => tier(g) >= 4 && !pet(g) && g.recall('liveWith') !== 'nursing' && g.recall('hhPlace') !== 'dorm',
+      text: (g) => pk(g, ['邻居家的大黄下了一窝崽，问你要不要抱一只。', '院门口来了一只瘦狗，赶了两回，它又回来了，蹲在那儿看你。', '这阵子村里丢了两回鸡，隔壁说，该养条看家狗了。'], 46),
+      choices: [
+        { t: '抱一只回来看家', canon: true, fx: (g) => { CN.adoptPet(g, 'dog', pk(g, ['大黄', '黑子', '虎子', '旺财', '来福'], 48)); g.remember('evPup', 'dog'); g.stat('心情', 3); },
+          res: (g) => '你给它起名叫' + petName(g) + '，在门边垫了个纸箱当窝。头一夜它哼唧了半宿。' },
+        { t: '要一只猫，抓抓老鼠', dev: 10, fx: (g) => { CN.adoptPet(g, 'cat', pk(g, ['花花', '老虎', '咪咪', '小灰'], 49)); g.remember('evPup', 'cat'); g.stat('心情', 2); },
+          res: (g) => '隔壁正好有一窝小猫。你挑了最瘦的那只，叫它' + petName(g) + '。' },
+        { t: '不要，养不过来', dev: 10, fx: (g) => { g.remember('evPup', 'no'); }, res: '那几只狗崽，过了几天都被人抱走了。' },
+      ] },
+    { id: 'e_pet_old', y: Y, minAge: 66, maxAge: 86, t: '做个伴',
+      cond: (g) => !pet(g) && !g.recall('pet') && g.recall('liveWith') !== 'nursing',
+      text: (g) => [
+        '社区在办流浪动物领养，一只九岁的老狗趴在笼子边上，一直看着你。',
+        (kids(g).length ? g.name(kids(g)[0]) + '打电话来，说给你买了一只鹦鹉，会说“吃了吗”，问你要不要。' : '老年活动中心有人家里的鹦鹉孵了小鸟，问你要不要一只。'),
+        '楼下的老邻居住进了养老院，托你照看他养了好些年的猫。',
+      ][Math.floor(rr(g, 50) * 3)],
+      choices: [
+        { t: (g) => ['领回家，做个伴', '要了，挂在阳台上', '答应，把它接过来'][Math.floor(rr(g, 50) * 3)], dev: 10,
+          fx: (g) => { const v = Math.floor(rr(g, 50) * 3); CN.adoptPet(g, ['dog', 'bird', 'cat'][v], ['老黑', '八哥', '老咪'][v]); g.remember('evOldPet', 'yes'); g.stat('心情', 4); g.stat('健康', 1); },
+          res: (g) => ({ dog: '老狗走得慢，你也走得慢。每天傍晚你们绕小区一圈，正好。', bird: '鹦鹉头一个月一句话也不说。有天早上你开窗，它突然说：吃了吗。', cat: '老猫认生，在柜顶上待了三天。第四天，它下来蹭了蹭你的裤腿。' }[pet(g).kind]) },
+        { t: '算了，怕自己走在它前头', canon: true, fx: (g) => { g.remember('evOldPet', 'no'); }, res: '你说了声谢谢，回家把阳台上的花浇了一遍。' },
+      ] },
+    { id: 'e_pet_vet', y: Y, minAge: 18, maxAge: 92, t: '宠物医院',
+      cond: (g) => money(g) && !!pet(g) && ['dog', 'cat', 'rabbit'].includes(pet(g).kind) && g.Y - pet(g).y >= 2,
+      text: (g) => petName(g) + pk(g, ['吃坏了东西，吐了一晚上', '腿瘸了，一碰就叫', '好几天不吃饭，蔫蔫地趴着'], 51) + '。宠物医院说要' + pk(g, ['做个小手术', '住几天院', '做一套检查'], 52) + '，先交 ' + fmt(vetBill(g)) + '。',
+      choices: [
+        { t: (g) => '治，先交 ' + fmt(vetBill(g)), canon: true, cond: (g) => cash(g) >= vetBill(g), fx: (g) => { CN.pay(g, vetBill(g)); g.remember('evVet', 'cure'); g.stat('心情', -1); },
+          res: (g) => '你交了 ' + fmt(vetBill(g)) + '。医生说来得及时。' + petName(g) + '戴着伊丽莎白圈回了家，委屈了好几天。' },
+        { t: (g) => '先开点药回家养（约 ' + fmt(round(vetBill(g) * 0.2, 100)) + '）', dev: 10, fx: (g) => { CN.pay(g, round(vetBill(g) * 0.2, 100)); g.remember('evVet', 'basic'); g.stat('心情', -2); },
+          res: '你拿了药，每天掰开它的嘴喂。它不肯吃，你就把药裹在肉里。' },
+      ] },
+
+    // —— 上班的人 ——
+    { id: 'e_layoff_rumor', y: Y, minAge: 26, maxAge: 52, t: '传言', cond: (g) => working(g) && ['office', 'tech', 'sales'].includes(job(g)),
+      text: (g) => pk(g, ['茶水间里有人小声说', '工作群突然安静了，有人私下说', '楼下吃饭的时候，隔壁部门的人说'], 53) + '，公司下个月要裁掉' + pk(g, ['两成', '三成', '一整个部门'], 54) + '的人。你现在一个月约 ' + fmt(myPay(g)) + '。',
+      choices: [
+        { t: '照常干活，不瞎想', canon: true, fx: (g) => { g.remember('evRumor', 'calm'); }, res: '你把手头的报告交了，准点下班。' },
+        { t: '悄悄投简历，先找好下家', dev: 10, fx: (g) => { g.remember('evRumor', 'hunt'); g.stat('心情', -1); }, res: '你在午休的时候改简历，屏幕调得很暗。' },
+        { t: '主动申请去最忙的项目组', dev: 15, fx: (g) => { g.remember('evRumor', 'busy'); g.stat('健康', -2); g.stat('事业', 2); }, res: '新项目组的灯每天亮到十一点。你在那儿认识了几个能干的人。' },
+      ] },
+    { id: 'e_wage_owed', y: Y, minAge: 18, maxAge: 60, t: '工钱', cond: (g) => working(g) && ['worker', 'driver', 'freelance'].includes(job(g)) && money(g),
+      text: (g) => '老板拖了你两个月的工钱，' + fmt(round(myPay(g) * 2, 100)) + '。' + pk(g, ['他说等工程款下来就给。', '人找不着了，电话也不接。', '他说公司周转不开，先给你打个欠条。'], 55),
+      choices: [
+        { t: '去劳动监察大队反映，申请仲裁', dev: 15, fx: (g) => { g.remember('evWageAmt', round(myPay(g) * 2, 100)); g.remember('evWage', 'sue'); g.stat('心情', -1); }, res: '你把工牌、聊天记录、考勤截图都打印出来，装了一个牛皮纸袋。' },
+        { t: '跟几个工友一起去找他', dev: 10, fx: (g) => { g.remember('evWageAmt', round(myPay(g) * 2, 100)); g.remember('evWage', 'group'); g.stat('人缘', 2); }, res: '你们五个人在他办公室门口等了一下午。他最后出来了，说下个月一定给。' },
+        { t: '认了，换个地方干', canon: true, fx: (g) => { g.remember('evWageAmt', round(myPay(g) * 2, 100)); g.remember('evWage', 'quit'); g.stat('心情', -3); }, res: '你收拾了东西，第二天去了新地方。' },
+      ] },
+    { id: 'e_partner_stake', y: Y, minAge: 28, maxAge: 55, t: '入股', cond: (g) => money(g) && cash(g) >= 50000,
+      text: (g) => '老同学' + pk(g, ['大刘', '阿杰', '小芳', '老周', '胖子', '燕子'], 56) + '要开一家' + pk(g, ['烧烤店', '民宿', '奶茶店', '洗车店', '剧本杀店'], 57) + '，拉你入股，要 ' + fmt(stakeAmt(g)) + '，说一年能分两成。',
+      choices: [
+        { t: (g) => '入股 ' + fmt(stakeAmt(g)) + '（成了年年分红，赔了血本无归）', dev: 15,
+          fx: (g) => { const a = stakeAmt(g); CN.pay(g, a); g.remember('evStakeAmt', a); g.remember('evStakeWho', pk(g, ['大刘', '阿杰', '小芳', '老周', '胖子', '燕子'], 56)); g.remember('evStakeKind', pk(g, ['烧烤店', '民宿', '奶茶店', '洗车店', '剧本杀店'], 57)); g.remember('evStake', 'in'); },
+          res: '你转了钱，他发来一张合伙协议的照片。字很小，你没细看。' },
+        { t: (g) => '少投一点，意思一下（' + fmt(round(stakeAmt(g) / 4, 5000)) + '）', dev: 10,
+          fx: (g) => { const a = round(stakeAmt(g) / 4, 5000); CN.pay(g, a); g.remember('evStakeAmt', a); g.remember('evStakeWho', pk(g, ['大刘', '阿杰', '小芳', '老周', '胖子', '燕子'], 56)); g.remember('evStakeKind', pk(g, ['烧烤店', '民宿', '奶茶店', '洗车店', '剧本杀店'], 57)); g.remember('evStake', 'part'); },
+          res: '你说手头紧，转了一小笔。他说够意思。' },
+        { t: '不入，钱留着', canon: true, fx: (g) => { g.remember('evStake', 'no'); g.remember('evStakeKind', pk(g, ['烧烤店', '民宿', '奶茶店', '洗车店', '剧本杀店'], 57)); }, res: '你说再想想。他说理解，开业那天还给你发了请柬。' },
+      ] },
+    { id: 'e_village_coop', y: Y, minAge: 24, maxAge: 45, t: '村里来电', cond: (g) => g.recall('hukou') === 'rural' && working(g) && tier(g) <= 3 && job(g) !== 'boss' && !!g.recall('homeCap'),
+      text: (g) => '老家的村支书在群里发了一条长消息：村里要办' + crop(g) + '基地，' + pk(g, ['县里给补贴', '有家公司包收购', '进村的路修通了'], 58) + '，想请在外面的年轻人回去牵头。他单独给你打了个电话。',
+      choices: [
+        { t: (g) => '回去牵头（' + CN.jobRisk('boss') + '）', dev: 25, check: ['人缘', 50],
+          fx: (g) => { const c = crop(g); CN.goHome(g); g.remember('tier', 5); g.remember('workCity', g.recall('homeCap')); g.info('住处', g.recall('homeCap')); CN.setJob(g, 'boss', c + '基地带头人'); g.remember('evCoopCrop', c); g.remember('evCoop', 'back'); g.stat('人缘', 4); },
+          res: (g) => '你回了村。头一年，' + g.recall('evCoopCrop') + '基地流转了两百亩地，你每天在地头和县城之间跑。',
+          fail: { fx: (g) => { const c = crop(g); CN.goHome(g); g.remember('tier', 5); g.remember('workCity', g.recall('homeCap')); g.info('住处', g.recall('homeCap')); CN.setJob(g, 'farmer', '回乡种地'); g.remember('evCoopCrop', c); g.remember('evCoop', 'backFail'); g.stat('心情', -3); },
+            res: '你回去了，可几户大的人家不肯把地流转出来，基地没办成。你留在村里，种自家那几亩。' } },
+        { t: '出点钱，人不回去（¥2 万）', dev: 10, cond: (g) => cash(g) >= 30000, fx: (g) => { CN.pay(g, 20000); g.remember('evCoopCrop', crop(g)); g.remember('evCoop', 'money'); g.stat('人缘', 2); }, res: '你转了 ¥2 万，支书在群里点了你的名。' },
+        { t: '不回，在外面挺好', canon: true, fx: (g) => { g.remember('evCoopCrop', crop(g)); g.remember('evCoop', 'no'); }, res: '你回了一句“支持”，又发了个红包。' },
+      ] },
+    { id: 'e_deposit', y: Y, minAge: 20, maxAge: 42, t: '押金', cond: (g) => g.recall('house') === 'rent' && money(g),
+      text: (g) => '退租那天，房东' + pk(g, ['说墙上多了几个钉子眼', '说沙发上有块印子', '说马桶得换个新的'], 59) + '，押金 ' + fmt(DEPOSIT[tier(g)] || 3000) + ' 只肯退一半。',
+      choices: [
+        { t: '翻出入住时拍的照片，一分不让', dev: 10, fx: (g) => { g.remember('evDepositAmt', DEPOSIT[tier(g)] || 3000); g.remember('evDeposit', 'fight'); }, res: '你把手机里的照片一张张划给他看。他脸色不太好看。' },
+        { t: '找中介和平台投诉', dev: 10, fx: (g) => { g.remember('evDepositAmt', DEPOSIT[tier(g)] || 3000); g.remember('evDeposit', 'report'); }, res: '你打了三次客服电话，每次都从头讲一遍。' },
+        { t: '认了，不想吵', canon: true, fx: (g) => { g.remember('evDepositAmt', DEPOSIT[tier(g)] || 3000); g.remember('evDeposit', 'let'); g.stat('心情', -2); }, res: '你把钥匙放在桌上，拖着箱子下了楼。' },
+      ] },
+
+    // —— 邻里、路上 ——
+    { id: 'e_lost_phone', y: Y, minAge: 16, maxAge: 78, t: '手机', cond: (g) => money(g),
+      text: (g) => '你把手机落在了' + pk(g, ['出租车后座上', '地铁座位上', '公园的长椅上', '饭馆的桌上'], 60) + '，走出去老远才发现。',
+      choices: [
+        { t: '借别人的手机，一遍遍打过去', canon: true, fx: (g) => { g.remember('evPhone', 'call'); }, res: '打到第六遍，有人接了。' },
+        { t: '去派出所报失', dev: 10, fx: (g) => { g.remember('evPhone', 'police'); }, res: '民警给你登了记，让你回去等消息。' },
+        { t: '认了，买个新的（¥3,000）', dev: 10, fx: (g) => { CN.pay(g, 3000); g.remember('evPhone', 'new'); g.stat('心情', -2); }, res: '新手机 ¥3,000。登录的时候，你发现好几年的照片都没备份。' },
+      ] },
+    { id: 'e_umbrella', y: Y, minAge: 16, maxAge: 72, t: '一把伞',
+      text: (g) => '下暴雨，' + pk(g, ['公交站', '地铁口', '便利店门口'], 61) + '有个' + pk(g, ['抱着孩子的女人', '拄拐的老人', '穿校服的学生'], 62) + '没带伞，看着雨发愁。你手里只有一把伞。',
+      choices: [
+        { t: '把伞塞给对方，自己跑回去', dev: 10, fx: (g) => { g.remember('evUmb', 'gave'); g.stat('健康', -1); g.stat('心情', 2); }, res: '你一路跑回去，鞋里全是水。' },
+        { t: '一起撑着，送一段', canon: true, fx: (g) => { g.remember('evUmb', 'walk'); g.stat('人缘', 1); }, res: '你把伞往那边歪着，自己湿了半边肩膀。' },
+        { t: '低头走过去', dev: 5, fx: (g) => { g.remember('evUmb', 'no'); }, res: '你走出几步，回头看了一眼。' },
+      ] },
+    { id: 'e_tutor_kid', y: Y, minAge: 30, maxAge: 75, t: '辅导', cond: (g) => hiEdu(g),
+      text: (g) => '楼下' + pk(g, ['张姐', '老李', '王阿姨', '小陈'], 63) + '家的孩子' + pk(g, ['数学', '英语', '作文'], 64) + '跟不上，问你能不能周末帮着看看。',
+      choices: [
+        { t: '答应，不收钱', canon: true, fx: (g) => { g.remember('evTutor', 'free'); g.stat('人缘', 3); }, res: '每个周六下午，那孩子抱着作业本来敲门。' },
+        { t: '答应，按市价收（一次 ¥200）', dev: 10, fx: (g) => { CN.earn(g, 6000); g.remember('evTutor', 'paid'); g.stat('人缘', 1); }, res: '一学期下来，你收了 ¥6,000。孩子的卷子上，红叉少了一半。' },
+        { t: '推了，实在没时间', dev: 10, fx: (g) => { g.remember('evTutor', 'no'); }, res: '你说最近太忙。对方说没事，下楼的脚步有点慢。' },
+      ] },
+    { id: 'e_hometown_road', y: Y, minAge: 35, maxAge: 80, t: '修路', cond: (g) => g.recall('hukou') === 'rural' && money(g) && cash(g) >= 10000,
+      text: (g) => '老家要' + pk(g, ['把进村的土路修成水泥路', '在村里装一排路灯', '在河上修一座桥'], 65) + '，在外面的人自愿出点钱。名字会刻在村口的碑上。',
+      choices: [
+        { t: (g) => '出 ' + fmt(roadAmt(g)), canon: true, fx: (g) => { const a = roadAmt(g); CN.pay(g, a); g.remember('evRoadAmt', a); g.remember('evRoad', 'gave'); g.stat('人缘', 2); }, res: '你在群里接龙，写上了自己的名字。' },
+        { t: (g) => '多出一些，出 ' + fmt(roadAmt(g) * 3), dev: 15, cond: (g) => cash(g) >= roadAmt(g) * 10,
+          fx: (g) => { const a = roadAmt(g) * 3; CN.pay(g, a); g.remember('evRoadAmt', a); g.remember('evRoad', 'big'); g.stat('人缘', 4); }, res: '支书打电话来，说了好几遍谢谢。' },
+        { t: '不出，没回去过几次', dev: 10, fx: (g) => { g.remember('evRoad', 'no'); g.stat('人缘', -2); }, res: '接龙到了一百多号，里面没有你。' },
+      ] },
+    { id: 'e_group_buy', y: Y, minAge: 35, maxAge: 78, t: '团长', cond: (g) => tier(g) <= 4 && money(g) && g.recall('liveWith') !== 'nursing',
+      text: (g) => '小区的团购群缺一个团长。' + pk(g, ['物业', '楼下超市的老板', '群主'], 66) + '问你愿不愿意干：帮大家收菜、分菜，每单有一点提成。',
+      choices: [
+        { t: '干，就当认识认识邻居', dev: 10, fx: (g) => { g.remember('evTuan', 'yes'); g.stat('人缘', 3); }, res: '你家门口多了一张折叠桌。每天傍晚，楼里的人来这儿取菜，顺便聊几句。' },
+        { t: '不干，太琐碎', canon: true, fx: (g) => { g.remember('evTuan', 'no'); }, res: '你在群里推荐了楼上的一个阿姨。' },
+      ] },
+    { id: 'e_hospital_number', y: Y, minAge: 35, maxAge: 85, t: '号', loc: 'hospital', cond: (g) => tier(g) <= 3,
+      text: (g) => '你排了一早上的队，挂上了' + pk(g, ['今天最后一个专家号', '下午的最后一个号'], 67) + '。旁边一个' + pk(g, ['从县里来的老人', '抱着发烧孩子的年轻妈妈'], 68) + '没挂上，急得直掉眼泪。',
+      choices: [
+        { t: '把号让给对方', dev: 15, fx: (g) => { g.remember('evHosp', 'gave'); g.stat('人缘', 2); g.stat('健康', -1); }, res: '对方愣了一下，一个劲地说谢谢。你把自己的号改到了下周。' },
+        { t: '陪对方去导诊台想办法', dev: 10, fx: (g) => { g.remember('evHosp', 'help'); g.stat('人缘', 1); }, res: '导诊的护士帮着加了一个号。你回来的时候，自己的号刚好叫到。' },
+        { t: '叹口气，看自己的病', canon: true, fx: (g) => { g.remember('evHosp', 'kept'); }, res: '你看完出来，那个人已经不在了。' },
+      ] },
+  ]);
+
+  /* 上面这些的回响 */
+  JY.addEncounters([
+    // 宠物老了：还在世的宠物，离它的寿数还有两年
+    { id: 'e_echo_petage', y: Y, minAge: 10, t: '老了', auto: true, always: true, kind: 'echo',
+      cond: (g) => !!pet(g) && ['dog', 'cat'].includes(pet(g).kind) && g.Y - pet(g).y >= Math.max(6, pet(g).life - 2),
+      text: (g) => petName(g) + '老了。' + (pet(g).kind === 'dog' ? '下楼梯要人抱，耳朵也背了，叫它好几声才回头。' : '跳不上窗台了，整天睡在暖气片边上。') + '你给它换了软一点的粮。' },
+    echo('e_echo_petget', (g) => [g.recall('evPetGet'), g.since('evPetGet')], '它', 3, 25, {
+      bought: { t: (g) => (pet(g) ? petName(g) + '长大了，' + (pet(g).kind === 'dog' ? '每天一到点就叼着牵引绳在门口等你。' : '最喜欢趴在你的键盘上。') + '这几年吃的、用的、看病，加起来花了 ' + fmt(petYear(g, pet(g).kind) * 3) + '。' : '你买的那只小家伙没养几年就病了。你后来一直没再去宠物店。'), fx: (g) => { if (pet(g)) CN.pay(g, petYear(g, pet(g).kind) * 3); g.stat('心情', 2); } },
+      shelter: { t: (g) => (pet(g) ? '救助站发来回访的消息，问' + petName(g) + '过得好不好。你拍了一张它四脚朝天睡觉的照片发过去。' : '救助站发来回访的消息。你翻出它的照片，看了很久。'), fx: (g) => g.stat('心情', 2) },
+      no: { t: '你后来常去同事家，抱着他家的猫坐一下午。同事说，你干脆自己养一只。', fx: (g) => g.stat('心情', 1) },
+    }),
+    echo('e_echo_pup', (g) => [g.recall('evPup'), g.since('evPup')], '院子里', 2, 14, {
+      dog: { t: (g) => (pet(g) && pet(g).kind === 'dog' ? petName(g) + '长成了一条大狗。有天半夜它叫个不停，' + CN.pick(['院墙外有人在撬隔壁的门。', '原来是灶房的炉子没封好，冒了烟。', '原来是一只黄鼠狼钻进了鸡窝。']) : '那条看家狗后来跑丢了，你找了好几天。'), fx: (g) => g.stat('心情', 2) },
+      cat: { t: (g) => (pet(g) && pet(g).kind === 'cat' ? petName(g) + '一早把一只老鼠摆在你门口，蹲在旁边等你夸它。' : '那只猫后来跟着隔壁走了，隔壁家的鱼更好吃。'), fx: (g) => g.stat('心情', 1) },
+      no: { t: '那窝狗崽里最壮的一只，被村口小卖部抱去了。你每次去买东西，它都冲你摇尾巴。' },
+    }),
+    echo('e_echo_oldpet', (g) => [g.recall('evOldPet'), g.since('evOldPet')], '老伙计', 2, 68, {
+      yes: { t: (g) => (pet(g) ? '有' + petName(g) + '在，你每天都有事做：' + ({ dog: '早晚遛两趟', bird: '换水、添食、教它说话', cat: '铲屎、梳毛、跟它说话' }[pet(g).kind] || '喂它') + '。' + (CN.alone(g) ? '屋里有了响动。' : '家里人说你话多了。') : '它陪了你几年，走了。你把它的东西收起来，留了一样摆在窗台上。'), fx: (g) => { g.stat('心情', 3); g.stat('健康', 1); } },
+      no: { t: '后来你常去社区的领养点坐坐，给那里的猫狗带点吃的。工作人员都认得你。', fx: (g) => g.stat('人缘', 1) },
+    }),
+    echo('e_echo_vet', (g) => [g.recall('evVet'), g.since('evVet')], '好了', 1, 19, {
+      cure: { t: (g) => (pet(g) ? petName(g) + '的病好利索了，又开始满屋子撒欢，' + CN.pick(['咬坏了一只拖鞋。', '把沙发抓出了一道口子。', '把垃圾桶翻了个底朝天。']) : '那次花的钱，你一点也不后悔。'), fx: (g) => g.stat('心情', 2) },
+      basic: { t: (g) => (pet(g) ? petName(g) + '慢慢好了，就是比以前瘦了一圈，跑起来没那么快。' : '那次没舍得多花钱。它走了以后，你有好一阵子想起来就难受。'), fx: (g) => g.stat('心情', pet(g) ? 1 : -3) },
+    }),
+    echo('e_echo_rumor', (g) => [g.recall('evRumor'), g.since('evRumor')], '名单', 1, 27, {
+      calm: { t: (g) => (g.recall('evRumorCut') ? '名单出来了，上面有你。补偿 ' + fmt(round(myPay(g) * 6, 1000)) + '。你歇了两个月，找到了新工作，钱少了一点。' : '传言没成真，只裁了几个外包。你照常上班，桌上的绿萝又长了一截。'),
+        fx: (g) => { const cut = g.rnd() < 0.4; g.remember('evRumorCut', cut); if (cut) { CN.earn(g, round(myPay(g) * 6, 1000)); g.stat('事业', -3); g.stat('心情', -3); } } },
+      hunt: { t: (g) => '你跳去了一家新公司，月薪多了 ' + fmt(round(myPay(g) * 0.15, 100)) + '。老公司后来真的裁了人，前同事在群里说你走得及时。', fx: (g) => { g.stat('事业', 3); g.stat('心情', 2); } },
+      busy: { t: '裁员名单上没有你们组。年底项目上线，领导在大会上念了你的名字。', fx: (g) => { g.stat('事业', 4); } },
+    }),
+    echo('e_echo_wage', (g) => [g.recall('evWage'), g.since('evWage')], '讨回来', 1, 19, {
+      sue: { t: (g) => '仲裁下来了。拖欠的 ' + fmt(g.recall('evWageAmt')) + ' 一分不少到了账，还多了一点利息。你给帮你写材料的那位工作人员送了一面锦旗。', fx: (g) => { CN.earn(g, Number(g.recall('evWageAmt')) || 0); g.stat('心情', 3); } },
+      group: { t: (g) => (g.recall('evWageBack') ? '拖了大半年，那笔 ' + fmt(g.recall('evWageAmt')) + ' 总算分三次给齐了。' : '老板最后只给了一半。剩下的，几个工友说算了，你也说算了。'),
+        fx: (g) => { const back = g.rnd() < 0.5; g.remember('evWageBack', back); CN.earn(g, (Number(g.recall('evWageAmt')) || 0) * (back ? 1 : 0.5)); } },
+      quit: { t: '后来听说那个老板跑路了，欠了一百多号人的钱。你在新地方干得踏实，每个月十号准时发钱。', fx: (g) => g.stat('心情', 1) },
+    }),
+    echo('e_echo_stake', (g) => [g.recall('evStake'), g.since('evStake')], '那家店', 2, 30, {
+      in: { t: (g) => (g.recall('evStakeOk') ? g.recall('evStakeWho') + '的' + g.recall('evStakeKind') + '火了，节假日要排队。两年分红加起来有 ' + fmt((Number(g.recall('evStakeAmt')) || 0) * 0.6) + '。' : g.recall('evStakeWho') + '的' + g.recall('evStakeKind') + '开了一年半，关了。入股的 ' + fmt(g.recall('evStakeAmt')) + ' 没了。他说对不住，你说生意就是这样。'),
+        fx: (g) => { const ok = g.rnd() < 0.45; g.remember('evStakeOk', ok); if (ok) CN.earn(g, (Number(g.recall('evStakeAmt')) || 0) * 0.6); else g.stat('心情', -3); } },
+      part: { t: (g) => (g.recall('evStakeOk') ? g.recall('evStakeWho') + '的店做起来了，年底给你转了一笔分红，' + fmt((Number(g.recall('evStakeAmt')) || 0) * 0.5) + '。你有点后悔当初没多投。' : g.recall('evStakeWho') + '的店没撑下去。你投的那一小笔，就当请他吃了几顿饭。'),
+        fx: (g) => { const ok = g.rnd() < 0.45; g.remember('evStakeOk', ok); if (ok) CN.earn(g, (Number(g.recall('evStakeAmt')) || 0) * 0.5); } },
+      no: { t: (g) => '那家' + g.recall('evStakeKind') + '你去过两次，生意不咸不淡。老同学每次都给你多送一个菜。' },
+    }),
+    echo('e_echo_coop', (g) => [g.recall('evCoop'), g.since('evCoop')], '基地', 3, 27, {
+      back: { t: (g) => g.recall('evCoopCrop') + '基地有了起色，去年卖了 ' + fmt(300000 + Math.round(rr(g, 69) * 40) * 10000) + '。村里四十多户人家在基地干活，' + (has(g, 'fa') || has(g, 'mo') ? parentsWord(g) + '也在，' : '') + '年底每户都分了钱。', fx: (g) => { CN.earn(g, 60000); g.stat('事业', 6); g.stat('人缘', 3); } },
+      backFail: { t: '基地没办成，你在村里种了三年地，又帮人开收割机。挣得不多，晚饭总是热的。', fx: (g) => g.stat('心情', 1) },
+      money: { t: (g) => '基地的第一批' + g.recall('evCoopCrop') + '下来了，支书给每个出过钱的人寄了一箱。你分给了同事，大家都说好吃。', fx: (g) => g.stat('人缘', 2) },
+      no: { t: (g) => '过年回村，村口多了一排' + g.recall('evCoopCrop') + '的大棚。牵头的是一个比你小几岁的人，他客客气气地喊你哥。' },
+    }),
+    echo('e_echo_deposit', (g) => [g.recall('evDeposit'), g.since('evDeposit')], '押金', 1, 21, {
+      fight: { t: (g) => (g.recall('evDepositBack') ? '房东最后把押金全退了，' + fmt(g.recall('evDepositAmt')) + '。你从此搬进哪儿都先拍一遍照。' : '房东还是扣了一半。你在租房平台上写了一条长长的评价，后来有好几个人私信谢你。'),
+        fx: (g) => { const back = g.rnd() < 0.6; g.remember('evDepositBack', back); if (back) CN.earn(g, (Number(g.recall('evDepositAmt')) || 0) / 2); } },
+      report: { t: (g) => '中介出面调解，退回了扣下的 ' + fmt((Number(g.recall('evDepositAmt')) || 0) / 2) + '。客服最后还给你打了个回访电话。', fx: (g) => CN.earn(g, (Number(g.recall('evDepositAmt')) || 0) / 2) },
+      let: { t: '那笔被扣的押金，你后来想起来还是有点气。下一次租房，你进门先把每面墙都拍了一遍。' },
+    }),
+    echo('e_echo_phone', (g) => [g.recall('evPhone'), g.since('evPhone')], '失而复得', 1, 17, {
+      call: { t: (g) => '接电话的是一个' + CN.pick(['外卖骑手', '大学生', '环卫工', '出租车司机']) + '，把手机给你送了回来。你要给钱，对方只收了一瓶水。后来你捡到东西，也总是等着失主来找。', fx: (g) => g.stat('心情', 2) },
+      police: { t: '过了一个星期，派出所打电话说手机找到了，是一位捡到的老人交过来的。你去取的时候，民警说那位老人没留名字。', fx: (g) => g.stat('人缘', 1) },
+      new: { t: '旧手机一直没找回来。那些没备份的照片里，有一张你很喜欢。你开始每个月备份一次。', fx: (g) => g.stat('学识', 1) },
+    }),
+    echo('e_echo_umbrella', (g) => [g.recall('evUmb'), g.since('evUmb')], '又碰见了', 1, 17, {
+      gave: { t: '过了一阵，你在同一个地方又碰见了那个人。对方认出了你，非要塞给你一袋自家包的包子。', fx: (g) => { g.stat('心情', 3); g.stat('人缘', 1); } },
+      walk: { t: '那天送到路口，对方说就在前面。后来下雨的时候，你的包里总多放一把折叠伞。', fx: (g) => g.stat('人缘', 1) },
+      no: { t: '后来又下了几场大雨。每次站在屋檐下，你都会想起那个看着雨发愁的人。', fx: (g) => g.stat('心情', -1) },
+    }),
+    echo('e_echo_tutor', (g) => [g.recall('evTutor'), g.since('evTutor')], '那个孩子', 3, 33, {
+      free: { t: (g) => '楼下那孩子考上了' + CN.pick(['市里的重点高中', '一所不错的大学', '心心念念的师范']) + '，拎着一箱水果来敲门，说是你教会了' + CN.pick(['他', '她']) + '怎么读题。', fx: (g) => { g.stat('人缘', 3); g.stat('心情', 3); } },
+      paid: { t: '那孩子的成绩上来了，家长又介绍了两个孩子来。你说周末还想歇歇，就没再接。', fx: (g) => g.stat('人缘', 1) },
+      no: { t: '你在电梯里碰见那个孩子。他长高了，戴着耳机，冲你点了点头。' },
+    }),
+    echo('e_echo_road', (g) => [g.recall('evRoad'), g.since('evRoad')], '村口', 2, 37, {
+      gave: { t: (g) => '回老家那次，你在村口的碑上找到了自己的名字，后面写着 ' + fmt(g.recall('evRoadAmt')) + '。车一直开到了家门口。', fx: (g) => g.stat('心情', 2) },
+      big: { t: (g) => '碑上你的名字排在前头，后面写着 ' + fmt(g.recall('evRoadAmt')) + '。村里的小孩指着碑认字，念到你的名字，念得很响。', fx: (g) => { g.stat('心情', 3); g.stat('人缘', 2); } },
+      no: { t: '回老家那次，新修好的路一直通到村里。你开过去的时候，开得很慢。' },
+    }),
+    echo('e_echo_tuan', (g) => [g.recall('evTuan'), g.since('evTuan')], '团长', 2, 37, {
+      yes: { t: (g) => '当团长这两年，提成攒了 ' + fmt(round(3000 + rr(g, 70) * 9000, 100)) + '。楼里谁家孩子考上了学、谁家老人住了院，你都比别人先知道。', fx: (g) => { CN.earn(g, round(3000 + rr(g, 70) * 9000, 100)); g.stat('人缘', 3); } },
+      no: { t: '团长换了三个人。最后一个是楼上的阿姨，她每次都给你留最新鲜的那把青菜。', fx: (g) => g.stat('人缘', 1) },
+    }),
+    echo('e_echo_hosp', (g) => [g.recall('evHosp'), g.since('evHosp')], '一箱特产', 2, 37, {
+      gave: { t: (g) => '你收到一个快递，是一箱' + CN.pick(['土鸡蛋', '小米', '腊肉', '新摘的橘子']) + '，里面夹着一张字条：那天谢谢你的号。', fx: (g) => { g.stat('心情', 3); } },
+      help: { t: '后来你在医院当过几回志愿者，专门站在挂号机旁边，帮老人点屏幕。', fx: (g) => g.stat('人缘', 2) },
+      kept: { t: '后来医院上了 AI 导诊，号好挂多了。你有时候还会想起那个掉眼泪的人。' },
     }),
   ]);
 

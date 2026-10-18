@@ -49,6 +49,15 @@
   const round1k = (x) => Math.round(x / 1000) * 1000;
   const family = (g) => hasKid(g) || hasSp(g);
   const famWord = (g) => (family(g) ? '家里人' : '社区的志愿者');
+  // 返聘：只请有真本事、身体也还行的人。学识、事业够高，或者是医生、老师、技术、有手艺的工人
+  const SKILLED = ['doctor', 'teacher', 'nurse', 'tech'];
+  const ableToRehire = (g) => g.s('健康') >= 50 && (g.s('学识') >= 72 || g.s('事业') >= 65
+    || (SKILLED.includes(g.recall('preJob')) && g.s('学识') >= 55) || (g.recall('preJob') === 'worker' && !!g.recall('skill'))
+    || g.recall('consult') === 'part' || g.recall('ladder40') === 'expert');
+  const rehireMonth = (g) => round1k(Math.max(3000, (CN.jobPay ? CN.jobPay(g, g.recall('preJob') || 'office', null) : 8000) * 0.5));
+  const REHIRE = { doctor: '原来的医院请你回去坐诊，一周三个半天。', teacher: '学校缺有经验的老教师，请你回去带新老师。', nurse: '医院的护理部请你回去带实习生。',
+    tech: '原来的公司有一套老系统，只有你摸得透，请你回去当顾问。', worker: '厂里新上的设备出了毛病，老师傅里只有你会修，请你回去带徒弟。',
+    civil: '单位请你回去帮着带新人、整理多年的材料。', soldier: '武装部请你回去给新兵讲课。' };
   // 能不能住得起养老院（一年约 ¥6 万）
   const canNursing = (g) => liquid(g) >= 150000 || CN.income(g) >= 50000 || hasKid(g);
   // 现在住哪儿，场景跟着走
@@ -130,12 +139,23 @@
         return '六十五岁，你领到了第一笔养老金，每月 ' + month + '。买菜够，看病不够。' + save + '你没觉得自己退休了，只是老了。' + debt;
       } },
     { id: 'o_after_retire', age: 65, t: '退休以后', loc: 'home',
-      cond: (g) => FORMAL.includes(g.recall('preJob')),
-      text: '交完工牌的第二天，你还是六点就醒了。原单位打电话来，问你愿不愿意返聘回去，带带新人。',
+      cond: (g) => FORMAL.includes(g.recall('preJob')) && ableToRehire(g),
+      text: (g) => '交完工牌的第二天，你还是六点就醒了。' + (REHIRE[g.recall('preJob')] || '原单位打电话来，问你愿不愿意返聘回去当顾问，带带新人。'),
       choices: [
         { t: '彻底歇下来', canon: true, fx: (g) => { g.stat('心情', 4); g.remember('afterRetire', 'rest'); }, res: '你挂了电话，去菜市场转了一圈。原来上午的菜这么新鲜。' },
-        { t: '返聘回去，再干几年', dev: 15, fx: (g) => { g.stat('健康', -2); g.remember('afterRetire', 'rehire'); g.info('职业', '退休返聘'); }, res: '你又有了工牌，只是上面多了“顾问”两个字。年轻人叫你老师。' },
+        { t: (g) => '返聘回去，再干几年（每月多 ' + CN.fmt(rehireMonth(g)) + '，干到七十岁）', dev: 15, fx: (g) => { g.stat('健康', -2); g.remember('rehirePay', rehireMonth(g)); g.remember('afterRetire', 'rehire'); g.info('职业', '退休返聘'); },
+          res: (g) => '你又有了工牌，只是上面多了“顾问”两个字。每月多 ' + CN.fmt(g.recall('rehirePay')) + '，年轻人叫你老师。' },
         { t: '去学一样年轻时没空学的东西', dev: 20, fx: (g) => { g.stat('学识', 3); g.stat('心情', 3); g.remember('afterRetire', 'learn'); g.remember('hobby', 'college'); }, res: '你报了老年大学，一学期 ¥800。开学那天，你比谁到得都早。' },
+      ] },
+    { id: 'o_retire_plain', age: 65, t: '退休以后', loc: 'home',
+      cond: (g) => FORMAL.includes(g.recall('preJob')) && !ableToRehire(g),
+      text: (g) => '交完工牌，单位里没再打电话来。你在家待了一个月，手不知道往哪儿放。' + (g.s('健康') < 50 ? '腰和膝盖都在提醒你，该歇了。' : '楼下超市贴着招工的条子，招理货员和夜班保安。'),
+      choices: [
+        { t: '在家歇着，买菜做饭', canon: true, fx: (g) => { g.stat('心情', 2); g.stat('健康', 1); g.remember('afterRetire', 'rest'); }, res: (g) => '你把菜市场摸熟了，哪家的豆腐嫩、哪家的秤准，你都知道。' + (CN.alone(g) ? '' : '家里的饭点比以前准了。') },
+        { t: '找点零活，挣个零花（每月约 ¥2,000）', dev: 10, cond: (g) => g.s('健康') >= 40,
+          fx: (g) => { g.stat('健康', -1); g.stat('人缘', 2); g.remember('afterRetire', 'odd'); g.info('职业', '退休，打点零工'); },
+          res: (g) => '你在' + CN.pick(['小区门口当门卫', '超市里理货', '菜市场帮人看摊', '附近的学校看大门']) + '，一个月 ¥2,000 左右。活不累，能和人说说话。' },
+        { t: '报个老年大学，学点没学过的', dev: 10, fx: (g) => { g.stat('学识', 3); g.stat('心情', 3); g.remember('afterRetire', 'learn'); g.remember('hobby', 'college'); }, res: '老年大学一学期 ¥800。你报了书法和手机摄影，开学那天比谁到得都早。' },
       ] },
     { id: 'o_keep_working', age: 65, t: '还干不干', loc: 'home',
       cond: (g) => !FORMAL.includes(g.recall('preJob')),
@@ -223,11 +243,16 @@
         { t: '不带，各过各的', dev: 25, fx: (g) => { g.stat('心情', 3); g.stat('人缘', -3); g.remember('gkCare', 'none'); }, res: '你把话说在前头。家里冷了一阵，后来他们请了阿姨。' },
       ] },
     { id: 'o_pet', age: 67, t: '养点什么', loc: 'home',
-      cond: (g) => !hasGk(g),
+      cond: (g) => !hasGk(g) && !CN.pet(g) && lw(g) !== 'nursing',
       text: (g) => (CN.alone(g) ? '屋子太安静。楼下的老邻居说，养点活物，日子就有了响动。' : '白天家里没什么响动。楼下的老邻居说，养点活物，日子就热闹了。'),
       choices: [
         { t: '种一阳台的花', canon: true, fx: (g) => { g.stat('心情', 2); g.remember('pet', 'plants'); }, res: '你买了十几个花盆。第一个月死了一半。' },
-        { t: '养一条狗', dev: 10, fx: (g) => { g.stat('健康', 2); g.stat('心情', 3); g.remember('pet', 'dog'); }, res: '它每天早上六点叫你起来遛它。你没法再睡懒觉了。' },
+        { t: (g) => ((g.recall('tier') || 5) <= 3 ? '养一条狗（宠物店的小狗 ¥3,000，打针、狗粮一年 ¥4,000）' : '养一条狗（邻居家的狗崽，白给）'), dev: 10,
+          fx: (g) => { if ((g.recall('tier') || 5) <= 3) CN.pay(g, 3000); CN.adoptPet(g, 'dog'); g.stat('健康', 2); g.stat('心情', 3); g.remember('pet', 'dog'); },
+          res: (g) => '它叫' + CN.pet(g).name + '。每天早上六点，它叫你起来遛它。你没法再睡懒觉了。' },
+        { t: '去救助站领一只没人要的老猫', dev: 15,
+          fx: (g) => { CN.pay(g, 500); CN.adoptPet(g, 'cat', CN.pick(['老黄', '阿灰', '团团', '花姐'])); g.stat('心情', 3); g.remember('pet', 'cat'); },
+          res: (g) => '救助站说它八岁了，没人愿意领。你交了 ¥500 的体检费，把' + CN.pet(g).name + '抱回了家。它头一个星期躲在床底下，第二个星期就睡到了你脚边。' },
         { t: '什么也不养，清净', dev: 10, fx: (g) => { g.remember('pet', 'none'); g.stat('心情', -1); }, res: '你说不想再操心任何东西。' },
       ] },
 
@@ -274,8 +299,12 @@
       } },
     { id: 'o_rehire_end', age: 70, t: '交了工牌', auto: true,
       cond: (g) => g.recall('afterRetire') === 'rehire',
-      fx: (g) => { CN.earn(g, 150000); g.info('职业', '退休'); },
-      text: () => '七十岁，你把顾问的工牌也交了。返聘这几年又多挣了 ' + CN.fmt(150000) + '。最后一天，年轻人凑钱给你买了一束花。' },
+      fx: (g) => { paid = (Number(g.recall('rehirePay')) || 2500) * 12 * 5; CN.earn(g, paid); g.info('职业', '退休'); },
+      text: () => '七十岁，你把顾问的工牌也交了。返聘这几年又多挣了 ' + CN.fmt(paid) + '。最后一天，年轻人凑钱给你买了一束花。' },
+    { id: 'o_odd_end', age: 70, t: '不干了', auto: true,
+      cond: (g) => g.recall('afterRetire') === 'odd',
+      fx: (g) => { paid = 2000 * 12 * 5; CN.earn(g, paid); g.info('职业', '退休'); g.stat('心情', 2); },
+      text: () => '七十岁，你把零活辞了。这几年零零碎碎挣了 ' + CN.fmt(paid) + '。最后一天，常来的几个人跟你说，以后常回来坐坐。' },
 
     /* ================= 71 岁：老伴生病，或者老朋友 ================= */
     { id: 'o_sp_sick', age: 71, t: '老伴病了', loc: 'hospital',
@@ -331,6 +360,7 @@
       text: (g) => {
         const p = g.recall('pet');
         if (p === 'dog') return '那条狗老了，你也老了。你们遛弯的速度刚好一样。';
+        if (p === 'cat') return CN.pet(g) ? '那只老猫每天下午趴在窗台上晒太阳。你看报纸，它看你。' : '那只老猫陪了你几年，走的那天是个晴天。你把它的垫子洗干净，收进了柜子。';
         if (p === 'plants') return '阳台上的花活下来的那一半，今年开得特别好。楼下的人抬头看，问你怎么养的。';
         return '你说不养东西清净。可是有天下午，你对着窗台说了半天话。';
       } },
@@ -823,9 +853,10 @@
   ]);
 
   /* 新增的状态键名（老年，写进这一世的记忆）：
-   * preJob 退休前的职业；pension 'high'|'mid'|'low'|'savings'；afterRetire 'rest'|'rehire'|'learn'|'work'|'handover'
+   * preJob 退休前的职业；pension 'high'|'mid'|'low'|'savings'；afterRetire 'rest'|'rehire'|'learn'|'work'|'handover'|'odd'（没人返聘，打点零工，七十岁歇）；rehirePay 返聘每月多挣的（元，七十岁结账）
+   * 返聘只给有本事的人（ableToRehire：学识、事业够高，医生老师护士技术员，有手艺的工人，中年当过顾问或评过专家），其他人走 o_retire_plain
    * liveWith 'kids'|'alone'（守着自己家，可能和老伴住）|'hometown'|'nursing'；kidCity 孩子住的城市；grandkids 孙辈个数（孙辈 id gk1、gk2）
-   * gkCare 'full'|'part'|'paid'|'none'；gkGift 给孙辈包过大红包；gk2No 二孩没要孩子；pet；hobby；learnWhat；chronic 'control'|'ai'|'ignore'
+   * gkCare 'full'|'part'|'paid'|'none'；gkGift 给孙辈包过大红包；gk2No 二孩没要孩子；pet 'plants'|'dog'|'cat'|'none'（六十七岁养点什么，宠物用 CN.adoptPet）；hobby；learnWhat；chronic 'control'|'ai'|'ignore'
    * heartBill 心梗自费多少（元）；spCare 'self'|'paid'|'rehab'|'kids'；reunion；robotBuy 买了家务机器人
    * scam；scamLoss 被骗多少（元）；fall；sports；robot 'home'|'none'
    * will 'kids'|'spouse'|'kin'|'carer'|'sell'|'spend'|'donate'|'none'；willAmt 卖房所得或捐出的钱（元，捐房为 0）；willSpent 81 岁时花掉多少

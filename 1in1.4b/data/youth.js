@@ -86,6 +86,42 @@
   // 结果文字要用到的数，fx 里算好放在这里，res 紧接着读
   let last = {};
 
+  /* 各行当一个月大概挣多少、稳不稳。数和 economy.js 的 INCOME 一致（按城市等级、事业算，不含配偶）。
+   * 挂在 CN 上，中年、老年、意外的选项也用：CN.jobLine(g, 'tech', 1) → '约 ¥1.8 万/月，钱多，加班重……'
+   * plus 是升职以后事业多出来的点数，用来写“升上去大概多少” */
+  const INC = { none: 0, farmer: 30000, worker: 70000, rider: 80000, driver: 80000, shop: 70000, office: 100000, tech: 200000, civil: 110000, teacher: 100000, doctor: 160000, nurse: 90000, sales: 100000, boss: 180000, creator: 70000, soldier: 80000, freelance: 80000, retired: 0 };
+  const RISK = {
+    civil: '铁饭碗，几乎不会被裁', teacher: '稳定，有寒暑假，带班累', doctor: '稳定，夜班多，熬身体', nurse: '稳定，三班倒', soldier: '包吃住，规矩严',
+    tech: '钱多，加班重，怕三十五岁和 AI', office: '不算累，被 AI 替代的风险高', sales: '底薪加提成，看业绩吃饭',
+    worker: '累，机器人替代的风险高', rider: '多劳多得，风吹日晒，没有底薪', driver: '熬夜，无人驾驶迟早要来', shop: '看位置和运气，赔了算自己的',
+    boss: '好年景翻几倍，差的时候血本无归', creator: '大起大落，平台一变就断粮', freelance: '有一单没一单', farmer: '看天吃饭，挣得少',
+  };
+  CN.jobPay = (g, job, t, plus) => r100((INC[job] != null ? INC[job] : 60000) * (TI[t || tierNow(g)] || 0.8) * (0.6 + Math.min(100, g.s('事业') + (plus || 0)) / 100 * 1.4) / 12);
+  CN.jobRisk = (job) => RISK[job] || '';
+  CN.jobLine = (g, job, t, plus) => {
+    const m = CN.jobPay(g, job, t, plus);
+    const pay = job === 'boss' || job === 'creator' ? '月入 ' + CN.fmt(r100(m * 0.4)) + '到 ' + CN.fmt(r100(m * 1.8)) + ' 不等' : '约 ' + CN.fmt(m) + '/月';
+    return pay + '，' + CN.jobRisk(job);
+  };
+  // 受雇上班的（能升职）；自己干的（能扩张）
+  const EMPLOYEE = ['office', 'tech', 'sales', 'civil', 'teacher', 'doctor', 'nurse', 'worker', 'rider', 'driver', 'soldier'];
+  const hiEdu = (g) => ['bachelor', 'master', 'phd'].includes(g.recall('edu'));
+  // 按年份固定的随机数：同一年里文字和结果读到的是同一个
+  const lifeSeed = (g) => { const c = JY.byId[g.me]; const t = ((c && c.name) || '') + (g.recall('city') || ''); let h = 7; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 1000003; return h; };
+  const roll = (g, salt) => { const x = Math.sin(g.Y * 12.9898 + salt * 78.233 + lifeSeed(g) * 0.0137) * 43758.5453; return x - Math.floor(x); };
+  const pk = (g, arr, salt) => arr[Math.floor(roll(g, salt) * arr.length)];
+  const jobTitle = (g) => JY.engine.get().L.info['职业'] || '';
+  // 本钱：手里的钱先用（留 ¥1 万应急），不够的找亲戚借（记进 debt）。返回借了多少元
+  const fund = (g, cost) => {
+    CN.withdraw(g);
+    const mine = Math.min(cost, Math.max(0, cash(g) - 10000));
+    const lend = r1000(cost - mine);
+    if (lend > 0) { CN.earn(g, lend); g.remember('debt', debtW(g) + wan(lend)); }
+    CN.pay(g, cost);
+    return lend;
+  };
+  const FRANCHISE = { 1: 400000, 2: 300000, 3: 200000, 4: 150000, 5: 100000 };
+
   /* 一套房子的账：tier 城市等级，size 相对普通住房的大小。price 万，down/mine/fam/borrow 元 */
   const deal = (g, tier, size) => {
     const price = Math.max(10, Math.round(CN.price(g, tier) * size));
@@ -254,6 +290,21 @@
         res: '复读班在县中学的后楼，一年学费 ¥8,000。第一天点名，你认识里面一半的人。' },
     ] });
 
+  /* 升职（31 岁）：管理岗、专业路线、外调。ladder 记下走的哪条路，中年的升职读它 */
+  const MGR = { tech: '技术组长', office: '部门主管', sales: '销售经理', civil: '副科长', teacher: '年级组长', doctor: '医疗组长', nurse: '护士长', worker: '车间主任', rider: '站点组长', driver: '车队调度', soldier: '副连长' };
+  const EXPERT = { tech: '高级工程师', doctor: '主治医师', teacher: '一级教师', nurse: '主管护师', worker: '高级技工', office: '资深专员', civil: '主任科员' };
+  const upMgr = (g) => { CN.setJob(g, g.recall('job'), MGR[g.recall('job')] || '主管'); g.remember('promoted', true); g.remember('ladder', 'mgr'); g.stat('事业', 10); g.stat('健康', -2); };
+  const mgrRes = (g) => '你当上了' + jobTitle(g) + '，' + payWord(g).replace(/^.*?大概/, '现在每月大概') + '。第一件事，是学着不在群里说太多话。';
+  const upFail = (g) => { g.remember('promoted', false); g.remember('ladder', 'stuck'); g.stat('心情', -4); };
+
+  /* 自己干（29 岁）：小吃摊、网店、加盟店。biz 记下干的什么、头一年成没成，32 岁的回响兑现 */
+  const bizText = (g) => pk(g, ['下班路过夜市，', '周末回家的路上，', '刷短视频的时候，'], 1)
+    + pk(g, ['一个比你小的老乡说，他摆摊一个月挣一万多。', '你看见以前的同事开了家店，门口排着队。', '你算了算，给人打工到退休，也就是这么些钱。'], 2);
+  const frKind = (g) => pk(g, ['奶茶店', '快餐店', '便利店', '洗衣店', '烘焙店'], 3);
+  const frCost = (g) => FRANCHISE[tierNow(g)] || 200000;
+  // 能叫来帮忙的家里人
+  const helper = (g) => ['sib0', 'sib1'].find((id) => JY.byId[id] && g.alive(id) && g.ageOf(id) >= 18) || (g.alive('mo') ? 'mo' : g.alive('fa') ? 'fa' : '');
+
   JY.addFlags({
     ySavedWorker: '在工地上救下了一个从脚手架上摔下来的工友',
     yHometownShop: '回老家开了一家店，后来成了镇上的老字号',
@@ -317,10 +368,10 @@
         { t: '考高职，读大专', canon: true,
           fx: (g) => { g.remember('major', VOC_MAJOR[g.recall('vocMajor')] || CN.pick(['汽修', '数控', '护理', '电商', '烹饪'])); g.remember('lifePath', 'college'); g.info('学历', '大专在读'); CN.goCity(g, 2, capital(g)); g.move('campus', capital(g) + ' · 职业技术学院'); },
           res: (g) => '你考上了。学的还是' + g.recall('major') + '，只是学校大了。' },
-        { t: '留在厂里转正', dev: 5,
+        { t: (g) => '留在厂里转正（' + CN.jobLine(g, 'worker', 3) + '）', dev: 5,
           fx: (g) => { g.remember('lifePath', 'work'); CN.setJob(g, 'worker', '技术工人'); CN.goCity(g, 3); g.move('factory', g.recall('workCity') + ' · 车间'); },
           res: (g) => '转正那天，班长让你自己带一台机器。' + payWord(g) + '。' },
-        { t: '去当兵', dev: 15, check: ['健康', 55],
+        { t: (g) => '去当兵（' + CN.jobLine(g, 'soldier', 3) + '）', dev: 15, check: ['健康', 55],
           fx: (g) => { g.remember('lifePath', 'army'); CN.setJob(g, 'soldier', '士兵'); g.move('road', '去部队的路上'); g.stat('健康', 5); },
           res: '你剃了平头，在火车站跟妈妈挥手。',
           fail: { fx: (g) => { g.remember('lifePath', 'work'); CN.setJob(g, 'worker', '技术工人'); CN.goCity(g, 3); }, res: '体检没过。你回了实习的厂子。' } },
@@ -329,10 +380,10 @@
       text: (g) => '你在' + (g.recall('workCity') || '外地') + '已经干了两年，' + payWord(g) + '。' + (g.recall('workPlan') === 'study' ? '夜校的课快上完了。' : g.recall('workPlan') === 'city' ? '电动车换了第二辆。' : '流水线上的活闭着眼都会了。'),
       choices: [
         { t: '接着干，攒钱', canon: true, fx: (g) => { g.remember('workStyle', 'save'); last.amt = CN.invest(g, r1000(cash(g) * 0.5), 'safe'); g.stat('心情', -2); }, res: (g) => '你每个月往家里打一半工资。剩下的攒了攒，存了一张 ' + CN.fmt(last.amt) + ' 的定期。' },
-        { t: '去大城市跑外卖', dev: 15,
+        { t: (g) => '去大城市跑外卖（' + CN.jobLine(g, 'rider', 1) + '）', dev: 15,
           fx: (g) => { CN.setJob(g, 'rider', '外卖骑手'); CN.goCity(g, 1); g.move('metro', g.recall('workCity') + ' · 城中村'); g.stat('健康', -2); },
           res: (g) => '在' + g.recall('workCity') + '，你租了一辆电动车，第一天跑了二十单。跑得勤的话，' + payWord(g) + '。' },
-        { t: '跟师傅学门手艺', dev: 15,
+        { t: (g) => '跟师傅学门手艺（学徒 ¥2,500/月，出师后' + CN.jobLine(g, 'worker', null, 6) + '）', dev: 15,
           fx: (g) => { const s = CN.pick(['cook', 'auto', 'hair', 'elec']); g.remember('skill', s); CN.setJob(g, 'worker', { cook: '学徒厨师', auto: '汽修学徒', hair: '理发学徒', elec: '电工学徒' }[s]); },
           res: '学徒一个月只有 ¥2,500，师傅脾气大。你每天最后一个走。' },
       ] }),
@@ -390,16 +441,16 @@
     dec({ id: 'y_work20', age: 20, t: '换个活法', loc: 'factory', cond: (g) => working(g) && !g.recall('army'),
       text: (g) => (g.recall('workStyle') === 'study' ? '你考下来的证，让你有了换岗的机会。' : '厂里的订单越来越少，车间里多了几台机械臂。') + '你现在' + payWord(g) + '。',
       choices: [
-        { t: '学门手艺，以后不靠流水线', canon: true, cond: (g) => !g.recall('skill'),
+        { t: (g) => '学门手艺，以后不靠流水线（拜师 ¥5,000，出师后' + CN.jobLine(g, 'worker', null, 4) + '）', canon: true, cond: (g) => !g.recall('skill'),
           fx: (g) => { const s = CN.pick(['cook', 'auto', 'hair', 'elec']); g.remember('skill', s); CN.pay(g, 5000); CN.setJob(g, 'worker', { cook: '厨师', auto: '汽修工', hair: '理发师', elec: '电工' }[s]); g.stat('事业', 4); },
           res: '拜师交了 ¥5,000。半年后，师傅说你可以出师了。' },
-        { t: '去跑外卖，多劳多得', dev: 10, cond: (g) => g.recall('job') !== 'rider',
+        { t: (g) => '去跑外卖（' + CN.jobLine(g, 'rider', 1) + '）', dev: 10, cond: (g) => g.recall('job') !== 'rider',
           fx: (g) => { CN.setJob(g, 'rider', '外卖骑手'); CN.goCity(g, 1); g.move('metro', g.recall('workCity') + ' · 城中村'); g.stat('健康', -3); },
           res: (g) => '你每天跑十二个小时，' + payWord(g) + '，膝盖开始疼。' },
-        { t: '学着做直播', dev: 20, check: ['人缘', 50],
+        { t: (g) => '学着做直播（设备 ¥3,000，' + CN.jobLine(g, 'creator') + '）', dev: 20, check: ['人缘', 50],
           fx: (g) => { CN.pay(g, 3000); CN.setJob(g, 'creator', '主播'); g.stat('心情', 3); }, res: '补光灯和声卡花了 ¥3,000。你拍的车间日常有人看，第一个月，打赏够交房租了。',
           fail: { fx: (g) => { CN.pay(g, 3000); g.stat('心情', -4); }, res: '设备花了 ¥3,000。直播间常常只有三个人，其中一个是你妈。' } },
-        { t: '回老家，帮家里', dev: 10,
+        { t: (g) => '回老家，帮家里（' + CN.jobLine(g, rural(g) ? 'farmer' : 'shop', rural(g) ? 5 : 4) + '）', dev: 10,
           fx: (g) => { goBack(g); g.remember('backHome', 'early'); CN.setJob(g, rural(g) ? 'farmer' : 'shop', rural(g) ? '种地，农闲打零工' : '在家里的店帮忙'); g.stat('心情', 3); },
           res: '你回来那天，家门口的路刚修成水泥的。挣得少了，饭是热的。' },
       ] }),
@@ -416,7 +467,7 @@
     dec({ id: 'y_college_out', age: 21, t: '大专毕业', loc: 'campus', cond: (g) => g.recall('lifePath') === 'college',
       text: (g) => '三年过得快。' + (g.recall('major') || '你的专业') + '的同学，大半已经签了工作。',
       choices: [
-        { t: '按专业找工作', canon: true,
+        { t: (g) => { const m = g.recall('major'); const j = { 护理: 'nurse', 学前教育: 'teacher', 机器人维修: 'worker', 电商: 'sales' }[m] || 'worker'; return '按专业找工作（' + CN.jobLine(g, j, ['机器人维修', '电商'].includes(m) ? 2 : 3) + '）'; }, canon: true,
           fx: (g) => {
             CN.setEdu(g, 'college', '大专'); g.remember('lifePath', 'work');
             const m = g.recall('major');
@@ -462,24 +513,25 @@
     dec({ id: 'y_offer', age: 22, t: '第一份工作', loc: 'office', cond: (g) => g.recall('lifePath') === 'uni' && !g.recall('job'),
       text: (g) => '投了几十份简历，' + (g.recall('uniSide') === 'intern' ? '实习过的公司先给了你回复。' : '回音不多。') + '那一年，很多基础岗位被 AI 替代，招聘会上的人比岗位多。',
       choices: [
-        { t: '去大城市，进一家大厂', dev: 10, check: ['学识', 84],
-          fx: (g) => { CN.setJob(g, g.recall('major') === '计算机' ? 'tech' : 'office', g.recall('major') === '计算机' ? '程序员' : '大厂职员'); CN.goCity(g, 1); g.move('office', g.recall('workCity') + ' · 写字楼'); g.remember('lifePath', 'work'); g.stat('健康', -3); },
+        { t: (g) => '去大城市，进一家大厂（' + CN.jobLine(g, g.recall('major') === '计算机' ? 'tech' : 'office', 1) + '）', dev: 10, check: ['学识', 84],
+          fx: (g) => { CN.setJob(g, g.recall('major') === '计算机' ? 'tech' : 'office', g.recall('major') === '计算机' ? '程序员' : '大厂职员'); CN.goCity(g, 1); g.move('office', g.recall('workCity') + ' · 写字楼'); g.remember('lifePath', 'work'); g.remember('offer22', 'big'); g.stat('健康', -3); },
           res: (g) => '你进了' + g.recall('workCity') + '的一家大厂，' + payWord(g) + '。工牌挂在脖子上，晚上十点地铁还很挤。',
           fail: { fx: (g) => { CN.setJob(g, 'office', '公司职员'); CN.goCity(g, 2, capital(g)); g.remember('lifePath', 'work'); }, res: (g) => '大厂没要你。你回了' + g.recall('workCity') + '，在一家小公司上班，' + payWord(g) + '。' } },
-        { t: '回省城，找份稳定的工作', canon: true,
+        { t: (g) => '回省城，找份稳定的工作（' + CN.jobLine(g, { 医学: 'doctor', 师范: 'teacher' }[g.recall('major')] || 'office', 2) + '）', canon: true,
           fx: (g) => {
             const m = g.recall('major');
+            g.remember('offer22', 'stable');
             if (m === '医学') { CN.setJob(g, 'doctor', '住院医生'); g.move('hospital', capital(g) + ' · 省医院'); }
             else if (m === '师范') CN.setJob(g, 'teacher', '中学老师');
             else CN.setJob(g, 'office', '公司职员');
             CN.goCity(g, 2, capital(g)); g.remember('lifePath', 'work');
           },
           res: (g) => '你在' + g.recall('workCity') + '上班了，' + payWord(g) + '。不算多，周末能回家。' },
-        { t: '回老家，考编', dev: 10,
-          fx: (g) => { CN.setJob(g, g.recall('major') === '师范' ? 'teacher' : 'civil', g.recall('major') === '师范' ? '县中学老师' : '乡镇公务员'); toCounty(g); g.remember('backHome', 'early'); g.remember('lifePath', 'work'); g.stat('心情', 3); },
+        { t: (g) => '回老家，考编（' + CN.jobLine(g, g.recall('major') === '师范' ? 'teacher' : 'civil', 4) + '）', dev: 10,
+          fx: (g) => { CN.setJob(g, g.recall('major') === '师范' ? 'teacher' : 'civil', g.recall('major') === '师范' ? '县中学老师' : '乡镇公务员'); toCounty(g); g.remember('backHome', 'early'); g.remember('lifePath', 'work'); g.remember('offer22', 'civil'); g.stat('心情', 3); },
           res: (g) => '编制考上了，' + payWord(g) + '。你妈在亲戚群里发了一个大红包。' },
-        { t: '做自媒体，自己干', dev: 25, check: ['人缘', 55],
-          fx: (g) => { CN.setJob(g, 'creator', '博主'); CN.goCity(g, 2, capital(g)); g.remember('lifePath', 'work'); g.stat('心情', 4); },
+        { t: (g) => '做自媒体，自己干（' + CN.jobLine(g, 'creator', 2) + '）', dev: 25, check: ['人缘', 55],
+          fx: (g) => { CN.setJob(g, 'creator', '博主'); CN.goCity(g, 2, capital(g)); g.remember('lifePath', 'work'); g.remember('offer22', 'media'); g.stat('心情', 4); },
           res: '你拍的租房日常火了一条。半年后，接广告的钱够活了。',
           fail: { fx: (g) => { CN.setJob(g, 'freelance', '自由职业'); CN.goCity(g, 2, capital(g)); g.remember('lifePath', 'work'); }, res: '粉丝涨得很慢。你接了一些零活，勉强交上房租。' } },
       ] }),
@@ -545,8 +597,8 @@
           fx: (g) => { g.remember('aiMove', 'learn'); CN.pay(g, 5000); g.stat('学识', 5); g.stat('事业', 5); if (['worker', 'rider', 'driver'].includes(g.recall('job'))) CN.setJob(g, 'worker', '机器人运维'); },
           res: '你花 ¥5,000 报了一个培训班，熬了几个月的夜，学会了怎么跟机器打交道。你留下来了。',
           fail: { fx: (g) => { g.remember('aiMove', 'laid'); last.amt = r1000(perMonth(g) * 3); CN.earn(g, last.amt); g.stat('心情', -6); CN.setJob(g, 'freelance', '打零工'); }, res: (g) => '你还是被裁了。补偿 ' + CN.fmt(last.amt) + '，你在公司楼下坐了一下午。晚上，' + (married(g) ? '家里' : '朋友') + '给你煮了一碗面。' } },
-        { t: '转行，去做 AI 训练师', dev: 15, fx: (g) => { g.remember('aiMove', 'switch'); CN.setJob(g, 'tech', 'AI 训练师'); g.stat('事业', 3); }, res: (g) => '你的新工作是教机器说人话。听起来有点好笑，' + payWord(g) + '。' },
-        { t: '换个机器干不了的活', dev: 15,
+        { t: (g) => '转行，去做 AI 训练师（' + CN.jobLine(g, 'tech') + '）', dev: 15, fx: (g) => { g.remember('aiMove', 'switch'); CN.setJob(g, 'tech', 'AI 训练师'); g.stat('事业', 3); }, res: (g) => '你的新工作是教机器说人话。听起来有点好笑，' + payWord(g) + '。' },
+        { t: (g) => '换个机器干不了的活，去做护理（' + CN.jobLine(g, 'nurse') + '）', dev: 15,
           fx: (g) => { g.remember('aiMove', 'care'); CN.setJob(g, g.rnd() < 0.5 ? 'nurse' : 'freelance', g.rnd() < 0.5 ? '护工' : '家政'); g.stat('人缘', 5); },
           res: '你去照顾老人。他们记不住你的名字，记得你的声音。' },
       ] }),
@@ -601,8 +653,8 @@
     dec({ id: 'y_career26', age: 26, t: '跳槽', loc: 'office', cond: (g) => working(g) && !g.recall('abroadStay') && ['office', 'tech', 'sales', 'boss'].includes(g.recall('job')),
       text: (g) => '猎头打来电话。你现在' + payWord(g) + '，对方开的价，比这多三成。',
       choices: [
-        { t: '跳', dev: 10, check: ['事业', 30], fx: (g) => { g.remember('jumped', true); g.stat('事业', 8); }, res: (g) => '新公司的工位在二十八楼，能看见江。' + payWord(g) + '。', fail: { fx: (g) => { g.remember('jumped', false); g.stat('心情', -3); }, res: '面了三轮，没了下文。' } },
-        { t: '不动，稳着', canon: true, fx: (g) => { g.remember('jumped', false); g.stat('事业', 3); g.stat('心情', 1); }, res: '你谢绝了。下个月，组长的位置给了你。' },
+        { t: (g) => '跳（月薪多三成，到 ' + CN.fmt(r100(CN.jobPay(g, g.recall('job')) * 1.3)) + '左右；新公司试用期站不稳就得走）', dev: 10, check: ['事业', 30], fx: (g) => { g.remember('jumped', true); g.stat('事业', 8); }, res: (g) => '新公司的工位在二十八楼，能看见江。' + payWord(g) + '。', fail: { fx: (g) => { g.remember('jumped', false); g.stat('心情', -3); }, res: '面了三轮，没了下文。' } },
+        { t: (g) => '不动，稳着（现在约 ' + CN.fmt(CN.jobPay(g, g.recall('job'))) + '/月，熟门熟路）', canon: true, fx: (g) => { g.remember('jumped', false); g.stat('事业', 3); g.stat('心情', 1); }, res: '你谢绝了。下个月，组长的位置给了你。' },
       ] }),
     dec({ id: 'y_side26', age: 26, t: '下班以后', loc: 'metro', cond: (g) => working(g) && !g.recall('abroadStay') && ['worker', 'rider', 'driver', 'shop', 'freelance', 'creator', 'nurse', 'farmer'].includes(g.recall('job')),
       text: (g) => '你' + payWord(g) + '。' + (kidN(g) || married(g) ? '家里的开销一年比一年大。' : '房租、吃饭、给家里寄一点，月底剩不下多少。') + '身边有人下了班还在干点别的。',
@@ -640,8 +692,8 @@
     dec({ id: 'y_startup', age: 27, t: '创业', loc: 'office', cond: (g) => working(g) && (g.recall('uniSide') === 'project' || g.recall('family') === 'rich' || g.s('事业') >= 45),
       text: (g) => '一个老同学找到你，说有个想法，就差一个合伙人，要你拿出 ' + CN.fmt(Math.min(100000, r1000(cash(g) * 0.7))) + ' 入股。',
       choices: [
-        { t: '辞职一起干', dev: 25, check: ['事业', 50], fx: (g) => { CN.withdraw(g); CN.pay(g, Math.min(100000, r1000(cash(g) * 0.7))); g.remember('startup', 'ok'); CN.setJob(g, 'boss', '创业公司合伙人'); g.stat('健康', -4); }, res: '第三年，公司拿到了融资。你请所有人吃了一顿烧烤。', fail: { fx: (g) => { CN.withdraw(g); CN.pay(g, Math.min(100000, r1000(cash(g) * 0.7))); g.remember('startup', 'fail'); g.remember('debt', debtW(g) + 20); g.stat('心情', -8); }, res: '撑了两年，公司没了。入股的钱打了水漂，你还欠了 ¥20 万。老同学请你吃了一顿饭，两个人都没怎么说话。' } },
-        { t: '算了，打工稳当', canon: true, fx: (g) => { g.remember('startup', 'no'); g.stat('心情', 1); }, res: '后来你在新闻里看到了那家公司的名字。' },
+        { t: (g) => '辞职一起干（入股 ' + CN.fmt(Math.min(100000, r1000(cash(g) * 0.7))) + '；成了收入翻几倍，十家里活下来一两家）', dev: 25, check: ['事业', 50], fx: (g) => { CN.withdraw(g); CN.pay(g, Math.min(100000, r1000(cash(g) * 0.7))); g.remember('startup', 'ok'); CN.setJob(g, 'boss', '创业公司合伙人'); g.stat('健康', -4); }, res: '第三年，公司拿到了融资。你请所有人吃了一顿烧烤。', fail: { fx: (g) => { CN.withdraw(g); CN.pay(g, Math.min(100000, r1000(cash(g) * 0.7))); g.remember('startup', 'fail'); g.remember('debt', debtW(g) + 20); g.stat('心情', -8); }, res: '撑了两年，公司没了。入股的钱打了水漂，你还欠了 ¥20 万。老同学请你吃了一顿饭，两个人都没怎么说话。' } },
+        { t: (g) => '算了，打工稳当（' + CN.jobLine(g, g.recall('job') || 'office') + '）', canon: true, fx: (g) => { g.remember('startup', 'no'); g.stat('心情', 1); }, res: '后来你在新闻里看到了那家公司的名字。' },
       ] }),
     dec({ id: 'y_burnout27', age: 27, t: '加班', loc: 'office', cond: (g) => ['tech', 'office', 'doctor', 'boss'].includes(g.recall('job')),
       text: '连续三个月，你没在十二点前睡过。体检报告上有好几个箭头。',
@@ -706,6 +758,23 @@
           res: (g) => '你回来那天，' + (g.alive('mo') ? '你妈' : '你爸') + '在村口等了一下午。挣得少了，你每天都能见到' + parentWord(g) + '。' },
       ] }),
 
+
+    dec({ id: 'y_promo29', age: 29, t: '升职', loc: 'office', cond: (g) => working(g) && EMPLOYEE.includes(g.recall('job')),
+      text: (g) => ({ civil: '科里空出一个副科的位置。', teacher: '学校要选一个年级组长。', doctor: '科里要定一个医疗组长。', nurse: '护士长要调走了。', worker: '车间主任要退休了。', rider: '站长问你要不要当个小组长。', driver: '车队要提一个调度。', soldier: '连里空出一个副职。', tech: '组长跳槽走了，位置空着。', sales: '大区经理的位子空出来了。' }[g.recall('job')] || '部门里空出一个小主管的位置。')
+        + '你现在是' + jobTitle(g) + '，自己一个月约 ' + CN.fmt(CN.jobPay(g, g.recall('job'))) + '。' + (hiEdu(g) ? '' : '一起竞争的人里，好几个学历比你高。'),
+      choices: [
+        { t: (g) => '争管理岗（升上去约 ' + CN.fmt(CN.jobPay(g, g.recall('job'), null, 10)) + '/月，会多，背指标）', canon: true, cond: hiEdu, check: ['事业', 40], fx: (g) => upMgr(g), res: (g) => mgrRes(g), fail: { fx: (g) => upFail(g), res: '没轮上你。你照常上班，只是话少了。' } },
+        { t: (g) => '争管理岗（升上去约 ' + CN.fmt(CN.jobPay(g, g.recall('job'), null, 10)) + '/月；学历吃亏，得拿业绩说话）', canon: true, cond: (g) => !hiEdu(g), check: ['事业', 52], fx: (g) => upMgr(g), res: (g) => mgrRes(g), fail: { fx: (g) => upFail(g), res: '位置给了一个研究生。你把业绩表又看了一遍，觉得自己不差。' } },
+        { t: (g) => '走专业路线，考' + EXPERT[g.recall('job')] + '（考下来约 ' + CN.fmt(CN.jobPay(g, g.recall('job'), null, 6)) + '/月，不用管人，要啃书）', dev: 10, cond: (g) => !!EXPERT[g.recall('job')], check: ['学识', 62],
+          fx: (g) => { CN.pay(g, 3000); CN.setJob(g, g.recall('job'), EXPERT[g.recall('job')]); g.remember('promoted', true); g.remember('ladder', 'expert'); g.stat('事业', 6); g.stat('学识', 3); },
+          res: (g) => '报班、考试花了 ¥3,000。证书下来那天，你成了' + EXPERT[g.recall('job')] + '，' + payWord(g).replace(/^.*?大概/, '现在每月大概') + '。难办的活开始点名找你。',
+          fail: { fx: (g) => { CN.pay(g, 3000); upFail(g); }, res: '考了两回，差一点。¥3,000 的报名费和书钱，你说就当交了学费。' } },
+        { t: (g) => '去外地分部，升一级（约 ' + CN.fmt(CN.jobPay(g, g.recall('job'), tierNow(g) === 1 ? 2 : 1, 10)) + '/月，' + (married(g) ? '家里得跟着搬' : '人生地不熟') + '）', dev: 20, cond: (g) => ['office', 'tech', 'sales'].includes(g.recall('job')),
+          fx: (g) => { const c = tierNow(g) === 1 ? CN.goCity(g, 2) : CN.goCity(g, 1, CN.pick(['上海', '深圳', '北京', '杭州', '广州'].filter((x) => x !== here(g)))); g.move('office', c + ' · 分部'); CN.setJob(g, g.recall('job'), '分部负责人'); g.remember('promoted', true); g.remember('ladder', 'move'); g.stat('事业', 10); g.stat('人缘', -2); },
+          res: (g) => '你调去了' + here(g) + '，当上了分部负责人，' + payWord(g) + '。' + (married(g) ? g.recall('spouse') + '跟着辞了工作，在新城市重新找。' : '行李不多，一个箱子就装完了。') },
+        { t: '让给别人，图个轻松', dev: 10, fx: (g) => { g.remember('promoted', false); g.remember('ladder', 'no'); g.stat('心情', 3); g.stat('健康', 2); }, res: (g) => '你准点下班，' + (kidN(g) && g.recall('custody') !== 'ex' ? '去幼儿园接孩子。' : '去公园走两圈。') },
+      ] }),
+
     /* ================= 30 岁是人生关口，这里只写自动节点 ================= */
     { id: 'y_turn30', age: 30, t: '三十岁', auto: true,
       text: (g) => (married(g) ? (kidN(g) && g.alive('k1') && g.ageOf('k1') >= 2 ? g.name('k1') + '给你画了一张生日卡，你被画成了一个圆。' : '你和' + g.recall('spouse') + '吃了一顿火锅，算是过生日。')
@@ -742,12 +811,6 @@
           },
           res: (g) => '民政局门口排着队。' + (last.sold ? '房子卖了，' : '') + '家里的钱一人一半，你给出去 ' + CN.fmt(last.amt) + '。' + (kidN(g) ? (g.recall('custody') === 'me' ? '孩子跟你。' : '孩子跟了对方。') : '') + '你们签完字，各走各的。' },
       ] }),
-    dec({ id: 'y_job31', age: 31, t: '升职', loc: 'office', cond: (g) => working(g) && g.recall('job') !== 'none',
-      text: (g) => ({ civil: '科里空出一个副科的位置。', teacher: '学校要选一个年级组长。', worker: '车间主任要退休了。', rider: '站长问你要不要当个小组长。', shop: '隔壁的门面也要转让。', creator: '有家公司想签你。' }[g.recall('job')] || '部门里空出一个小主管的位置。'),
-      choices: [
-        { t: '争一争', canon: true, check: ['事业', 40], fx: (g) => { g.remember('promoted', true); g.stat('事业', 8); g.stat('健康', -2); g.info('职业', (JY.engine.get().L.info['职业'] || '') + '（带团队）'); }, res: (g) => '你上去了，' + payWord(g).replace(/^.*?大概/, '现在每月大概') + '。第一件事，是学着不在群里说太多话。', fail: { fx: (g) => { g.remember('promoted', false); g.stat('心情', -4); }, res: '没轮上你。你照常上班，只是话少了。' } },
-        { t: '让给别人，图个轻松', dev: 10, fx: (g) => { g.remember('promoted', false); g.stat('心情', 3); g.stat('健康', 2); }, res: (g) => '你准点下班，' + (kidN(g) && g.recall('custody') !== 'ex' ? '去幼儿园接孩子。' : '去公园走两圈。') },
-      ] }),
 
     /* ================= 32 岁 ================= */
     dec({ id: 'y_kid2', age: 32, t: '二胎', loc: 'home', cond: (g) => married(g) && kidN(g) === 1 && g.alive('k1') && g.ageOf('k1') >= 2,
@@ -770,6 +833,26 @@
       choices: [
         { t: '有人介绍，就见见', canon: true, check: ['人缘', 45], fx: (g) => { CN.marry(g, { origin: '朋友介绍' }); g.remember('lateMarry', 'match'); CN.pay(g, 30000); g.stat('心情', 6); }, res: (g) => '你和' + g.recall('spouse') + '处了半年就结了婚，请两家人吃了几桌，花了 ¥3 万。两个人都不年轻了，没那么多讲究。', fail: { fx: (g) => { g.remember('singleWay', 'blind'); g.stat('心情', -2); }, res: '没成。你也没太难过，回家给自己炒了两个菜。' } },
         { t: '就这样过，挺自在', dev: 15, fx: (g) => { g.remember('singleWay', 'self'); CN.pay(g, 3000); g.stat('心情', 4); }, res: '你花 ¥3,000 给自己买了一套好点的锅。' },
+      ] }),
+    dec({ id: 'y_biz32', age: 32, t: '自己干', loc: 'metro',
+      cond: (g) => working(g) && !['boss', 'shop', 'creator', 'farmer'].includes(g.recall('job')) && g.recall('startup') !== 'ok' && !g.recall('abroadStay') && (cash(g) >= 20000 || !!g.recall('skill') || !!g.recall('side')),
+      text: (g) => bizText(g) + '你现在是' + jobTitle(g) + '，' + payWord(g) + '，卡里有 ' + CN.fmt(cash(g)) + '。',
+      choices: [
+        { t: '晚上摆个小吃摊（本钱 ¥2 万，白天照常上班，挣多少看手艺和地段）', dev: 15, check: ['人缘', 45],
+          fx: (g) => { last.lend = fund(g, 20000); g.remember('biz', 'stall'); g.remember('side', 'stall'); g.stat('健康', -2); },
+          res: (g) => '推车、炉子、第一批货，一共 ¥2 万' + (last.lend ? '，其中 ' + CN.fmt(last.lend) + ' 是借的' : '') + '。你卖' + pk(g, ['烤冷面', '炸串', '手抓饼', '凉皮', '煎饼'], 4) + '，第一个月刨去成本挣了 ¥3,000 多。',
+          fail: { fx: (g) => { last.lend = fund(g, 20000); CN.earn(g, 6000); g.remember('biz', 'stallFail'); g.stat('心情', -4); }, res: '摆了半年，赶上一个多雨的夏天，摊位又挪了两回。你把推车 ¥6,000 转给了别人，算下来亏了一万多。' } },
+        { t: '开网店，做直播带货（本钱 ¥3 万，十家里能活下来两三家）', dev: 20, check: ['人缘', 55],
+          fx: (g) => { last.lend = fund(g, 30000); g.remember('biz', 'online'); g.stat('健康', -2); },
+          res: (g) => '样品、补光灯、投流，先花了 ¥3 万' + (last.lend ? '，' + CN.fmt(last.lend) + ' 是借的' : '') + '。你卖' + pk(g, ['老家的土特产', '自己挑的童装', '小家电', '手工饰品'], 5) + '，下了班就开播，第三个月开始有回头客。',
+          fail: { fx: (g) => { last.lend = fund(g, 30000); g.remember('biz', 'onlineFail'); g.stat('心情', -4); }, res: '直播间常常只有十几个人。三个月后你停了播，¥3 万变成了阳台上的几箱货，送了一年亲戚朋友。' } },
+        { t: (g) => '加盟一家连锁' + frKind(g) + '（加盟费、装修、押金一共 ' + CN.fmt(frCost(g)) + (cash(g) - 10000 < frCost(g) ? '，要借 ' + CN.fmt(r1000(frCost(g) - Math.max(0, cash(g) - 10000))) : '') + '，顺利的话两三年回本）', dev: 25,
+          cond: (g) => cash(g) >= frCost(g) * 0.4, check: ['事业', 45],
+          fx: (g) => { const k = frKind(g); last.lend = fund(g, frCost(g)); g.remember('bizKind', k); g.remember('biz', 'franchise'); CN.setJob(g, 'boss', k + '加盟店老板'); g.stat('心情', 3); },
+          res: (g) => '你辞了工作，开了一家' + g.recall('bizKind') + '。' + (last.lend ? '借来的 ' + CN.fmt(last.lend) + ' 写了借条。' : '') + '头一年刨去房租和人工，你自己拿到手的，比上班时略多一点。',
+          fail: { fx: (g) => { const k = frKind(g); const c = frCost(g); last.lend = fund(g, c); last.amt = r1000(c * 0.3); CN.earn(g, last.amt); g.remember('bizKind', k); g.remember('biz', 'franchiseFail'); g.stat('心情', -6); },
+            res: (g) => '店开了十个月，门口的人流比总部说的少一半。你把店转了出去，只收回 ' + CN.fmt(last.amt) + '。' + (debtW(g) ? '还欠着 ' + CN.fmt(debtW(g) * 1e4) + '，' : '') + '你回去接着上班。' } },
+        { t: '想想就算了，上班稳当', canon: true, fx: (g) => { g.remember('biz', 'no'); g.stat('心情', 1); }, res: '你在夜市买了一份烤冷面，边走边吃。挺好吃，你没再多想。' },
       ] }),
 
     /* ================= 33 岁 ================= */
@@ -804,9 +887,9 @@
     dec({ id: 'y_last34', age: 34, t: '三十五岁之前', loc: 'office', cond: (g) => working(g) && !['civil', 'teacher', 'doctor', 'soldier', 'farmer', 'retired', 'none'].includes(g.recall('job')),
       text: (g) => '明年就三十五了。招聘启事上写着“三十五岁以下”。' + (g.recall('aiMove') === 'switch' ? '你转行做的这一行，年轻人越来越多。' : g.recall('promoted') ? '你带着一个小团队，也带着一份不安。' : '你在现在的位置上已经好几年了。'),
       choices: [
-        { t: '考个编，求个稳', dev: 10, check: ['学识', 80], fx: (g) => { g.remember('last34', 'civil'); CN.setJob(g, 'civil', '事业单位职员'); g.stat('心情', 4); }, res: (g) => '你考上了最后一年还能报的岗位。' + payWord(g) + '，比原来少，心里踏实。', fail: { fx: (g) => { g.remember('last34', 'stay'); g.stat('心情', -3); }, res: '差了两分。你回到工位上，把准考证收进了抽屉。' } },
+        { t: (g) => '考个编，求个稳（' + CN.jobLine(g, 'civil') + '）', dev: 10, check: ['学识', 80], fx: (g) => { g.remember('last34', 'civil'); CN.setJob(g, 'civil', '事业单位职员'); g.stat('心情', 4); }, res: (g) => '你考上了最后一年还能报的岗位。' + payWord(g) + '，比原来少，心里踏实。', fail: { fx: (g) => { g.remember('last34', 'stay'); g.stat('心情', -3); }, res: '差了两分。你回到工位上，把准考证收进了抽屉。' } },
         { t: '守住现在的位置', canon: true, fx: (g) => { g.remember('last34', 'stay'); g.stat('事业', 3); g.stat('健康', -2); }, res: '你比以前更早到公司，更晚走。' },
-        { t: '自己出来单干', dev: 20, fx: (g) => { g.remember('last34', 'own'); CN.withdraw(g); last.amt = r1000(Math.min(cash(g) * 0.6, 100000)); CN.pay(g, last.amt); CN.setJob(g, g.recall('skill') ? 'shop' : 'boss', g.recall('skill') ? '开店' : '个体老板'); g.stat('心情', 4); }, res: (g) => '你拿出 ' + CN.fmt(last.amt) + '，注册了一家小公司，法人代表写的是你的名字。' },
+        { t: (g) => '自己出来单干（' + CN.jobLine(g, g.recall('skill') ? 'shop' : 'boss') + '）', dev: 20, fx: (g) => { g.remember('last34', 'own'); CN.withdraw(g); last.amt = r1000(Math.min(cash(g) * 0.6, 100000)); CN.pay(g, last.amt); CN.setJob(g, g.recall('skill') ? 'shop' : 'boss', g.recall('skill') ? '开店' : '个体老板'); g.stat('心情', 4); }, res: (g) => '你拿出 ' + CN.fmt(last.amt) + '，注册了一家小公司，法人代表写的是你的名字。' },
       ] }),
     dec({ id: 'y_last34b', age: 34, t: '回头看', loc: 'home', cond: (g) => true,
       text: '你翻到一张十八岁时的照片。那时候你以为三十四岁是很老的年纪。',
@@ -879,11 +962,59 @@
       text: '周末的课上完了。你发现自己还能学进去东西，这让你高兴了好几天。' },
     { id: 'y_single_after', age: 34, t: '自己的日子', auto: true, cond: (g) => single(g) && ['self', 'refuse'].includes(g.recall('singleWay')),
       text: '你把自己的日子过得井井有条。周末约朋友爬山，晚上看一部老电影。偶尔夜里醒来，会想一想以后老了谁陪你。' },
+    // 第一份工作的风险兑现：大厂会裁员，自媒体会断流
+    { id: 'y_offer_echo', age: 28, t: '当年的选择', auto: true,
+      cond: (g) => working(g) && ((g.recall('offer22') === 'big' && ['tech', 'office'].includes(g.recall('job')) && tierNow(g) === 1) || (g.recall('offer22') === 'media' && g.recall('job') === 'creator')),
+      fx: (g) => {
+        const media = g.recall('offer22') === 'media';
+        last.cut = g.rnd() < (media ? 0.45 : 0.3);
+        const m = CN.jobPay(g, g.recall('job'));
+        if (!last.cut) { last.amt = r1000(m * (media ? 5 : 3)); CN.earn(g, last.amt); g.stat('事业', 4); }
+        else if (media) { CN.setJob(g, 'freelance', '接零活的剪辑师'); g.stat('心情', -5); }
+        else { last.amt = r1000(m * 7); CN.earn(g, last.amt); CN.setJob(g, 'office', '小公司职员'); g.stat('事业', -4); g.stat('心情', -5); }
+      },
+      text: (g) => {
+        const media = g.recall('offer22') === 'media';
+        if (media) return last.cut ? '平台改了推荐规则，你的播放量一夜之间掉到原来的一成。撑了半年，你开始给别人剪视频，按条收钱。'
+          : '你的账号熬过了好几次平台改版。今年接广告挣了 ' + CN.fmt(last.amt) + '，评论区有人叫你老师。';
+        return last.cut ? '第三轮裁员，名单上有你。赔偿 N+1，一共 ' + CN.fmt(last.amt) + '。你抱着纸箱下楼，保安冲你点了点头。一个月后你去了一家小公司，钱少了，晚上七点能下班。'
+          : '大厂这几年裁过两轮，你都留下了。年终奖 ' + CN.fmt(last.amt) + '，你在工位上愣了一会儿。你已经记不清上一次周末不开电脑是什么时候。';
+      } },
+    { id: 'y_biz_echo', age: 34, t: '那个摊子', auto: true, cond: (g) => ['stall', 'online', 'franchise'].includes(g.recall('biz')),
+      fx: (g) => {
+        const b = g.recall('biz');
+        last.ok = g.rnd() < { stall: 0.55, online: 0.5, franchise: 0.65 }[b];
+        last.who = helper(g);
+        if (b === 'stall') {
+          g.remember('side', '');
+          if (last.ok) { CN.setJob(g, 'shop', '小吃店老板'); g.stat('事业', 6); g.stat('心情', 4); } else g.stat('健康', -2);
+        } else if (b === 'online') {
+          if (last.ok) { CN.setJob(g, 'boss', '网店老板'); g.stat('事业', 8); } else g.stat('心情', -3);
+        } else if (last.ok) { last.amt = r1000(frCost(g) * 0.5); CN.earn(g, last.amt); g.stat('事业', 8); }
+        else { last.amt = r1000(frCost(g) * 0.2); CN.earn(g, last.amt); CN.setJob(g, tierNow(g) >= 4 ? 'worker' : 'office', tierNow(g) >= 4 ? '工厂工人' : '公司职员'); g.stat('心情', -6); }
+      },
+      text: (g) => {
+        const b = g.recall('biz');
+        const hire = last.who ? '你把' + CN.who(g, last.who).replace(/^你的/, '') + '叫来帮忙，按月给' + (last.who === 'mo' || last.who === 'fa' ? '零花钱' : '工资') + '。' : '你雇了一个小工。';
+        if (b === 'stall') return last.ok ? '摊子做出了名气，常有人排队。你辞了工作，盘下一个门面，开了家小吃店。' + hire + '现在' + payWord(g) + '。'
+          : '摆了三年摊，腰受不了了。你把推车卖了，专心上班。那几年攒下的熟客，现在还会在路上跟你打招呼。';
+        if (b === 'online') return last.ok ? '网店做起来了，仓库从阳台搬到了一间小厂房。你辞了工作，' + hire + '好的月份一个月能挣三四万，差的月份只够发工资。'
+          : '平台改了规则，流量掉了一大半。你把网店关了，剩下的货在朋友圈清了。上班的钱少，可每个月都有。';
+        return last.ok ? '这家' + g.recall('bizKind') + '回了本，这两年净挣了 ' + CN.fmt(last.amt) + '。你在隔壁街开了第二家，' + hire
+          : '总部换了老板，加盟店一家家关门。你的' + g.recall('bizKind') + '撑到最后，转让只收回 ' + CN.fmt(last.amt) + '。' + (debtW(g) ? '欠的钱还剩 ' + CN.fmt(debtW(g) * 1e4) + '。' : '') + '你又找了份工作，' + payWord(g) + '。';
+      } },
+    { id: 'y_ladder_echo', age: 33, t: '这条路', auto: true, cond: (g) => ['expert', 'move', 'stuck'].includes(g.recall('ladder')) && working(g),
+      fx: (g) => { const l = g.recall('ladder'); if (l === 'expert') { last.amt = r1000(CN.jobPay(g, g.recall('job')) * 2); CN.earn(g, last.amt); } if (l === 'move') g.stat('心情', married(g) ? -2 : 1); if (l === 'stuck') g.stat('事业', 2); },
+      text: (g) => ({
+        expert: '同行开会，有人点名请你去讲。讲一次给 ' + CN.fmt(last.amt) + ' 的课酬，你讲得磕磕巴巴，台下记得很认真。',
+        move: '在' + here(g) + '的第二年，分部从五个人变成了二十个人。' + (married(g) ? '周末一家人去逛新城市，' + g.recall('spouse') + '说，这里的菜还是吃不惯。' : '你认得了楼下每一家早点铺。'),
+        stuck: '那次没升上去以后，你把力气花在了手艺上。新来的人有不会的，都先来问你。',
+      }[g.recall('ladder')]) },
     { id: 'y_broke_after', age: 28, t: '分手以后', auto: true, cond: (g) => g.recall('singleWay') === 'broke' && single(g),
       text: '分手以后，你很长一段时间没再谈。工作倒是做得更好了。' },
     { id: 'y_startup_after', age: 31, t: '公司', auto: true, cond: (g) => ['ok', 'fail'].includes(g.recall('startup')),
       text: (g) => (g.recall('startup') === 'ok' ? '公司有了五十个人。你开始学着记住每个人的名字。' : '你又回去打工了。面试官看到你的简历，问你创业失败学到了什么。你说，学会了算账。') },
-    { id: 'y_promo_after', age: 33, t: '团队', auto: true, cond: (g) => g.recall('promoted') === true,
+    { id: 'y_promo_after', age: 33, t: '团队', auto: true, cond: (g) => g.recall('promoted') === true && g.recall('ladder') === 'mgr',
       text: '你带的人里，有一个跟你刚毕业时很像。你把自己的经验一条条告诉了他。' },
     { id: 'y_metparents_after', age: 26, t: '亲家', auto: true, cond: (g) => g.recall('metParents') === true && loveIs(g, 'dating'),
       text: '两家家长通了一次电话，聊了一个小时。你在旁边听着，有点尴尬，也有点高兴。' },
@@ -955,5 +1086,9 @@
    * credit 'none'|'phone'|'loan'；money1 第一次理财 'safe'|'fund'|'stock'|'family'|'none'；car 'no'|'new'|'loan'|'used'
    * side 副业 'drive'|'stall'|'video'，'' 表示停了（economy.js 读，每年多一万）；sideEnd
    * oldFriend 'went'|'red'；last34 'civil'|'stay'|'own'；look34 'ok'|'learn'；abroadStay；viral；riderHurt
+   * offer22 第一份工作 'big'|'stable'|'civil'|'media'（28 岁回响：大厂裁员、自媒体断流）
+   * ladder 29 岁升职走的路 'mgr'|'expert'|'move'|'no'|'stuck'（中年的升职、33 岁回响读）
+   * biz 32 岁自己干 'stall'|'online'|'franchise'|'stallFail'|'onlineFail'|'franchiseFail'|'no'；bizKind 加盟店的种类（34 岁回响兑现成败）
+   * 工具：CN.jobPay(g, 职业键, 城市等级, 事业加点) 月薪（元）、CN.jobRisk(职业键)、CN.jobLine(...) '约 ¥8,000/月，……'，中年、老年、意外都用
    */
 })();

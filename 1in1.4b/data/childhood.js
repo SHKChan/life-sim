@@ -60,6 +60,7 @@
   };
   const seaCity = (c) => ['深圳', '广州', '宁波', '上海', '天津', '大连', '青岛'].includes(c);
   const petName = (g) => (rural(g) ? ['大黄', '小黑', '旺财', '花花'] : ['团子', '咪咪', '豆豆', '橘子'])[hash(g) % 4];
+  CN.kidPetName = petName; // economy.js 收养这只宠物时用同一个名字
   const petKind = (g) => (rural(g) ? '狗' : '猫');
   // 在学校里的场景
   const atSchool = (g, what) => g.move('school', what);

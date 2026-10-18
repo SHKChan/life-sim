@@ -117,6 +117,12 @@
 | `liveWith` | `'alone'` `'kids'` `'nursing'` `'hometown'` | 老年 | 晚年住哪儿。`'alone'` 是住自己家（可能和老伴一起）；`economy.js` 按它对“和谁住” |
 | `spCare` `gkCare` `afterWidow` `oldNanny` `robotBuy` `scamLoss` `heartBill` `gkGift` `gk2No` | 见 `oldage.js` | 老年 | 照顾老伴、带孙辈、丧偶后怎么过、九十三岁请住家保姆、机器人、被骗的钱、心梗的医药费、给孙辈的红包、二孩没生孩子 |
 | `sp2` | 人物 id | 老年 | 晚年再婚的老伴，和 `sp` 一样算同住 |
+| `offer22` `ladder` `biz` `bizKind` | 见 `youth.js` 末尾 | 青年 | 第一份工作（大厂、稳定、考公、自媒体）、29 岁升职（`y_promo29`）、32 岁创业及结果（`…Fail` 是失败） |
+| `ladder40` `ladder50` `biz45` `bizKind45` `crop45` `consult` `consultPay` | 见 `midlife.js` 末尾 | 中年 | 中年两次升职、40–52 岁创业、55–63 岁做顾问 |
+| `rehirePay` `afterRetire` | 元/月；`'odd'` 等 | 老年 | 返聘的月薪（只有有本事、身体好的人才有返聘）、退休后做什么 |
+| `petNow` | `{ kind, name, y, life }` | `economy.js`，剧情用 `CN.adoptPet` | 现在养的宠物，在家时画进场景，活够年头会老去。读用 `CN.pet(g)` |
+| `illY` `lowMood` | 布尔；连续几年心情很低 | `economy.js` | 上一次生病的年份（两次病至少隔四年）、心情低落的年数 |
+| `expense` | 元 | `economy.js` | 去年花出去的钱（日常加还款），名帖上显示 |
 | `money0` | 布尔 | `economy.js` | 已经有自己的钱了（十八岁或开始工作起）。之前“财富”表示家境 |
 | `cash` `invest` `investStyle` | 元、元、`'safe'` `'fund'` `'stock'` `'gold'` | `economy.js`，剧情用 `CN.pay` `CN.earn` `CN.invest` `CN.withdraw` | 存款、理财。**剧情不要直接 remember 这几个键**，用工具函数 |
 | `houseVal` `loanBase` | 万 | `economy.js`，剧情用 `CN.buyHouse` `CN.sellHouse` | 房子值多少、贷款本金基数（算每年还款） |
