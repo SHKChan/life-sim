@@ -227,8 +227,13 @@
    * 选择用 g.remember 记在这一世里，几年后由下面的“回响”奇遇读到。
    * 回响是自动节点（auto + always），条件满足就会出现，让玩家看到当年那一下的后果。 */
   const isMale = (g) => g.me && JY.byId[g.me] && JY.byId[g.me].sex === '男';
+  // 这些通用奇遇只在人间烟火处发生：古墓、海岛、冰火岛、昆仑山谷里碰不到；集市上的事只在城镇和路上
+  const SECLUDED = ['gumu', 'binghuo', 'kunlun', 'taohua', 'sea', 'wangpan', 'lingshe'];
+  const TOWNS = ['niujia', 'jiangnan', 'jiaxing', 'guiyun', 'lintan', 'zhongdu', 'zhangjiakou', 'dadu', 'fenglingdu', 'haozhou', 'xiangyang', 'hanshui', 'road', 'hut'];
+  const outside = (g) => !SECLUDED.includes(g.loc);
+  const inTown = (g) => TOWNS.includes(g.loc);
   JY.addEncounters([
-    { id: 'e_jianghu_bandit', y: [-50, 200], minAge: 16, t: '拦路', text: '山道上跳出几个强人，要你留下买路钱。领头的脸上有道疤，手里的刀豁了口。',
+    { id: 'e_jianghu_bandit', y: [-50, 200], minAge: 16, cond: (g) => inTown(g) && !['lintan', 'zhongdu', 'dadu', 'xiangyang'].includes(g.loc), t: '拦路', text: '山道上跳出几个强人，要你留下买路钱。领头的脸上有道疤，手里的刀豁了口。',
       choices: [
         { t: '给钱了事', canon: true, fx: (g) => { g.stat('心境', -2); g.remember('bandit', 'paid'); }, res: '强人数着钱走了。领头的多看了你一眼，说你是个爽快人。' },
         { t: '动手', check: ['武学', 30], dev: 0, fx: (g) => { g.stat('声望', 3); g.stat('正邪', 2); g.remember('bandit', 'beaten'); }, res: '他们跑得比来的时候快。领头的回头看了你一眼，像是要记住你的脸。',
@@ -236,26 +241,26 @@
         { t: '打服他们，写封荐书让他们去投军', check: ['声望', 40], dev: 0, fx: (g) => { g.stat('声望', 5); g.stat('正邪', 4); g.remember('bandit', 'army'); }, res: '领头的跪下叫你大哥，揣着你的荐书往边关去了。',
           fail: { fx: (g) => { g.stat('根骨', -5); g.remember('bandit', 'beaten'); }, res: '他们不服，一哄而散，临走还砍了你一刀。', dev: 0 } },
       ] },
-    { id: 'e_tavern_duel', y: [-50, 200], minAge: 16, t: '酒楼比武', text: '酒楼上两个人争一个座位，眼看要拔刀。整层楼的人都看着你，因为那个座位是你的。',
+    { id: 'e_tavern_duel', y: [-50, 200], minAge: 16, cond: inTown, t: '酒楼比武', text: '酒楼上两个人争一个座位，眼看要拔刀。整层楼的人都看着你，因为那个座位是你的。',
       choices: [
         { t: '让给他们', canon: true, fx: (g) => g.stat('心境', 2), res: '你换了张桌子，菜一样好吃。' },
         { t: '一人一拳，打下楼去', check: ['武学', 45], dev: 0, fx: (g) => { g.stat('声望', 4); g.remember('tavern', 'fought'); }, res: '楼下的人以为下了一场人雨。其中一个人爬起来，袖口绣着帮派的记号。',
           fail: { fx: (g) => g.stat('根骨', -5), res: '他们先联手把你打下了楼。', dev: 0 } },
         { t: '请他们一起坐，再叫一坛酒', dev: 0, fx: (g) => { g.stat('情义', 4); g.stat('心境', 2); g.remember('tavern', 'drink'); }, res: '三个人喝到半夜。走的时候，他们争着替你付账，还问了你的名字。' },
       ] },
-    { id: 'e_sick_child', y: [-50, 200], minAge: 16, t: '病童', text: '路边一个妇人抱着发高烧的孩子，求过路的人给几个钱抓药。孩子的脸烧得通红。',
+    { id: 'e_sick_child', y: [-50, 200], minAge: 16, cond: inTown, t: '病童', text: '路边一个妇人抱着发高烧的孩子，求过路的人给几个钱抓药。孩子的脸烧得通红。',
       choices: [
         { t: '把身上的钱都给她', canon: true, fx: (g) => { g.stat('正邪', 3); g.stat('情义', 2); g.remember('child', 'money'); }, res: '她磕了三个头，问你叫什么。你没说。' },
         { t: '背着孩子去最近的镇上找郎中', dev: 0, fx: (g) => { g.stat('根骨', -2); g.stat('情义', 4); g.remember('child', 'carried'); }, res: '你跑了二十里路。郎中说再晚一个时辰就救不回来了。孩子醒来，盯着你看了很久。' },
         { t: '赶路要紧', dev: 0, fx: (g) => { g.stat('心境', -3); g.remember('child', 'left'); }, res: '你走出很远，还能听见孩子的哭声。' },
       ] },
-    { id: 'e_old_book', y: [-50, 200], minAge: 12, t: '旧书摊', text: '旧书摊上有一本没有封皮的拳谱，摊主说是从一个死去的老镖师家里收来的。',
+    { id: 'e_old_book', y: [-50, 200], minAge: 12, cond: inTown, t: '旧书摊', text: '旧书摊上有一本没有封皮的拳谱，摊主说是从一个死去的老镖师家里收来的。',
       choices: [
         { t: '买下来', canon: true, fx: (g) => { g.stat('悟性', 2); g.remember('book', 'bought'); }, res: '书里有几页被人用朱笔圈过。你看不懂，先收着。' },
         { t: '不买', canon: true, res: '摊主说你会后悔的。' },
         { t: '打听老镖师的家人，把书还回去', dev: 0, fx: (g) => { g.stat('情义', 4); g.stat('正邪', 3); g.remember('book', 'returned'); }, res: '老镖师的孙子接过书，说这是爷爷一辈子的心血。他记下了你的名字。' },
       ] },
-    { id: 'e_mongol_patrol', y: [30, 143], minAge: 14, t: '蒙古游骑', text: '一队蒙古游骑冲进了村子，要抓壮丁。',
+    { id: 'e_mongol_patrol', y: [30, 143], minAge: 14, cond: (g) => outside(g) && !['grassland', 'dadu'].includes(g.loc) && !g.isMe('zhaomin'), t: '蒙古游骑', text: '一队蒙古游骑冲进了村子，要抓壮丁。',
       choices: [
         { t: '带着村民往山里跑', canon: true, fx: (g) => { g.stat('情义', 3); g.stat('根骨', -2); g.remember('patrol', 'fled'); }, res: '你们在山里躲了三天。回去时，村子只剩下一半。' },
         { t: '截住他们', check: ['武学', 55], dev: 0, fx: (g) => { g.stat('声望', 5); g.stat('正邪', 4); g.remember('patrol', 'fought'); }, res: '游骑跑了，丢下了两匹马。百夫长逃走前，让画师记下了你的样子。',
@@ -263,40 +268,40 @@
         { t: '夜里摸进营地，放走抓去的人', check: ['武学', 45], dev: 0, fx: (g) => { g.stat('正邪', 5); g.stat('声望', 3); g.remember('patrol', 'freed'); }, res: '天亮时营地里只剩下一地绳子。被你放走的人里，有个少年一直回头看你。',
           fail: { fx: (g) => g.stat('根骨', -10), res: '你被发现了，翻墙逃走时摔伤了腿。', dev: 0 } },
       ] },
-    { id: 'e_flood', y: [-50, 200], minAge: 10, t: '大水', text: '连下了一个月的雨，河堤要垮了。',
+    { id: 'e_flood', y: [-50, 200], minAge: 10, cond: inTown, t: '大水', text: '连下了一个月的雨，河堤要垮了。',
       choices: [
         { t: '去堤上扛沙袋', canon: true, fx: (g) => { g.stat('根骨', -2); g.stat('情义', 3); g.stat('正邪', 2); g.remember('flood', 'dike'); }, res: '堤保住了。你的肩膀疼了半年。' },
         { t: '收拾细软，先走', canon: true, fx: (g) => { g.stat('心境', -2); g.remember('flood', 'fled'); }, res: '你走的时候，邻居们还在堤上。' },
         { t: '去县衙敲鼓，逼官府开仓放粮', check: ['声望', 45], dev: 0, fx: (g) => { g.stat('正邪', 4); g.stat('声望', 4); g.remember('flood', 'granary'); }, res: '县官被你堵在门口，只好开了仓。他临走看你的眼神，你记得。',
           fail: { fx: (g) => g.stat('心境', -4), res: '衙役把你轰了出来。仓到底没开。', dev: 0 } },
       ] },
-    { id: 'e_beggar_teacher', y: [-50, 200], minAge: 8, maxAge: 30, t: '老叫化', text: '一个老叫化子跟了你三条街，说你骨骼清奇，要教你一套“打狗”的功夫，只要一只鸡。',
+    { id: 'e_beggar_teacher', y: [-50, 200], minAge: 8, maxAge: 30, cond: inTown, t: '老叫化', text: '一个老叫化子跟了你三条街，说你骨骼清奇，要教你一套“打狗”的功夫，只要一只鸡。',
       choices: [
         { t: '买只鸡给他', canon: true, fx: (g) => { g.stat('武学', 3); g.remember('beggar', 'chicken'); }, res: '他教了你三招，吃完鸡就不见了。' },
         { t: '买不起鸡，把自己的干粮分他一半', dev: 0, fx: (g) => { g.stat('情义', 3); g.remember('beggar', 'share'); }, res: '他嚼着干粮说你小气，眼睛却笑了。他什么也没教你，只问了你的名字。' },
         { t: '不理他', canon: true, res: '他骂骂咧咧地走了。' },
       ] },
-    { id: 'e_fortune', y: [-50, 200], minAge: 16, t: '算命', text: '一个瞎眼的算命先生拉住你，说你命里有一道坎，过了是福，过不了是命。',
+    { id: 'e_fortune', y: [-50, 200], minAge: 16, cond: inTown, t: '算命', text: '一个瞎眼的算命先生拉住你，说你命里有一道坎，过了是福，过不了是命。',
       choices: [
         { t: '问他是什么坎', canon: true, fx: (g) => { g.remember('fortune', g.s('情义') > 60 ? '情' : g.s('武学') > 60 ? '剑' : '心'); }, res: (g) => '他摸了摸你的手：“' + g.recall('fortune') + '。”然后收了你十文钱。' },
         { t: '“我的命，我自己算。”', canon: true, fx: (g) => { g.stat('心境', 3); g.remember('fortune', 'self'); }, res: '他笑了，没收你钱。' },
         { t: '看他可怜，多给他一吊钱', dev: 0, fx: (g) => { g.stat('情义', 2); g.stat('正邪', 1); }, res: '他把钱揣进怀里，说你的坎会小一点。' },
       ] },
-    { id: 'e_wounded_stranger', y: [-50, 200], minAge: 16, t: '受伤的人', text: '破庙里躺着一个受了重伤的人，身边扔着一把缺口的鬼头刀。外面有人在找他。',
+    { id: 'e_wounded_stranger', y: [-50, 200], minAge: 16, cond: inTown, t: '受伤的人', text: '破庙里躺着一个受了重伤的人，身边扔着一把缺口的鬼头刀。外面有人在找他。',
       choices: [
         { t: '把他藏起来', canon: true, fx: (g) => { g.stat('情义', 3); g.stat('正邪', 1); g.remember('stranger', 'hid'); }, res: '追兵走了。他说他欠你一条命，然后也走了。' },
         { t: '交给追兵', dev: 0, fx: (g) => { g.stat('正邪', -4); g.stat('声望', 1); g.remember('stranger', 'gave'); }, res: '追兵赏了你五两银子。你不知道他犯了什么事。' },
         { t: '先问清楚再说', check: ['悟性', 50], dev: 0, fx: (g) => { g.stat('悟性', 2); g.remember('stranger', 'hid'); }, res: '他是好人，追他的是仇家。你把他藏了起来。',
           fail: { res: '他说什么也不肯讲，天亮前自己走了。', dev: 0 } },
       ] },
-    { id: 'e_wedding', y: [-50, 200], minAge: 16, t: '喜酒', text: '村里有人办喜事，新郎说你是贵客，非要你喝三碗。',
+    { id: 'e_wedding', y: [-50, 200], minAge: 16, cond: inTown, t: '喜酒', text: '村里有人办喜事，新郎说你是贵客，非要你喝三碗。',
       choices: [
         { t: '喝', canon: true, fx: (g) => { g.stat('心境', 4); g.stat('情义', 2); g.remember('wedding', 'drank'); }, res: '你喝了六碗，抱着新郎唱了半夜的歌。' },
         { t: '以茶代酒', canon: true, fx: (g) => g.stat('心境', 1), res: '新娘偷偷给你多夹了一块肉。' },
         { t: '给新人舞一段剑助兴', check: ['武学', 35], dev: 0, fx: (g) => { g.stat('声望', 3); g.stat('心境', 3); g.remember('wedding', 'sword'); }, res: '满院子的人叫好。小孩子们学了你一晚上。',
           fail: { fx: (g) => g.stat('心境', -2), res: '你一剑挑翻了喜桌。新郎说这叫红红火火。', dev: 0 } },
       ] },
-    { id: 'e_plague', y: [-50, 200], minAge: 16, t: '时疫', text: '你落脚的城里起了时疫，每天都有人抬出去。',
+    { id: 'e_plague', y: [-50, 200], minAge: 16, cond: inTown, t: '时疫', text: '你落脚的城里起了时疫，每天都有人抬出去。',
       choices: [
         { t: '留下帮郎中煎药', check: ['根骨', 50], dev: 0, fx: (g) => { g.stat('正邪', 5); g.stat('情义', 3); g.remember('plague', 'stay'); }, res: '你一直没染上。郎中说你命硬。',
           fail: { fx: (g) => { g.stat('根骨', -15); g.remember('plague', 'stay'); }, res: '你也病倒了，差一点没熬过来。', dev: 0 } },
@@ -304,7 +309,7 @@
         { t: '翻医书找方子', check: ['悟性', 65], dev: 0, fx: (g) => { g.stat('悟性', 3); g.stat('声望', 4); g.remember('plague', 'cure'); g.info('外号', '小郎中'); }, res: '你在一本旧医书里找到了治法。城里的人后来叫你“小郎中”。',
           fail: { fx: (g) => g.stat('心境', -3), res: '你翻了半个月的书，找到的方子都不管用。', dev: 0 } },
       ] },
-    { id: 'e_chess', y: [-50, 200], minAge: 20, t: '残局', text: '松树下摆着一盘残局，一个老人说，解得开就送你一样东西。',
+    { id: 'e_chess', y: [-50, 200], minAge: 20, cond: (g) => outside(g) && !['xiangyang', 'dadu', 'zhongdu', 'lintan'].includes(g.loc), t: '残局', text: '松树下摆着一盘残局，一个老人说，解得开就送你一样东西。',
       choices: [
         { t: '试试', check: ['悟性', 65], dev: 0, fx: (g) => { g.stat('悟性', 2); g.remember('chess', 'solved'); }, res: '他送了你一句口诀。你念了几遍，没懂。',
           fail: { fx: (g) => g.stat('心境', 1), res: '你下了一个时辰，老人睡着了。', dev: 0 } },

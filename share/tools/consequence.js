@@ -83,7 +83,7 @@ if (require.main === module) {
   const html = fs.readFileSync(path.join(gameDir, 'index.html'), 'utf8');
   // SIM_DATA=childhood,youth 只载入这几个数据文件（data/world.js 和 data/relations.js 总会载入），并行写作时不受别人半成品的影响
   const onlyFiles = (process.env.SIM_DATA || '').split(',').filter(Boolean);
-  const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((s) => !/(ui|pixel|sharecard)\.js$/.test(s))
+  const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((s) => !/(ui|pixel|sharecard)\.js$/.test(s) && !/^(https?:|\/)/.test(s))
     .filter((s) => !onlyFiles.length || !/^data\//.test(s) || /data\/(world|relations)\.js$/.test(s) || onlyFiles.some((b) => s === 'data/' + b + '.js'));
   const ctx = { console, Math, JSON, Date, localStorage: { getItem: () => null, setItem: () => {} } };
   ctx.window = ctx;

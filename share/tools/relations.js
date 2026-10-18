@@ -20,7 +20,7 @@ const gameDir = path.join(repo, game || '');
 if (!game || !fs.existsSync(path.join(gameDir, 'index.html'))) { console.error('用法：node share/tools/relations.js <游戏目录> [人物id ...]'); process.exit(2); }
 const only = process.argv.slice(3);
 const html = fs.readFileSync(path.join(gameDir, 'index.html'), 'utf8');
-const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((s) => !/(ui|pixel|sharecard)\.js$/.test(s));
+const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]).filter((s) => !/(ui|pixel|sharecard)\.js$/.test(s) && !/^(https?:|\/)/.test(s)); // 全站顶栏 /nav.js 不是游戏的一部分
 const ctx = { console, Math, JSON, Date, localStorage: { getItem: () => null, setItem: () => {} } };
 ctx.window = ctx;
 vm.createContext(ctx);

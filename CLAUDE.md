@@ -38,7 +38,7 @@
 │   ├── config.js        部署配置（网址、站名、字体、导航、反馈），上线后可直接改
 │   ├── lang/<语言>/     剧情翻译：game.js（界面用词）+ data/ 每个文件的翻译版（同名、同顺序）
 │   ├── game.js          游戏设定 JY.GAME：标题、界面用词、书名颜色、分享文案、存档前缀
-│   ├── data/            故事数据（world.js + 每本书一个文件）
+│   ├── data/            故事数据（world.js + 每本书一个文件 + encounters.js 通用奇遇与贵人）
 │   ├── docs/SPEC.md     内容规范：时间线、数据格式、写作要求。写剧情前必读
 │   └── docs/ref/        用户给的设计参考截图（1in8B 的主界面、分享、回顾）
 ├── docs/DEPLOY.md       阿里云部署（OSS / ECS+Nginx / Docker）
