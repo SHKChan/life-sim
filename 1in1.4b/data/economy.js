@@ -448,6 +448,13 @@
       g.stat('心情', 8);
       out.push('那段时间你整夜睡不着，胸口发闷。家里人陪你去看了医生，说是心里累出来的病。吃了半年药，' + (fee ? '花了 ' + CN.fmt(fee) + '，' : '') + '慢慢缓过来了。');
     }
+    // 养生：五十五岁以后，心情好、常锻炼、家里宽裕（看得起病、吃得好）的人，身体老得慢一些，能活到九十以上
+    if (age >= 55) {
+      let keep = (M >= 60 ? 0.5 : 0) + (g.focus === '锻炼身体' ? 1 : 0) + (g.s('财富') >= 60 ? 0.4 : 0) + (g.s('人缘') >= 60 ? 0.3 : 0);
+      if (M < 30) keep -= 0.5;
+      const whole = Math.floor(keep) + (g.rnd() < keep - Math.floor(keep) ? 1 : 0);
+      if (whole) g.stat('健康', whole);
+    }
     if (g.since('illY') >= 0 && g.since('illY') < 4) return out;
     const base = age < 40 ? 0.015 : age < 60 ? 0.035 : age < 75 ? 0.07 : 0.11;
     const p = base * (1.7 - H / 100) * (M < 30 ? 1.5 : 1);
