@@ -99,7 +99,22 @@
 .qx-lv { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--xin); }
 .qx-art .end-btns { margin-top: 6px; gap: 6px; }
 .qx-map { position: relative; width: 100%; aspect-ratio: 16 / 10; background: radial-gradient(ellipse at 30% 40%, color-mix(in srgb, var(--gen) 10%, var(--panel-2)), var(--panel-2) 70%); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
-.qx-map::after { content: ""; position: absolute; right: 0; top: 0; bottom: 0; width: 14%; background: color-mix(in srgb, var(--wu) 16%, transparent); }
+.qx-map::after { content: none; }
+/* 像素舆图底图（icons.js 的 QX.drawMap），铺满地图框，地点按钮浮在上面 */
+.qx-mapbg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.qx-pin { z-index: 1; }
+/* 像素图标 */
+.qx-ic { width: 24px; height: 24px; image-rendering: pixelated; flex: 0 0 auto; vertical-align: middle; }
+.qx-ic.sm { width: 18px; height: 18px; }
+.qx-ic.lg { width: 36px; height: 36px; }
+.qx-irow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.qx-relics.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.qx-relic.slot { display: flex; align-items: center; gap: 8px; padding: 6px 8px; }
+.qx-relic.slot:not(.got) .qx-ic { opacity: .25; filter: grayscale(1); }
+.qx-charhead { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
+.qx-charhead canvas.px[data-portrait] { width: 80px; height: 96px; image-rendering: pixelated; border: 1px solid var(--line); border-radius: 4px; }
+.qx-fight .card-h .b { margin-left: auto; }
+.qx-fight .card-h small { margin-left: 10px; }
 .qx-pin { position: absolute; transform: translate(-50%, -50%); background: none; border: 0; padding: 2px; display: flex; flex-direction: column; align-items: center; gap: 1px; z-index: 1; }
 .qx-pin i { width: 10px; height: 10px; border-radius: 50%; background: var(--canon); border: 2px solid var(--panel); }
 .qx-pin.sea i { background: var(--wu); }
@@ -129,3 +144,5 @@
   .qx-modal.wide { width: 100%; }
 }
 .qx-unit .qx-track { flex: none; width: 100%; height: 6px; }
+/* 右栏状态：图标和字在同一行 */
+.qx-kv dt { display: flex; align-items: center; gap: 6px; white-space: nowrap; }

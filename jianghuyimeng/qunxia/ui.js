@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -25,6 +25,8 @@
   const MON = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月'];
   const DAYN = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十', '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十', '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
   function dateText(day) { const d = QX.date(day); return t('纪年') + ' ' + d.y + ' · ' + t(MON[d.m - 1]) + t(DAYN[d.d - 1]); }
+  // 像素图标（icons.js）：kind 是类型或属性名，id 是物品或武功 id
+  const ic = (kind, id) => (QX.iconHtml ? QX.iconHtml(kind, id, 'sm') : '');
   function bar(cls, v, max, label) {
     const p = Math.max(0, Math.min(100, Math.round((v / Math.max(1, max)) * 100)));
     return '<span class="qx-bar ' + cls + '" title="' + esc(label + ' ' + v + '/' + max) + '"><small>' + esc(label) + '</small><span class="qx-track"><i style="width:' + p + '%"></i></span><b>' + Math.max(0, Math.round(v)) + '</b></span>';
@@ -87,7 +89,7 @@
       + '<button class="logo" data-act="home" title="' + esc(t('回到开始')) + '">' + t('群') + '<i>' + t('侠') + '</i></button>'
       + '<div class="qx-when"><span class="qx-date">' + esc(dateText(S.day)) + '</span><span class="qx-age">' + t('{n} 岁', { n: QX.age() }) + '</span></div>'
       + '<div class="qx-bars">' + bar('hp', S.hp, QX.maxHp(), t('气血')) + bar('mp', S.mp, QX.maxMp(), t('内力')) + '</div>'
-      + '<div class="ctl">' + btn('char', '人物') + btn('arts', '武功') + btn('items', '物品') + btn('party', '队伍') + btn('map', '地图') + btn('save', '存档') + themeBtn() + langSelect('lang-top')
+      + '<div class="ctl">' + btn('char', '人物') + btn('arts', '武功') + btn('items', '物品') + (QX.CFG.companions ? btn('party', '队伍') : '') + btn('map', '地图') + btn('save', '存档') + themeBtn() + langSelect('lang-top')
       + '<button class="b icon-b" data-act="feedback">' + ICON.chat + '<span>' + t('反馈') + '</span></button></div></div></header>';
   }
 
@@ -120,13 +122,14 @@
     const F = QX.state().fight;
     const unit = (u, i, foe) => '<button class="qx-unit' + (foe ? ' foe' : '') + (u.hp <= 0 ? ' down' : '') + (foe && F.target === i ? ' tgt' : '') + '"' + (foe ? ' data-act="target" data-i="' + i + '"' : ' disabled') + '><b>' + esc(u.name) + '</b>'
       + '<span class="qx-track hp"><i style="width:' + Math.max(0, Math.round((u.hp / u.max) * 100)) + '%"></i></span><small>' + Math.max(0, u.hp) + '/' + u.max + (u.id === 'me' ? ' · ' + t('内力') + ' ' + u.mp + '/' + u.maxMp : '') + '</small></button>';
-    let h = '<div class="card qx-fight" id="qx-ev"><div class="card-h"><h3>' + t('交手') + '</h3><small>' + t('第 {n} 回合', { n: F.round }) + '</small></div>'
+    let h = '<div class="card qx-fight" id="qx-ev"><div class="card-h"><h3>' + t('交手') + '</h3><small>' + t('第 {n} 回合', { n: F.round }) + '</small>'
+      + (F.result ? '' : '<button class="b" data-act="auto" aria-pressed="' + !!F.auto + '">' + t(F.auto ? '停止自动' : '自动战斗') + '</button>') + '</div>'
       + '<div class="qx-side"><div class="qx-units">' + F.foes.map((u, i) => unit(u, i, true)).join('') + '</div><div class="qx-vs">' + t('对') + '</div><div class="qx-units">' + F.allies.map((u, i) => unit(u, i, false)).join('') + '</div></div>'
       + '<ol class="qx-flog">' + F.lines.slice(-7).map((l) => '<li>' + esc(l) + '</li>').join('') + '</ol>';
     if (F.result) h += '<div class="choices"><button class="b primary big" data-act="fightdone" id="cont">' + t('继续') + '</button></div>';
     else {
       h += '<div class="qx-opts">' + QX.fightOptions().map((o, i) => '<button class="choice qx-opt" data-act="fight" data-i="' + i + '"' + (o.dis || F.auto ? ' disabled' : '') + '><span class="t">' + esc(t(o.label)) + '</span><span class="m">' + esc(o.dis || t(o.sub)) + (o.cost ? ' · ' + t('内力') + ' ' + o.cost : '') + '</span></button>').join('') + '</div>'
-        + '<div class="end-btns" style="margin-top:10px"><button class="b" data-act="auto" aria-pressed="' + !!F.auto + '">' + t(F.auto ? '停止自动' : '自动战斗') + '</button><span class="hint">' + t('点对手的名字可以换目标。') + '</span></div>';
+        + '<p class="hint" style="margin-top:8px">' + t('点对手的名字可以换目标。') + '</p>';
     }
     return h + '</div>';
   }
@@ -147,8 +150,8 @@
     const S = QX.state();
     const sect = S.sect ? QX.SECTS[S.sect].name + ' · ' + QX.rankName() : t('无门无派');
     return '<div class="card"><div class="card-h"><h3>' + esc(S.name) + '</h3><small>' + esc(t(S.sex)) + ' · ' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + '</small></div>'
-      + '<dl class="kv"><dt>' + t('门派') + '</dt><dd>' + esc(sect) + '</dd><dt>' + t('品德') + '</dt><dd>' + Math.round(S.st.品德) + ' <span class="qx-muted">' + esc(t(S.st.品德 >= 70 ? '侠义' : S.st.品德 >= 50 ? '正直' : S.st.品德 >= 30 ? '亦正亦邪' : '心狠手辣')) + '</span></dd>'
-      + '<dt>' + t('声望') + '</dt><dd>' + Math.round(S.st.声望) + '</dd><dt>' + t('银两') + '</dt><dd>' + Math.round(S.st.银两) + ' ' + t('两') + '</dd>'
+      + '<dl class="kv qx-kv"><dt>' + ic('门派') + t('门派') + '</dt><dd>' + esc(sect) + '</dd><dt>' + ic('品德') + t('品德') + '</dt><dd>' + Math.round(S.st.品德) + ' <span class="qx-muted">' + esc(t(S.st.品德 >= 70 ? '侠义' : S.st.品德 >= 50 ? '正直' : S.st.品德 >= 30 ? '亦正亦邪' : '心狠手辣')) + '</span></dd>'
+      + '<dt>' + ic('声望') + t('声望') + '</dt><dd>' + Math.round(S.st.声望) + '</dd><dt>' + ic('银两') + t('银两') + '</dt><dd>' + Math.round(S.st.银两) + ' ' + t('两') + '</dd>'
       + (S.inj ? '<dt>' + t('内伤') + '</dt><dd class="qx-badv">' + t('{n} 层', { n: S.inj }) + '</dd>' : '') + '</dl>'
       + '<div class="qx-zx"><i style="left:' + S.st.品德 + '%"></i></div><div class="qx-zxl"><span>' + t('魔') + '</span><span>' + t('侠') + '</span></div></div>';
   }
@@ -164,17 +167,22 @@
   }
   function newsCard() {
     const S = QX.state();
-    const lines = S.log.slice(-10).reverse();
+    const lines = S.log.slice(-14).reverse();
     return '<div class="card log-card"><div class="card-h"><h3>' + t('经历') + '</h3><small>' + t('最新在上') + '</small></div><ul class="log qx-log">' + lines.map((l) => '<li class="k-' + esc(l.k) + '"><span class="a">' + esc(QX.date(l.d).y + '.' + QX.date(l.d).m) + '</span><span class="t">' + esc(l.t) + '</span><span class="s"></span></li>').join('') + '</ul>'
-      + (S.news.length ? '<div class="lbl" style="margin-top:12px">' + t('江湖传闻') + '</div><ul class="ulist qx-news">' + S.news.slice(-4).reverse().map((n) => '<li>' + esc(n.t) + '</li>').join('') + '</ul>' : '') + '</div>';
+      + '</div>'
+      + '<div class="card"><div class="card-h"><h3>' + t('江湖大事记') + '</h3><small>' + t('最新在上') + '</small></div>'
+      + (S.news.length ? '<ul class="ulist qx-news">' + S.news.slice(-8).reverse().map((n) => '<li>' + (n.d != null ? '<span class="qx-muted">' + esc(QX.date(n.d).y + '.' + QX.date(n.d).m) + '</span> ' : '') + esc(n.t) + '</li>').join('') + '</ul>' : '<p class="empty">' + t('江湖上暂时还算平静。') + '</p>') + '</div>';
   }
 
   /* ---------- 弹框 ---------- */
   function charModal() {
     const S = QX.state();
-    const rows = ['资质', '根骨', '内力', '攻击', '防御', '轻功'].map((k) => '<div class="row"><span class="k">' + t(k) + '</span><span class="v">' + QX.eff(k) + '</span></div>').join('');
-    return modal(t('人物'), '<div class="rows">' + rows + '<div class="row"><span class="k">' + t('气血') + '</span><span class="v">' + S.hp + '/' + QX.maxHp() + '</span></div><div class="row"><span class="k">' + t('内力') + '</span><span class="v">' + S.mp + '/' + QX.maxMp() + '</span></div>'
-      + '<div class="row"><span class="k">' + t('历练') + '</span><span class="v">' + S.xp + '</span></div><div class="row"><span class="k">' + t('战绩') + '</span><span class="v">' + t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights }) + '</span></div></div>'
+    const rows = ['资质', '根骨', '内力', '攻击', '防御', '轻功'].map((k) => '<div class="row"><span class="k qx-irow">' + ic(k) + t(k) + '</span><span class="v">' + QX.eff(k) + '</span></div>').join('');
+    const sect = S.sect ? QX.SECTS[S.sect].name + ' · ' + QX.rankName() : t('无门无派');
+    const head = '<div class="qx-charhead"><canvas class="px" data-portrait="me" width="20" height="24"></canvas><div><h3>' + esc(S.name) + '</h3><p class="qx-muted">' + esc(t(S.sex)) + ' · ' + t('{n} 岁', { n: QX.age() }) + ' · ' + esc(sect) + '</p>'
+      + '<p class="qx-muted">' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + ' · ' + t('品德') + ' ' + Math.round(S.st.品德) + ' · ' + t('声望') + ' ' + Math.round(S.st.声望) + '</p></div></div>';
+    return modal(t('人物'), head + '<div class="rows">' + rows + '<div class="row"><span class="k qx-irow">' + ic('气血') + t('气血') + '</span><span class="v">' + S.hp + '/' + QX.maxHp() + '</span></div><div class="row"><span class="k qx-irow">' + ic('内力') + t('内力') + '</span><span class="v">' + S.mp + '/' + QX.maxMp() + '</span></div>'
+      + '<div class="row"><span class="k qx-irow">' + ic('历练') + t('历练') + '</span><span class="v">' + S.xp + '</span></div><div class="row"><span class="k qx-irow">' + ic('战绩') + t('战绩') + '</span><span class="v">' + t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights }) + '</span></div></div>'
       + '<p class="hint">' + t('资质管学武快慢；根骨管气血；内力管内力上限；轻功管身法、躲闪和赶路。品德 50 以上是侠的结局，以下是魔。') + '</p>');
   }
   function artsModal() {
@@ -183,7 +191,7 @@
     const body = ids.map((id) => {
       const A = QX.ARTS[id], a = S.arts[id], can = QX.canPractise(id);
       const r1 = Math.round(QX.practiseRisk(id, false) * 100), r2 = Math.round(QX.practiseRisk(id, true) * 100);
-      return '<div class="qx-art"><div class="qx-art-h"><b>' + esc(A.name) + '</b><span class="tag book">' + esc(t(A.type)) + '</span><span class="qx-lv">' + t('{n} 级', { n: a.lv }) + '</span></div>'
+      return '<div class="qx-art"><div class="qx-art-h">' + ic(A.type, id) + '<b>' + esc(A.name) + '</b><span class="tag book">' + esc(t(A.type)) + '</span><span class="qx-lv">' + t('{n} 级', { n: a.lv }) + '</span></div>'
         + (a.lv < QX.CFG.maxLv ? '<span class="qx-track xp"><i style="width:' + Math.round((a.xp / QX.need(a.lv)) * 100) + '%"></i></span>' : '<p class="qx-muted">' + t('已经练到顶了。') + '</p>')
         + '<p class="qx-muted">' + esc(A.d) + '</p>'
         + (can ? '<div class="end-btns"><button class="b" data-act="practise" data-id="' + id + '">' + t('练十天') + (r1 ? ' · ' + t('风险 {p}%', { p: r1 }) : '') + '</button><button class="b" data-act="practise" data-id="' + id + '" data-hard="1">' + t('冒进苦练') + ' · ' + t('风险 {p}%', { p: r2 }) + '</button></div>' : '') + '</div>';
@@ -192,9 +200,11 @@
   }
   function itemsModal() {
     const S = QX.state(), ids = Object.keys(S.items).filter((k) => !QX.ITEMS[k].relic);
-    const body = ids.length ? ids.map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span><b class="nm">' + esc(it.name) + '</b> ×' + S.items[id] + '<br><small class="qx-muted">' + esc(it.d) + '</small></span><span class="v">' + (it.use || it.teaches ? '<button class="b" data-act="use" data-id="' + id + '">' + t(it.teaches ? '研读' : '使用') + '</button>' : '') + '</span></div>'; }).join('') : '<p class="empty">' + t('包袱里空空的。') + '</p>';
-    const relics = S.relics.map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span><b class="nm">' + esc(it.name) + '</b><br><small class="qx-muted">' + esc(it.d) + '</small></span><span class="v">' + (it.use || it.teaches ? '<button class="b" data-act="use" data-id="' + id + '">' + t(it.teaches ? '研读' : '使用') + '</button>' : '') + '</span></div>'; }).join('');
-    return modal(t('物品'), (ui.toast && ui.modal === 'items' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + '<div class="rows">' + body + '</div>' + (relics ? '<div class="lbl">' + t('信物') + '</div><div class="rows">' + relics + '</div>' : ''));
+    const body = ids.length ? ids.map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span class="qx-irow">' + ic(it.type, id) + '<span><b class="nm">' + esc(it.name) + '</b> ×' + S.items[id] + '<br><small class="qx-muted">' + esc(it.d) + '</small></span></span><span class="v">' + (it.use || it.teaches ? '<button class="b" data-act="use" data-id="' + id + '">' + t(it.teaches ? '研读' : '使用') + '</button>' : '') + '</span></div>'; }).join('') : '<p class="empty">' + t('包袱里空空的。') + '</p>';
+    const slots = '<div class="qx-relics grid">' + QX.relicIds().map((r) => { const got = S.relics.includes(r); return '<span class="qx-relic slot' + (got ? ' got' : '') + '" title="' + esc(got ? QX.ITEMS[r].d : t('还没找到')) + '">' + ic('信物', r) + '<span>' + esc(got ? QX.ITEMS[r].name : t('未得')) + '</span></span>'; }).join('') + '</div>';
+    const relics = S.relics.filter((id) => { const it = QX.ITEMS[id]; return it.use || it.teaches; }).map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span><b class="nm">' + esc(it.name) + '</b><br><small class="qx-muted">' + esc(it.d) + '</small></span><span class="v">' + (it.use || it.teaches ? '<button class="b" data-act="use" data-id="' + id + '">' + t(it.teaches ? '研读' : '使用') + '</button>' : '') + '</span></div>'; }).join('');
+    return modal(t('物品'), (ui.toast && ui.modal === 'items' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + '<div class="lbl">' + t('包袱') + '</div><div class="rows">' + body + '</div>'
+      + '<div class="lbl">' + t('十四件信物') + ' · ' + S.relics.length + '/14</div>' + slots + (relics ? '<div class="rows" style="margin-top:8px">' + relics + '</div>' : ''));
   }
   function partyModal() {
     const S = QX.state();
@@ -212,11 +222,11 @@
         return '<div class="row"><span class="nm">' + esc(QX.LOCS[id].short) + '</span><span class="v"><button class="b" data-act="go" data-id="' + id + '"' + (r.why ? ' disabled title="' + esc(r.why) + '"' : '') + '>' + t('{n} 天', { n: r.days }) + (r.cost ? ' · ' + t('{n} 两', { n: r.cost }) : '') + '</button></span>' + (r.why ? '<span class="n">' + esc(r.why) + '</span>' : '') + '</div>';
       }).join('') + '</div>';
     }).join('');
-    return modal(t('地图'), '<div class="qx-map" role="img" aria-label="' + esc(t('地图')) + '">' + pins + '</div><div class="qx-regs">' + regs + '</div><p class="hint">' + t('路上可能遇到强人、流民或比武的人。东海诸岛从临安坐船，去冰火岛要有海图。') + '</p>', 'wide');
+    return modal(t('地图'), '<div class="qx-map" role="img" aria-label="' + esc(t('地图')) + '"><canvas class="qx-mapbg" id="qx-mapbg"></canvas>' + pins + '</div><div class="qx-regs">' + regs + '</div><p class="hint">' + t('路上可能遇到强人、流民或比武的人。东海诸岛从临安坐船，去冰火岛要有海图。') + '</p>', 'wide');
   }
   function shopModal() {
     const S = QX.state(), L = QX.LOCS[S.loc];
-    const body = (L.shop || []).map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span><b class="nm">' + esc(it.name) + '</b><br><small class="qx-muted">' + esc(it.d) + '</small></span><span class="v"><button class="b" data-act="buy" data-id="' + id + '"' + (S.st.银两 < it.price ? ' disabled' : '') + '>' + t('{n} 两', { n: it.price }) + '</button></span></div>'; }).join('');
+    const body = (L.shop || []).map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span class="qx-irow">' + ic(it.type, id) + '<span><b class="nm">' + esc(it.name) + '</b><br><small class="qx-muted">' + esc(it.d) + '</small></span></span><span class="v"><button class="b" data-act="buy" data-id="' + id + '"' + (S.st.银两 < it.price ? ' disabled' : '') + '>' + t('{n} 两', { n: it.price }) + '</button></span></div>'; }).join('');
     return modal(t('店铺') + ' · ' + L.short, (ui.toast && ui.modal === 'shop' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + '<p class="qx-muted">' + t('身上有 {n} 两银子。', { n: Math.round(S.st.银两) }) + '</p><div class="rows">' + body + '</div>');
   }
   function saveModal() {
@@ -266,7 +276,7 @@
     else {
       setMe();
       const mid = S.fight ? fightCard() : S.ev ? eventCard() : actionsCard();
-      h = topView() + '<div class="qx-shell"><div class="col qx-main">' + sceneCard() + mid + '</div><aside class="col qx-sidecol">' + statusCard() + partyCard() + relicCard() + newsCard() + '</aside></div>' + foot();
+      h = topView() + '<div class="qx-shell"><div class="col qx-main">' + sceneCard() + mid + '</div><aside class="col qx-sidecol">' + statusCard() + (QX.CFG.companions ? partyCard() : '') + newsCard() + '</aside></div>' + foot();
       const M = { char: charModal, arts: artsModal, items: itemsModal, party: partyModal, map: mapModal, shop: shopModal, save: saveModal };
       if (ui.modal && M[ui.modal]) h += M[ui.modal]();
     }
@@ -277,6 +287,9 @@
   }
   function paint() {
     const S = QX.state();
+    if (QX.paintIcons) QX.paintIcons(app);
+    const mb = document.getElementById('qx-mapbg');
+    if (mb && QX.drawMap) QX.drawMap(mb);
     const c = document.getElementById('scene');
     if (c && JY.drawScene) JY.drawScene(c, { loc: S.loc, year: S.day, me: 'me', age: QX.age(), party: S.party.slice(0, 2), partyAges: S.party.map(() => 30) });
     document.querySelectorAll('canvas[data-portrait]').forEach((cv) => { if (JY.drawPortrait) JY.drawPortrait(cv, cv.dataset.portrait, 30); });
@@ -367,7 +380,7 @@
   if (q.get('demo') && QX.state()) {
     if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
     if (q.get('open')) ui.modal = q.get('open');
-    if (q.get('fight')) { const S = QX.state(); S.ev = null; S.party = ['zhoudian']; QX.startFight({ foes: ['shanzei', 'zeitou'] }); QX.fightAct(QX.aiOption()); QX.fightAct(QX.aiOption()); }
+    if (q.get('fight')) { const S = QX.state(); S.ev = null; S.party = QX.CFG.companions ? ['zhoudian'] : []; QX.startFight({ foes: ['shanzei', 'zeitou'] }); QX.fightAct(QX.aiOption()); QX.fightAct(QX.aiOption()); }
   }
   render();
 })();

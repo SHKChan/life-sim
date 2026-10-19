@@ -246,7 +246,7 @@ function playOne(persona, k) {
 function interest_person(pid) {
   const S = QX.state(), g = QX.G(), P2 = QX.PEOPLE[pid];
   for (const id in QX.EVENTS) { const E = QX.EVENTS[id]; if (E.who === pid && E.act && !(S.done[id] && E.once !== false) && (!E.cond || E.cond(g))) return true; }
-  if (P2.comp && !S.party.includes(pid) && S.party.length < QX.CFG.partyMax && (!P2.comp.cond || P2.comp.cond(g))) return true;
+  if (QX.CFG.companions && P2.comp && !S.party.includes(pid) && S.party.length < QX.CFG.partyMax && (!P2.comp.cond || P2.comp.cond(g))) return true;
   for (const t of P2.teach || []) if (!S.arts[t.art] && (!t.cond || t.cond(g))) return true;
   return !S.met[pid];
 }

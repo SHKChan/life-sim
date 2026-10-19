@@ -10,6 +10,7 @@
   const CFG = (QX.CFG = Object.assign({
     start: [131, 1], end: [138, 12], age: 12, key: 'jianghuyimeng.qunxia.v1',
     partyMax: 2, maxLv: 10, relicsAll: 14, retireFrom: [137, 1],
+    companions: false, // 同伴功能：暂时关掉（不出现“邀请同行”，旧存档里的同伴也会离开）。改成 true 就恢复
   }, QX.CFG || {}));
 
   /* ---------- 注册 ---------- */
@@ -114,6 +115,7 @@
   /* ---------- 同伴 ---------- */
   QX.inParty = (pid) => S.party.includes(pid);
   function joinParty(pid) {
+    if (!CFG.companions) return;
     const P = personDef(pid);
     if (!P.comp) throw new Error(pid + ' 不能同行');
     if (QX.inParty(pid)) return;
@@ -400,7 +402,7 @@
       if (!lv) ch.push({ t: QX.tx('拜师学', { a: A.name }), a: { k: 'learn', p: pid, art: T.art }, dis: ok ? costOk(T) : val(T.why, g), sub: A.type });
       else if (lv < cap) ch.push({ t: QX.tx('请教', { a: A.name }), a: { k: 'coach', p: pid, art: T.art }, dis: ok ? '' : val(T.why, g), sub: QX.tx('级', { n: lv }) });
     }
-    if (P.comp && !QX.inParty(pid)) {
+    if (CFG.companions && P.comp && !QX.inParty(pid)) {
       const why = joinBlock(pid, g);
       if (!(P.comp.hide && why && P.comp.hide(g))) ch.push({ t: QX.tx('邀请同行'), a: { k: 'join', p: pid }, dis: why });
     }
@@ -914,7 +916,7 @@
   QX.saveManual = () => { if (!S) return; const o = readAll(); o.manual = JSON.parse(JSON.stringify(S)); o.manualAt = Date.now(); writeAll(o); };
   QX.slots = () => { const o = readAll(); return { auto: o.auto ? summary(o.auto, o.autoAt) : null, manual: o.manual ? summary(o.manual, o.manualAt) : null }; };
   function summary(s, at) { return { name: s.name, day: s.day, loc: s.loc, relics: (s.relics || []).length, over: !!s.over, at }; }
-  QX.load = (slot) => { const o = readAll(); const s = o[slot || 'auto']; if (!s || s.v !== 1) return false; S = JSON.parse(JSON.stringify(s)); if (slot === 'manual') QX.save(); return true; };
+  QX.load = (slot) => { const o = readAll(); const s = o[slot || 'auto']; if (!s || s.v !== 1) return false; S = JSON.parse(JSON.stringify(s)); if (!CFG.companions) S.party = []; if (slot === 'manual') QX.save(); return true; };
   QX.clearAuto = () => { const o = readAll(); delete o.auto; writeAll(o); S = null; };
 
   /* ---------- 给检查工具用 ---------- */
