@@ -28,7 +28,7 @@
           fail: { fx: (g) => g.hurt(30), res: '他笑着拍了拍你的肩膀，你半边身子麻了一整天。你什么也没看出来。' } },
         { t: '先不打草惊蛇', fx: (g) => g.add('资质', 0.5), res: '你记下了他的样子。还不能确定。' },
       ] },
-    { id: 'sl_cangjing', loc: 'shaolin', act: '夜探藏经阁', cond: (g) => !g.has('yijin') && g.holder('yijin') === 'shaolin', once: false, t: '藏经阁',
+    { id: 'sl_cangjing', loc: 'shaolin', act: '夜探藏经阁', cond: (g) => !(g.f('watchSl') && g.day - g.f('watchSl') < 180) && !g.has('yijin') && g.holder('yijin') === 'shaolin', once: false, t: '藏经阁',
       text: '半夜，藏经阁的灯还亮着。最高一层供着一部用贝叶写的经，听说就是达摩祖师留下的易筋经。',
       choices: [
         { t: '从后窗翻进去', check: ['轻功', '极难'], fx: (g) => { g.give('yijin'); g.set('robbedShaolin'); g.add('品德', -15); },
@@ -39,7 +39,8 @@
           fail: { res: '真气走到一半散了，你扒着檐角吊在半空。底下的武僧提着灯笼围了过来。', next: 'sl_cangjing_caught' } },
         { t: '算了，佛门的东西不碰', fx: (g) => g.add('品德', 2), res: '你在藏经阁外站了一会儿，回去了。' },
       ] },
-    { id: 'sl_cangjing_caught', once: false, t: '被围',
+    { id: 'sl_cangjing_caught', once: false, fx: (g) => g.set('watchSl', g.day), // 被抓过一回，半年内这里戒备森严
+      t: '被围',
       text: '武僧们的棍子封住了四面。领头的说：“施主放下东西，少林不伤人。”',
       choices: [
         { t: '硬闯', fight: { foes: ['slwuseng', 'slwuseng', 'slwuseng'], win: { fx: (g) => { g.give('yijin'); g.set('robbedShaolin'); g.add('品德', -20); }, res: '你打翻了三个武僧，抢了经书冲下山去。少林从此把你当成了贼。' },
@@ -150,20 +151,32 @@
 
     /* ---------- 蝴蝶谷 ---------- */
     { id: 'hd_grave', loc: 'hudie', act: '去胡青牛的坟前', cond: (g) => !g.f('graveTended') && !g.f('dugGrave'), t: '胡青牛之墓',
-      text: '谷底有两座坟，并排着。一块木牌上写着“胡青牛之墓”，另一块写着“王难姑之墓”。坟上长满了草。',
+      text: (g) => (g.f('jinhuaDug') ? '谷底的两座坟被人挖开了，土翻在一边，木牌倒在草里。坑里只剩两副骨头，陪葬的铁匣不见了。' : '谷底有两座坟，并排着。一块木牌上写着“胡青牛之墓”，另一块写着“王难姑之墓”。坟上长满了草。'),
       choices: [
-        { t: '拔草，上香', fx: (g) => { g.set('graveTended'); g.add('品德', 3); }, res: '你拔了半天草，又找了两块石头压住木牌。风吹过来，满谷的蝴蝶飞了起来。' },
-        { t: '挖开坟，看看有没有陪葬', cond: (g) => !g.here('changyuchun'), fx: (g) => { g.set('dugGrave'); g.add('品德', -15); g.give('yijing'); g.give('jiedu', 3); },
+        { t: (g) => (g.f('jinhuaDug') ? '把土填回去，扶正木牌' : '拔草，上香'), fx: (g) => { g.set('graveTended'); g.add('品德', g.f('jinhuaDug') ? 4 : 3); }, res: (g) => (g.f('jinhuaDug') ? '你填了一下午的土，把两块木牌重新插好。蝴蝶落在新土上，一动不动。' : '你拔了半天草，又找了两块石头压住木牌。风吹过来，满谷的蝴蝶飞了起来。') },
+        { t: '挖开坟，看看有没有陪葬', cond: (g) => !g.here('changyuchun') && !g.f('jinhuaDug'), fx: (g) => { g.set('dugGrave'); g.add('品德', -15); g.give('yijing'); g.give('jiedu', 3); },
           res: '坟里只有两副骨头，一只铁匣。铁匣里是两本手写的书，一本医经，一本毒经。毒经你扔了，医经你留下了。' },
+        { t: '等守坟的常遇春睡熟了，夜里来挖', cond: (g) => g.here('changyuchun') && !g.f('jinhuaDug'), check: ['轻功', '中'], fx: (g) => { g.set('dugGrave'); g.add('品德', -15); g.give('yijing'); g.give('jiedu', 3); },
+          res: '你在月光下挖开了坟，抱着铁匣翻出了山谷。常遇春的鼾声一直没停。铁匣里一本医经，一本毒经。医经你留下了。',
+          fail: { fx: (g) => { g.add('品德', -5); g.hurt(40); g.set('cycAngry'); g.like('changyuchun', -40); }, res: '铁锹刚碰到棺木，常遇春的刀背就砸在了你肩上：“胡先生的坟你也敢动！”你连滚带爬地逃出了谷。' } },
         { t: '磕个头就走', fx: (g) => g.add('品德', 1), res: '你磕了一个头。' },
       ] },
-    { id: 'hd_hut', loc: 'hudie', explore: 'hudie', once: false, w: 5, cond: (g) => g.f('graveTended') && !g.has('yijing'), t: '草屋',
+    { id: 'hd_hut', loc: 'hudie', explore: 'hudie', once: false, w: 5, cond: (g) => g.f('graveTended') && !g.has('yijing') && !g.holder('yijing'), t: '草屋',
       text: '草屋里的药柜还在，抽屉上贴着字条，一格一格写着药名。墙角有一块地砖是松的。',
       choices: [
         { t: '照着药柜上的字条找', check: ['资质', '中'], fx: (g) => { g.give('yijing'); g.add('品德', 1); },
           res: '字条上的药名连起来，是一句话：“医者，救人。”松动的地砖下面，埋着胡青牛的医经。你在坟前又磕了一个头。',
           fail: { res: '你翻了一下午，没看出名堂。' } },
         { t: '不动死人的东西', fx: (g) => g.add('品德', 1), res: '你把门掩上了。' },
+      ] },
+    /* 黑玉断续膏：万安寺以后在赵敏手里（大势 t_wanan）。她原本就是要拿去给武当的人治伤 */
+    { id: 'hd_zm_heiyu', who: 'zhaomin', act: '向赵姑娘讨黑玉断续膏', cond: (g) => g.holder('heiyu') === 'zhaomin' && !g.has('heiyu'), t: '黑玉断续膏',
+      text: '赵敏把一只黑盒子在手里转来转去：“阿三那个蠢货的东西。我答应过一个人，拿去给武当的俞三侠、殷六侠接骨。你要它做什么？”',
+      choices: [
+        { t: '说你正要上武当，替她送去', cond: (g) => !g.f('yuCured') && g.alive('yudaiyan'), need: ['品德', 50], fx: (g) => { g.give('heiyu'); g.add('声望', 3); },
+          res: '赵敏看了你半天，把盒子扔给你：“送到了，就说是我给的。少一点，我找你算账。”' },
+        { t: '拿五十两银子换', cost: { 银两: 50 }, fx: (g) => { g.give('heiyu'); g.add('品德', -2); }, res: '赵敏收了银子，笑得很开心：“你倒实在。”' },
+        { t: '告辞', res: '赵敏把盒子收回了袖子里。' },
       ] },
     { id: 'hd_butterfly', loc: 'hudie', explore: 'hudie', once: false, w: 2, t: '蝴蝶',
       text: '蝴蝶落了你一身，有一只停在你的刀尖上，翅膀一开一合。',

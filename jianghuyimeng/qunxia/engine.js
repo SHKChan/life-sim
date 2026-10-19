@@ -29,6 +29,13 @@
   QX.addEvents = (arr) => arr.forEach((e) => { if (QX.EVENTS[e.id]) QX.DUP.push(e.id); QX.EVENTS[e.id] = e; });
   QX.addTimeline = (arr) => arr.forEach((t) => QX.TIMELINE.push(t));
   QX.addOrigins = (arr) => arr.forEach((o) => QX.ORIGINS.push(o));
+  // 给已有的人物补上说话的内容（mood、likes、thanks、chats、topics……），按人物 id 合并；topics 接在后面
+  QX.addTalk = (o) => Object.keys(o).forEach((pid) => {
+    const P = QX.PEOPLE[pid];
+    if (!P) { QX.DUP.push('addTalk:' + pid + '（人物不存在）'); return; }
+    const x = o[pid];
+    for (const k in x) if (k === 'topics') P.topics = (P.topics || []).concat(x.topics); else P[k] = x[k];
+  });
   QX.addEndings = (arr) => arr.forEach((o) => QX.ENDINGS.push(o));
   QX.tx = (k, v) => {
     const s = QX.TXT[k];
@@ -169,9 +176,56 @@
       if (a.cond && !a.cond(g)) continue;
       return a.loc;
     }
+    // 走动的人：roam: { locs, every: 天数, from, to, cond }，每隔一段日子换一处（按人和日子算，同一天总在同一处）
+    const W = P.roam;
+    if (W && !(W.from && S.day < dv(W.from[0], W.from[1])) && !(W.to && S.day >= dv(W.to[0], W.to[1] + 1)) && (!W.cond || W.cond(g))) {
+      const k = Math.floor(S.day / (W.every || 60));
+      let h = 7;
+      for (const c of pid + ':' + k) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+      return W.locs[h % W.locs.length];
+    }
     return null;
   };
   QX.peopleHere = () => Object.keys(QX.PEOPLE).filter((p) => QX.where(p) === S.loc);
+
+  /* ---------- 好感 ----------
+   * 每个人对你有一个好感（0–100，不显示数字），分四档：敌（只能告辞）、生（问路、问传闻）、熟（问人、问武功、请教）、信（托付、送东西）。
+   * 起点 = 35 + 人物的 aff0 + 门派之间的亲疏（QX.addSectRel；同门 +25）+ 正派的人看你的品德 + 声望（最多 +15）；
+   * 替王府办过事，正派的人少 10、王府的人多 15。之后的增减（深谈、送礼、剧情里 g.like）记在 S.aff。 */
+  QX.SECT_REL = {}; QX.UPRIGHT = [];
+  QX.addSectRel = (o) => Object.assign(QX.SECT_REL, o);
+  const AFF_TIERS = [['敌', 0], ['生', 15], ['熟', 45], ['信', 75]];
+  const tierRank = (t) => ['敌', '生', '熟', '信'].indexOf(t);
+  QX.tierRank = tierRank;
+  function sideRel(a, b) { if (!a || !b) return 0; if (a === b) return 25; return (QX.SECT_REL[a] && QX.SECT_REL[a][b]) || (QX.SECT_REL[b] && QX.SECT_REL[b][a]) || 0; }
+  function affBase(pid) {
+    const P = personDef(pid);
+    let v = 35 + (P.aff0 || 0) + sideRel(S.sect, P.side);
+    const up = QX.UPRIGHT.includes(P.side);
+    if (up) v += (S.st.品德 - 50) / 4;
+    if (S.flags.servedWang) v += up ? -10 : P.side === 'wangfu' ? 15 : 0;
+    return v + Math.min(15, S.st.声望 / 8);
+  }
+  QX.aff = (pid) => clamp(Math.round(affBase(pid) + ((S.aff || {})[pid] || 0)), 0, 100);
+  QX.affTier = (pid) => { const v = QX.aff(pid); let r = '敌'; for (const [k, n] of AFF_TIERS) if (v >= n) r = k; return r; };
+  function like(pid, n) { personDef(pid); S.aff = S.aff || {}; const t0 = QX.affTier(pid); S.aff[pid] = (S.aff[pid] || 0) + n; const t1 = QX.affTier(pid); if (t0 !== t1) log(QX.tx(tierRank(t1) > tierRank(t0) ? '态度近了' : '态度远了', { a: QX.PEOPLE[pid].name, t: t1 }), tierRank(t1) > tierRank(t0) ? 'good' : 'bad'); }
+  QX.mood = (pid) => { const P = personDef(pid), tr = QX.affTier(pid); return val((P.mood || {})[tr], G()) || QX.tx('态度' + tr, { a: P.name }); };
+
+  /* ---------- 托付与差遣 ----------
+   * g.task(id, 文字) 记下别人托你的事，g.taskDone(id) 办完。g.errand(id, 地点, 天数, 文字) 是门派派的差事：
+   * 限期内到那个地点，写着 errand: id 的事件会自动发生；过了期就算误了，门派贡献 -1。 */
+  function task(id, o) { S.tasks = S.tasks || {}; S.tasks[id] = Object.assign({ d: S.day }, typeof o === 'string' ? { t: o } : o); }
+  function taskDone(id, t) { if (S.tasks && S.tasks[id]) { delete S.tasks[id]; if (t) log(t, 'good'); } }
+  function expireTasks() {
+    for (const id in S.tasks || {}) {
+      const T = S.tasks[id];
+      if (T.until == null || S.day <= T.until) continue;
+      delete S.tasks[id];
+      S.flags['late_' + id] = true;
+      if (T.kind === 'errand' && T.sect && T.sect === S.sect) S.contrib = Math.max(0, S.contrib - 1);
+      log(QX.tx('误期', { t: T.t }), 'bad');
+    }
+  }
 
   /* ---------- g：给数据文件用的接口 ---------- */
   function G() {
@@ -195,6 +249,12 @@
       restMp: (n) => { S.mp = clamp(S.mp + n, 0, QX.maxMp()); },
       injure: (n) => { S.inj = clamp(S.inj + (n || 1), 0, 9); }, cure: (n) => { S.inj = n ? Math.max(0, S.inj - n) : 0; }, inj: () => S.inj,
       mer: () => !!S.mer, cureMer: (t) => cureMer(t),
+      like: (p, n) => like(p, n), aff: (p) => { personDef(p); return QX.aff(p); }, tier: (p) => { personDef(p); return QX.affTier(p); },
+      atLeast: (p, t) => { personDef(p); return tierRank(QX.affTier(p)) >= tierRank(t); },
+      task: (id, o) => task(id, o), taskDone: (id, t) => taskDone(id, t), hasTask: (id) => !!(S.tasks && S.tasks[id]),
+      errand: (id, loc, days, t) => { if (!QX.LOCS[loc]) throw new Error('未知地点 ' + loc); task(id, { t, loc, until: S.day + days, kind: 'errand', sect: S.sect }); },
+      addContrib: (n) => { S.contrib = Math.max(0, S.contrib + n); },
+      breakGate: (id, how) => { artDef(id); return breakGate(id, how); },
       rumor: (t, o) => { news(t, Object.assign({ cred: '听说' }, o || {})); log(t, 'news'); },
       days: (n) => { S.pend += n; }, move: (l) => { if (!QX.LOCS[l]) throw new Error('未知地点 ' + l); S.loc = l; },
       log: (t) => log(t, 'ev'), news: (t) => news(t),
@@ -287,6 +347,7 @@
     S.mp = clamp(S.mp + Math.round(QX.maxMp() * 0.05 * n), 0, QX.maxMp());
     S.injT = (S.injT || 0) + n;
     while (S.injT >= 30) { S.injT -= 30; if (S.inj > SELF_HEAL) S.inj--; }
+    expireTasks();
     timeline();
     if (!S.over && S.day >= END_DAY()) finish('deadline');
   }
@@ -352,6 +413,14 @@
       delete S.lastAt[pid];
     }
     for (const pid of QX.peopleHere()) if (S.met[pid]) S.lastAt[pid] = loc;
+    // 差遣：限期内到了差事要去的地方
+    for (const id in QX.EVENTS) {
+      const E = QX.EVENTS[id];
+      if (!E.errand) continue;
+      const T = S.tasks && S.tasks[E.errand];
+      if (!T || T.loc !== loc || !evAvailable(E, g) || S.queue.includes(id)) continue;
+      S.queue.push(id);
+    }
     // 到达时自动触发的事件（arrive: true）
     for (const id in QX.EVENTS) {
       const E = QX.EVENTS[id];
@@ -446,8 +515,10 @@
   }
   QX.cont = () => {
     if (!S.ev) { flush(); QX.save(); return; }
-    const nx = S.ev.next;
+    const nx = S.ev.next, back = S.ev.back;
     S.ev = null;
+    // 问完话、深谈、送礼、学武以后回到和这个人说话
+    if (back && !nx && !S.over && !S.queue.length && QX.where(back) === S.loc) { QX.talk(back); return; }
     if (S.over) { QX.save(); return; }
     if (nx) startEvent(nx);
     flush();
@@ -460,30 +531,57 @@
     const first = !S.met[pid];
     S.met[pid] = true;
     S.lastAt = S.lastAt || {}; S.lastAt[pid] = S.loc;
-    const ch = [];
+    const ch = [], tr = QX.affTier(pid), rk = tierRank(tr);
     for (const id in QX.EVENTS) {
       const E = QX.EVENTS[id];
       if (E.who !== pid || !E.act) continue;
       if (E.loc && E.loc !== S.loc) continue;
       if (!evAvailable(E, g)) continue;
-      ch.push({ t: val(E.act, g), a: { k: 'ev', id } });
+      // minAff：要熟到哪一档才会跟你说这件事；不够时灰着
+      const lock = E.minAff && rk < tierRank(E.minAff) ? QX.tx('交情不够', { t: E.minAff }) : '';
+      if (lock && E.hideLocked) continue;
+      ch.push({ t: val(E.act, g), a: { k: 'ev', id }, dis: lock });
+    }
+    // 话题：每人只答他会知道的事。问过的再问，换成“上回说过”的短句
+    for (const T of P.topics || []) {
+      if (T.cond && !T.cond(g)) continue;
+      if (rk < tierRank(T.tier || '生')) continue;
+      const asked = S.asked && S.asked[pid + ':' + T.id];
+      ch.push({ t: QX.tx('问话题', { a: val(T.q, g) }), a: { k: 'topic', p: pid, id: T.id }, sub: QX.tx('话题' + (T.k || '传闻')) + (asked ? ' · ' + QX.tx('问过') : '') });
     }
     for (const T of P.teach || []) {
       const A = artDef(T.art), lv = QX.artLv(T.art);
       const ok = !T.cond || T.cond(g);
       if (!ok && !T.why) continue;
       const cap = T.cap || CFG.maxLv;
-      if (!lv) ch.push({ t: QX.tx('拜师学', { a: A.name }), a: { k: 'learn', p: pid, art: T.art }, dis: ok ? costOk(T) : val(T.why, g), sub: A.type });
-      else if (lv < cap) ch.push({ t: QX.tx('请教', { a: A.name }), a: { k: 'coach', p: pid, art: T.art }, dis: ok ? '' : val(T.why, g), sub: QX.tx('级', { n: lv }) });
+      // 拜师要不是仇人；请教要熟
+      if (!lv) ch.push({ t: QX.tx('拜师学', { a: A.name }), a: { k: 'learn', p: pid, art: T.art }, dis: !ok ? val(T.why, g) : rk < 1 ? QX.tx('交情不够', { t: '生' }) : costOk(T), sub: A.type });
+      else if (lv < cap) ch.push({ t: QX.tx('请教', { a: A.name }), a: { k: 'coach', p: pid, art: T.art }, dis: !ok ? val(T.why, g) : rk < 2 ? QX.tx('交情不够', { t: '熟' }) : '', sub: QX.tx('级', { n: lv }) + (QX.atGate(T.art) ? ' · ' + QX.tx('能破关') : '') });
     }
     if (CFG.companions && P.comp && !QX.inParty(pid)) {
       const why = joinBlock(pid, g);
       if (!(P.comp.hide && why && P.comp.hide(g))) ch.push({ t: QX.tx('邀请同行'), a: { k: 'join', p: pid }, dis: why });
     }
+    // 深谈：半天，同一个人七天一回；送礼：送他喜欢的东西，一个月一回
+    if (!P.noChat) {
+      const last = S.chat && S.chat[pid];
+      const wait = last != null && S.day - last < CHAT_GAP ? QX.tx('刚谈过') : '';
+      ch.push({ t: QX.tx('深谈'), a: { k: 'chat', p: pid }, dis: rk < 1 ? QX.tx('他不理你') : wait, sub: QX.tx('一天') });
+      const gift = (P.likes || []).find((it) => QX.has(it) && !QX.ITEMS[it].relic);
+      const lastG = S.gift && S.gift[pid];
+      if (gift) ch.push({ t: QX.tx('送礼', { a: QX.ITEMS[gift].name }), a: { k: 'gift', p: pid, item: gift }, dis: lastG != null && S.day - lastG < GIFT_GAP ? QX.tx('刚送过') : '' });
+    }
     ch.push({ t: QX.tx('告辞'), a: { k: 'bye' } });
-    S.ev = { talk: pid, id: '', who: pid, title: P.name, text: val(first && P.hello ? P.hello : P.talk, g) || '', choices: ch, res: null };
+    S.ev = { talk: pid, id: '', who: pid, title: P.name, text: val(first && P.hello ? P.hello : P.talk, g) || '', mood: QX.mood(pid), tier: tr, choices: ch, res: null };
     QX.save();
   };
+  const CHAT_GAP = 7, GIFT_GAP = 30, CHAT_AFF = 6, GIFT_AFF = 12;
+  function chatText(P, g) {
+    const tr = QX.affTier(P.id);
+    const lines = val(P.chats, g);
+    if (Array.isArray(lines) && lines.length) return pick(lines);
+    return QX.tx('深谈' + tr, { a: P.name });
+  }
 
   QX.choose = (i) => {
     if (!S.ev || S.fight || S.over) return;
@@ -498,19 +596,48 @@
         const T = personDef(a.p).teach.find((x) => x.art === a.art);
         if (T.cost && T.cost.银两) addSt('银两', -T.cost.银两);
         learn(a.art, 1);
-        S.ev = { id: '', who: a.p, title: QX.PEOPLE[a.p].name, text: '', choices: [], res: val(T.say, g) || QX.tx('学成', { a: QX.ARTS[a.art].name }) };
+        S.ev = { id: '', who: a.p, title: QX.PEOPLE[a.p].name, text: '', choices: [], res: val(T.say, g) || QX.tx('学成', { a: QX.ARTS[a.art].name }), back: a.p };
         passDays(T.days || 5);
         break;
       }
       case 'coach': {
         const r = practise(a.art, false, 2.2);
-        S.ev = { id: '', who: a.p, title: QX.PEOPLE[a.p].name, text: '', choices: [], res: QX.tx('指点', { a: QX.ARTS[a.art].name, n: r.gain }) + (r.up ? QX.tx('升级', { a: QX.ARTS[a.art].name, n: QX.artLv(a.art) }) : '') };
+        // 师父指点能破瓶颈
+        const broke = breakGate(a.art, QX.tx('师父指点', { a: QX.PEOPLE[a.p].name }));
+        S.ev = { id: '', who: a.p, title: QX.PEOPLE[a.p].name, text: '', choices: [], res: QX.tx('指点', { a: QX.ARTS[a.art].name, n: r.gain }) + (broke ? QX.tx('破关', { n: QX.artLv(a.art) }) : '') + (r.up || broke ? QX.tx('升级', { a: QX.ARTS[a.art].name, n: QX.artLv(a.art) }) : ''), back: a.p };
         break;
       }
       case 'join': {
         const P = personDef(a.p);
         joinParty(a.p);
         S.ev = { id: '', who: a.p, title: P.name, text: '', choices: [], res: val(P.comp.joinText, g) || QX.tx('入队', { a: P.name }) };
+        break;
+      }
+      case 'topic': {
+        const P = personDef(a.p), T = P.topics.find((x) => x.id === a.id);
+        S.asked = S.asked || {};
+        const key = a.p + ':' + a.id, again = S.asked[key];
+        S.asked[key] = 1;
+        if (!again && T.fx) T.fx(g);
+        if (!again && T.loc) news(val(T.a, g), { loc: T.loc, cred: T.cred || '听说' });
+        const res = again ? (val(T.again, g) || QX.tx('上回说过', { a: P.name })) : val(T.a, g);
+        S.ev = { id: '', who: a.p, title: P.name, text: '', choices: [], res, back: a.p };
+        break;
+      }
+      case 'chat': {
+        const P = personDef(a.p);
+        S.chat = S.chat || {}; S.chat[a.p] = S.day;
+        like(a.p, CHAT_AFF + (P.chatAff || 0));
+        passDays(1);
+        S.ev = { id: '', who: a.p, title: P.name, text: '', choices: [], res: chatText(P, g), back: a.p };
+        break;
+      }
+      case 'gift': {
+        const P = personDef(a.p);
+        take(a.item, 1);
+        S.gift = S.gift || {}; S.gift[a.p] = S.day;
+        like(a.p, GIFT_AFF);
+        S.ev = { id: '', who: a.p, title: P.name, text: '', choices: [], res: val((P.thanks || {})[a.item], g) || QX.tx('收礼', { a: P.name, b: QX.ITEMS[a.item].name }), back: a.p };
         break;
       }
       default: break;
@@ -648,6 +775,7 @@
       const r = f(g);
       if (!r) continue;
       const o = typeof r === 'string' ? { t: r } : r;
+      if (o.fx) o.fx(g);
       news(o.t, { loc: o.loc || '', cred: o.cred || '听说' });
       log(QX.tx('打听到') + o.t, 'news');
       return QX.tx('打听到') + o.t;
@@ -685,7 +813,12 @@
     passDays(10);
     S.contrib++;
     addSt('声望', 1);
-    let t = val(SC.chore, G()) || QX.tx('门派差事');
+    // 门派差事事件：chore: 门派 id（或 '*' 哪个门派都行），用牌堆轮着来；抽到了就接着发生这件事
+    const g0 = G(), pool = [];
+    for (const id in QX.EVENTS) { const E = QX.EVENTS[id]; if ((E.chore === S.sect || E.chore === '*') && evAvailable(E, g0)) pool.push([id, val(E.w, g0) || 1]); }
+    const cev = pool.length && R() < CHORE_EVENT ? drawFrom('_chore_' + S.sect, pool) : null;
+    if (cev) S.queue.unshift(cev);
+    let t = cev ? QX.tx('门派差事') : val(SC.chore, G()) || QX.tx('门派差事');
     const need = SC.ranks ? SC.ranks[S.rank + 1] : null;
     if (need && S.contrib >= need.c && S.st.品德 >= (need.de || 0)) {
       S.rank++;
@@ -696,16 +829,35 @@
     log(QX.tx('门派差事'));
     return t;
   }
+  const CHORE_EVENT = 0.6; // 做门派差事时碰上一件有选项的事的机会
   QX.rankName = () => (S.sect && QX.SECTS[S.sect].ranks ? QX.SECTS[S.sect].ranks[S.rank].name : '');
 
   /* ---------- 练功 ---------- */
   const need = (lv) => 15 + lv * 12;
   QX.need = need;
+  /* 瓶颈：武功练到 3、6、9 级（入门功夫只在 6、9 级）卡住，长进攒满了也升不上去。
+   * 突破的办法：找会这门功夫的人指点（请教）、带着对应的秘籍练、到合适的地方闭关（QX.GATE_LOCS，按武功类型，一半机会），
+   * 或者打赢一场硬仗（对手的历练加起来 HARD_FIGHT 以上）。突破过的关口记在 a.open。 */
+  const HARD_FIGHT = 80;
+  QX.GATE_LOCS = {};
+  QX.gatesOf = (id) => { const A = artDef(id); return A.gates || ((A.diff || 1) < 0.9 ? [6, 9] : [3, 6, 9]); };
+  QX.gateLocs = (id) => { const A = artDef(id); return A.gateLoc || QX.GATE_LOCS[A.type] || []; };
+  QX.atGate = (id) => { const a = S.arts[id]; return !!a && a.lv < CFG.maxLv && QX.gatesOf(id).includes(a.lv) && (a.open || 0) < a.lv; };
+  QX.stuck = (id) => QX.atGate(id) && S.arts[id].xp >= need(S.arts[id].lv);
+  function breakGate(id, how) {
+    if (!QX.atGate(id)) return false;
+    const a = S.arts[id];
+    a.open = a.lv;
+    log(QX.tx('突破', { a: QX.ARTS[id].name, n: a.lv, how: how || '' }), 'good');
+    addArtXp(id, 0);
+    return true;
+  }
   function addArtXp(id, n) {
     const a = S.arts[id], A = QX.ARTS[id];
     let up = false;
     a.xp += n;
     while (a.lv < CFG.maxLv && a.xp >= need(a.lv)) {
+      if (QX.atGate(id)) { a.xp = need(a.lv); break; } // 卡在关口：长进只攒到满
       a.xp -= need(a.lv); a.lv++; up = true;
       for (const k in A.grow || {}) addSt(k, A.grow[k]);
       log(QX.tx('升级', { a: A.name, n: a.lv }), 'good');
@@ -713,6 +865,7 @@
     if (a.lv >= CFG.maxLv) a.xp = 0;
     return up;
   }
+  const hasBook = (id) => Object.keys(S.items).some((it) => S.items[it] > 0 && QX.ITEMS[it] && [].concat(QX.ITEMS[it].teaches || []).includes(id));
   QX.canPractise = (id) => { const a = S.arts[id]; return !!a && a.lv < CFG.maxLv; };
   QX.practiseRisk = (id, hard) => {
     const A = artDef(id), a = S.arts[id], g = G();
@@ -743,8 +896,22 @@
     out.gain = gain;
     if (A.evil) addSt('品德', -1);
     if (!out.hurt && !coach) log(QX.tx('练功', { a: A.name, n: gain }));
+    // 卡在瓶颈上：带着秘籍就能对照着想通；在合适的地方闭关有一半机会
+    if (!coach && !out.hurt && QX.stuck(id)) {
+      if (hasBook(id)) out.broke = breakGate(id, QX.tx('对照秘籍'));
+      else if (QX.gateLocs(id).includes(S.loc) && R() < 0.5) out.broke = breakGate(id, QX.tx('闭关', { a: QX.LOCS[S.loc].short }));
+      else if (!S.gateTold || S.gateTold[id] !== a.lv) { S.gateTold = S.gateTold || {}; S.gateTold[id] = a.lv; log(QX.tx('瓶颈', { a: A.name, n: a.lv }), 'bad'); }
+    }
+    if (!coach) { S.trainN = (S.trainN || 0) + 1; if (S.trainN % TRAIN_EVERY === 0) { const ev = trainEvent(); if (ev) S.queue.push(ev); } }
     passDays(10);
     return out;
+  }
+  /* 修炼小事：每练 TRAIN_EVERY 次碰到一件（事件写 train: true，可以用 cond 限定武功、地点、门派），用牌堆不重复 */
+  const TRAIN_EVERY = 3;
+  function trainEvent() {
+    const g = G(), pool = [];
+    for (const id in QX.EVENTS) { const E = QX.EVENTS[id]; if (E.train && evAvailable(E, g)) pool.push([id, val(E.w, g) || 1]); }
+    return drawFrom('_train', pool);
   }
   // 内伤三层以上不许冒进
   QX.hardBlock = () => (S.inj >= HARD_MAX_INJ ? QX.tx('伤重不能冒进', { n: S.inj }) : '');
@@ -1036,6 +1203,8 @@
       S.xp += xp; addSt('银两', silver);
       for (const e of F.foes) for (const d of e.drops) if (R() < d[1]) give(d[0], 1);
       line(QX.tx('赢了', { n: xp, s: silver }));
+      // 打赢一场硬仗，卡住的武功里挑一门破关
+      if (xp >= HARD_FIGHT) { const sid = Object.keys(S.arts).find((id) => QX.stuck(id)) || Object.keys(S.arts).find((id) => QX.atGate(id)); if (sid) breakGate(sid, QX.tx('硬仗')); }
     }
     F.xp = xp; F.silver = silver;
     QX.save();

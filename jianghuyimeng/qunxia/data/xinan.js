@@ -64,7 +64,7 @@
         { t: '给掌柜磕个头', fx: (g) => { g.give('jinchuang', 2); g.add('品德', 2); }, res: '掌柜嘴上骂你没良心，转身塞给你两包金创药。' },
         { t: '帮他看几天铺子', fx: (g) => { g.days(5); g.add('资质', 1); g.add('银两', 10); }, res: '你又抓了五天药。几百个药名，一个也没忘。' },
       ] },
-    { id: 'dl_temple', loc: 'dali', act: '天龙寺门口的争吵', cond: (g) => !g.f('tianlongHelped'), once: false, t: '天龙寺',
+    { id: 'dl_temple', loc: 'dali', act: '天龙寺门口的争吵', cond: (g) => !g.f('tianlongHelped') && !g.f('tianlongLost'), once: false, t: '天龙寺', // 133 年十月以后寺田被收走（大势 t_dali）
       text: '几个恶霸拿着官府的文书，说天龙寺的田归他们了。老和尚拦在门口，被推了一个跟头。',
       choices: [
         { t: '把恶霸赶走', fight: { foes: ['tianlong_e', 'shanzei'], win: { fx: (g) => { g.set('tianlongHelped'); g.add('品德', 6); g.add('声望', 5); }, res: '恶霸跑了，文书也被你撕了。老和尚扶着门框，向你合十。' }, lose: { res: '你被打倒在台阶下。老和尚替你敷了药。' } } },

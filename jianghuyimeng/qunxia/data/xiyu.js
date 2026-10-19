@@ -22,27 +22,28 @@
         { t: '把她数石砖的事告诉杨逍', fx: (g) => { g.set('xiaozhaoTold'); g.add('品德', -3); g.add('声望', 3); }, res: '杨逍让人把小昭的铁链又加了一道。她再见你的时候，低着头，一句话也不说。' },
         { t: '不多问', res: '你把水桶放下就走了。' },
       ] },
-    { id: 'gm_midao', loc: 'guangming', act: '跟小昭进秘道', cond: (g) => g.f('xiaozhaoTrust') && (g.here('xiaozhao') || g.inParty('xiaozhao')) && !g.has('qiankun') && !g.f('midaoDone'), t: '秘道',
+    { id: 'gm_midao', loc: 'guangming', act: '跟小昭进秘道', cond: (g) => g.f('xiaozhaoTrust') && (g.here('xiaozhao') || g.inParty('xiaozhao')) && !g.has('qiankun') && !g.f('midaoDone') && g.holder('qiankun') !== 'zhangwuji', t: '秘道',
       text: '小昭领你从一块松动的石砖钻下去。秘道很长，尽头是一间石室，地上坐着两具骸骨。一具骸骨手里攥着一张羊皮，上面写满了字。',
       choices: [
         { t: '和小昭一起参详，把羊皮带走', fx: (g) => { g.give('qiankun'); g.set('midaoDone'); }, res: '小昭看了一夜，把字一个一个记在心里。“你拿着吧，我记住了就够了。”' },
         { t: '把羊皮留给小昭', fx: (g) => { g.add('品德', 5); g.set('midaoDone'); g.set('xiaozhaoOwe'); }, res: '小昭攥着羊皮，眼睛亮亮的：“我欠你一回。”' },
         { t: '先把两位前辈葬了', fx: (g) => { g.add('品德', 3); g.set('buriedYang'); }, res: '骸骨旁有一封遗书，是阳顶天教主写的。你把他们葬在石室里，羊皮压在了碑下。下回再来取。' },
       ] },
-    { id: 'gm_midao2', loc: 'guangming', act: '去石室取羊皮', cond: (g) => g.f('buriedYang') && !g.has('qiankun') && !g.f('midaoDone'), t: '石室',
+    { id: 'gm_midao2', loc: 'guangming', act: '去石室取羊皮', cond: (g) => g.f('buriedYang') && !g.has('qiankun') && !g.f('midaoDone') && g.holder('qiankun') !== 'zhangwuji', t: '石室',
       text: '你又下了秘道。石碑还在，羊皮压在碑下，好好的。',
       choices: [
         { t: '取出来', fx: (g) => { g.give('qiankun'); g.set('midaoDone'); }, res: '你在碑前磕了一个头，带走了羊皮。' },
         { t: '还是留在这里', fx: (g) => { g.add('品德', 2); g.set('midaoDone'); }, res: '你把石碑扶正，退了出去。这东西不该是你的。' },
       ] },
-    { id: 'gm_sneak', loc: 'guangming', act: '夜里撬开圣火殿的地砖', cond: (g) => !g.has('qiankun') && !g.f('midaoDone') && g.before(134, 5) && !g.f('xiaozhaoTrust'), once: false, t: '圣火殿',
+    { id: 'gm_sneak', loc: 'guangming', act: '夜里撬开圣火殿的地砖', cond: (g) => !(g.f('watchGm') && g.day - g.f('watchGm') < 180) && !g.has('qiankun') && !g.f('midaoDone') && g.before(134, 5) && !g.f('xiaozhaoTrust'), once: false, t: '圣火殿',
       text: '你听人说圣火殿下面有一条秘道，历代教主的武功都藏在里面。半夜，殿里只有一盏长明灯。',
       choices: [
         { t: '撬开地砖钻下去', check: ['轻功', '难'], fx: (g) => { g.give('qiankun'); g.set('midaoDone'); g.add('品德', -12); }, res: '你在秘道尽头的骸骨手里拿到了一张羊皮。出来的时候，天已经亮了，没人发现。',
           fail: { res: '地砖还没撬开，巡夜的教众就到了。', next: 'gm_sneak_caught' } },
         { t: '不动明教的东西', fx: (g) => g.add('品德', 1), res: '你回去睡了。' },
       ] },
-    { id: 'gm_sneak_caught', once: false, t: '被发现',
+    { id: 'gm_sneak_caught', once: false, fx: (g) => g.set('watchGm', g.day), // 被抓过一回，半年内这里戒备森严
+      t: '被发现',
       text: '火把一下子亮了一圈。明教的人围住了你，有人喊：“六大派的奸细！”',
       choices: [
         { t: '打出去', fight: { foes: ['mjdizi', 'mjdizi'], win: { fx: (g) => { g.add('品德', -5); if (g.sect === 'mingjiao') g.setSect(''); }, res: '你打翻了两个人，从后山滑了下去。光明顶你是回不去了。' }, lose: { fx: (g) => { if (g.sect === 'mingjiao') g.setSect(''); }, res: '你被扔下了山。醒来时躺在雪地里。' } } },
@@ -66,6 +67,13 @@
       choices: [
         { t: '请他告诉你路', fx: (g) => { g.set('jiuyangHint'); }, res: '他画了一张图，说从光明顶往西，找那道最陡的悬崖。' },
         { t: '谢过他，不必了', fx: (g) => { g.add('品德', 4); g.add('声望', 5); g.set('jiuyangLeft'); }, res: '张无忌笑了：“你这个人，倒跟我一样。”' },
+      ] },
+    /* 乾坤大挪移心法：光明顶一战后在张无忌手里（大势 t_gmd） */
+    { id: 'gm_wuji_qk', who: 'zhangwuji', act: '向张教主借乾坤大挪移心法', cond: (g) => g.holder('qiankun') === 'zhangwuji' && !g.has('qiankun'), minAff: '熟', t: '乾坤大挪移',
+      text: '张无忌从怀里取出那张羊皮，摊在桌上：“这是阳教主留下的。我已经背熟了。你要看，得先答应我一件事。”',
+      choices: [
+        { t: '答应他：只用来护人，不用来争', need: ['品德', 60], fx: (g) => { g.give('qiankun'); g.like('zhangwuji', 5); }, res: '张无忌把羊皮卷好递给你：“内功不到火候别硬练，我当年是碰巧。”' },
+        { t: '说你是想看看明教的根底', fx: (g) => g.like('zhangwuji', -8), res: '张无忌把羊皮收了回去，客客气气地请你喝了一杯茶。' },
       ] },
     { id: 'gmd_battle', t: '六大派围攻光明顶',
       fx: (g) => g.set('atGmd'),

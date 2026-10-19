@@ -95,7 +95,24 @@ const referenced = new Set();
 for (const id of evIds) for (const c of QX.EVENTS[id].choices || []) [c.next, c.fail && c.fail.next, c.fight && c.fight.win && c.fight.win.next, c.fight && c.fight.lose && c.fight.lose.next].filter(Boolean).forEach((n) => referenced.add(n));
 QX.TIMELINE.forEach((T) => T.ev && referenced.add(T.ev));
 for (const s in QX.SECTS) { const S = QX.SECTS[s]; if (S.expel) referenced.add(S.expel); (S.ranks || []).forEach((r) => r.ev && referenced.add(r.ev)); }
-for (const id of evIds) { const E = QX.EVENTS[id]; if (!E.act && !E.arrive && !E.explore && !E.road && !referenced.has(id)) P('事件 ' + id + ' 没有任何触发方式'); if (E.act && !E.loc && !E.who && !E.anywhere) P('事件 ' + id + ' 有 act，但没写 loc、who 或 anywhere'); }
+// 差遣：g.errand('id', ...) 派出去的差事，要有 errand: 'id' 的事件接着；反过来也一样
+const errandSet = new Set([...Object.keys(srcs).filter((s) => /^data\//.test(s)).map((s) => srcs[s]).join('\n').matchAll(/g\.errand\('(\w+)'/g)].map((m) => m[1]));
+for (const id of evIds) { const E = QX.EVENTS[id]; if (E.errand && !errandSet.has(E.errand)) P('事件 ' + id + ' 等的差遣 ' + E.errand + ' 没有人派（g.errand）'); if (E.chore && E.chore !== '*' && !QX.SECTS[E.chore]) P('事件 ' + id + ' 的门派 ' + E.chore + ' 不存在'); if (E.minAff && QX.tierRank(E.minAff) < 0) P('事件 ' + id + ' 的 minAff 写错了'); }
+for (const e of errandSet) if (!evIds.some((id) => QX.EVENTS[id].errand === e)) P('差遣 ' + e + ' 派出去了，却没有 errand: \'' + e + '\' 的事件接着');
+// 说话：话题、喜好
+for (const pid in QX.PEOPLE) {
+  const Pp = QX.PEOPLE[pid], seen = new Set();
+  for (const it of Pp.likes || []) if (!QX.ITEMS[it]) P('人物 ' + pid + ' 喜欢的 ' + it + ' 不存在');
+  for (const T of Pp.topics || []) {
+    if (!T.id || seen.has(T.id)) P('人物 ' + pid + ' 的话题 id 重复或没写：' + T.id); seen.add(T.id);
+    if (!T.q || !T.a) P('人物 ' + pid + ' 的话题 ' + T.id + ' 缺问或答');
+    if (T.tier && QX.tierRank(T.tier) < 0) P('人物 ' + pid + ' 的话题 ' + T.id + ' 的 tier 写错了');
+    if (T.loc && !QX.LOCS[T.loc]) P('人物 ' + pid + ' 的话题 ' + T.id + ' 的地点不存在');
+  }
+  if (Pp.side && !QX.SECTS[Pp.side] && !['wangfu', 'wudang', 'shaolin', 'tianlong', 'tianying'].includes(Pp.side)) P('人物 ' + pid + ' 的 side ' + Pp.side + ' 不认识');
+  if (Pp.roam) for (const l of Pp.roam.locs || []) if (!QX.LOCS[l]) P('人物 ' + pid + ' 走动的地点 ' + l + ' 不存在');
+}
+for (const id of evIds) { const E = QX.EVENTS[id]; if (!E.act && !E.arrive && !E.explore && !E.road && !E.chore && !E.train && !E.errand && !referenced.has(id)) P('事件 ' + id + ' 没有任何触发方式'); if (E.act && !E.loc && !E.who && !E.anywhere) P('事件 ' + id + ' 有 act，但没写 loc、who 或 anywhere'); }
 // 标记：设了没人读、读了没人设
 const allSrc = Object.keys(srcs).filter((s) => /^data\//.test(s)).map((s) => srcs[s]).join('\n');
 const setF = new Set([...allSrc.matchAll(/g\.set\('(\w+)'/g)].map((m) => m[1]));
@@ -200,7 +217,11 @@ function playOne(persona, k) {
       if (!ch.length || S.ev.res !== null && !S.ev.choices.length) { QX.cont(); continue; }
       if (S.ev.talk) {
         // 和人说话：先做事件、学武、邀请，最后告辞
-        const pri = ch.find((x) => x[0].a.k === 'ev' && !S.done[x[0].a.id]) || ch.find((x) => x[0].a.k === 'learn') || ch.find((x) => x[0].a.k === 'join' && rng() < 0.7) || (rng() < 0.3 && ch.find((x) => x[0].a.k === 'coach'));
+        // 和人说话：先做事件、学武、邀请；卡在瓶颈的去请教；问没问过的话题、深谈、送礼；最后告辞
+        const pri = ch.find((x) => x[0].a.k === 'ev' && !S.done[x[0].a.id]) || ch.find((x) => x[0].a.k === 'learn') || ch.find((x) => x[0].a.k === 'join' && rng() < 0.7)
+          || ch.find((x) => x[0].a.k === 'coach' && QX.stuck(x[0].a.art)) || (rng() < 0.3 && ch.find((x) => x[0].a.k === 'coach'))
+          || (rng() < 0.5 && ch.find((x) => x[0].a.k === 'topic' && !(S.asked && S.asked[x[0].a.p + ':' + x[0].a.id])))
+          || (rng() < 0.25 && ch.find((x) => x[0].a.k === 'chat')) || (rng() < 0.5 && ch.find((x) => x[0].a.k === 'gift'));
         QX.choose((pri || ch[ch.length - 1])[1]);
         continue;
       }
@@ -305,7 +326,13 @@ const ROUTES = [
   { relic: 'taiji', d: '侠：用黑玉断续膏治好俞岱岩', at: [135, 4], loc: 'wudang', de: 80, give: ['heiyu'], steps: [['talk', 'yudaiyan', 'wd_yu_heiyu'], ['talk', 'zhangsanfeng', 'wd_zsf_gift']], pref: ['敷上', '受了', '双手'] },
   { relic: 'taiji', d: '魔：趁乱摸进后殿', at: [135, 1, 28], loc: 'shaolin', de: 30, steps: [['go', 'wudang']], pref: ['后殿', '揣进'] },
   { relic: 'yijing', d: '侠：祭扫胡青牛的坟，找到医经', at: [131, 3], loc: 'hudie', steps: [['act', 'hd_grave'], ['explore', 'hd_hut']], pref: ['拔草', '字条'] },
-  { relic: 'yijing', d: '魔：挖坟', at: [136, 4], loc: 'hudie', steps: [['act', 'hd_grave']], pref: ['挖开'] },
+  { relic: 'yijing', d: '魔：挖坟（赶在金花婆婆之前）', at: [132, 4], loc: 'hudie', steps: [['act', 'hd_grave']], pref: ['挖开', '夜里来挖'] },
+  // 机缘错过了，去对头那里夺回来
+  { relic: 'yijing', d: '金花婆婆挖走以后，去灵蛇岛讨回', at: [133, 6], loc: 'lintan', steps: [['go', 'lingshe'], ['talk', 'jinhua', 'ls_yijing']], pref: ['动手抢'] },
+  { relic: 'xiantian', d: '番僧抢走以后，夜探王府书库', at: [132, 9], loc: 'dadu', steps: [['act', 'dd_shuku']], pref: ['屋顶', '硬闯'] },
+  { relic: 'yiyang', d: '寺田被收以后，夜探王府书库', at: [133, 11], loc: 'dadu', give: ['xiantian'], steps: [['act', 'dd_shuku']], pref: ['屋顶', '硬闯'] },
+  { relic: 'qiankun', d: '光明顶以后，向张教主借', at: [134, 7], loc: 'guangming', steps: [['talk', 'zhangwuji', 'gm_wuji_qk']], pref: ['答应'] },
+  { relic: 'heiyu', d: '万安寺以后，向赵敏讨', at: [135, 9], loc: 'hudie', steps: [['talk', 'zhaomin', 'hd_zm_heiyu']], pref: ['送去'] },
   { relic: 'yiyang', d: '侠：赶走恶霸，老僧相赠', at: [131, 3], loc: 'dali', steps: [['act', 'dl_temple'], ['talk', 'tianlong_seng', 'dl_yiyang_gift']], pref: ['赶走', '收下'] },
   { relic: 'yiyang', d: '魔：夜入经房', at: [131, 3], loc: 'dali', steps: [['act', 'dl_steal']], pref: ['拿走'] },
   { relic: 'xiantian', d: '侠：帮重阳宫挡住番僧', at: [132, 7], loc: 'xiangyang', steps: [['go', 'zhongnan']], pref: ['挡住', '收下'] },
@@ -337,6 +364,7 @@ function runRoute(R) {
   QX._internal.passDays(1); // 之前的大势照常发生
   S = QX.state(); S.queue = []; S.ev = null; S.hp = QX.maxHp(); S.mp = QX.maxMp();
   (R.flags || []).forEach((f) => { S.flags[f] = true; });
+  if (R.aff) S.aff = Object.assign(S.aff || {}, R.aff); // 托付要熟到一定档位才肯开口
   (R.give || []).forEach((it) => QX.G().give(it));
   for (const st of R.steps) {
     S = QX.state();
@@ -352,7 +380,9 @@ function runRoute(R) {
     } else if (st[0] === 'explore') {
       let n = 0;
       QX.rnd = rng;
-      while (!QX.state().done[st[1]] && n++ < 80) { QX.act('explore'); drive(R.pref); S = QX.state(); S.hp = QX.maxHp(); }
+      // 探索用真随机：碰到了还没拿到（判定掷坏了），这件事可重复的话再试几回
+      const again = () => { const d = QX.state().done[st[1]] || 0; return !d || (QX.EVENTS[st[1]].once === false && !QX.state().relics.includes(R.relic) && d < 4); };
+      while (again() && n++ < 80) { QX.act('explore'); drive(R.pref); S = QX.state(); S.hp = QX.maxHp(); }
       QX.rnd = () => 0.5;
       if (!QX.state().done[st[1]]) return '探索 80 次没碰到 ' + st[1];
       continue;
@@ -362,7 +392,22 @@ function runRoute(R) {
   S = QX.state();
   QX.rnd = rng;
   if (S.over && S.over.kind === 'dead') return '死了：' + S.over.text;
+  if (R.expect) return R.expect(S) ? '' : '最后没办成（标记：' + Object.keys(S.flags).join('、') + '）';
   return S.relics.includes(R.relic) ? '' : '最后没拿到';
+}
+/* 托付链：从头走到尾，看最后的标记对不对（机器人凑不齐交情和前置，随机试玩里碰不到） */
+const CHAINS = [
+  { d: '俞岱岩：打听仇人、讨回公道、用黑玉断续膏治好他', at: [134, 1], loc: 'wudang', aff: { yudaiyan: 30 },
+    steps: [['talk', 'yudaiyan', 'tk_yu1'], ['go', 'dadu'], ['go', 'wudang'], ['talk', 'yudaiyan', 'tk_yu3'], ['go', 'dadu'], ['talk', 'asan', 'tk_yu4'], ['go', 'wudang'], ['talk', 'yudaiyan', 'tk_yu5']],
+    pref: ['答应替他打听', '凑过去', '答应替他讨回', '动手', '黑玉', '敷上', '受了'], expect: (S) => S.flags.asanCrippled && S.flags.yuCured },
+  { d: '说书先生：讲真事、听来成昆的事', at: [133, 1], loc: 'lintan', aff: { shuoshu: 30 }, flags: ['heardGuojing', 'xiexunAsk'],
+    steps: [['talk', 'shuoshu', 'tk_shuo1'], ['talk', 'shuoshu', 'tk_shuo2'], ['talk', 'shuoshu', 'tk_shuo3']],
+    pref: ['答应替他听', '讲郭大侠', '记下'], expect: (S) => S.flags.heardChengkun && S.flags.shuoTold },
+];
+for (const R of CHAINS) {
+  if (process.env.RDBG) { if (!R.d.includes(process.env.RDBG)) continue; console.log('托付', R.d); }
+  try { const why = runRoute(R); if (why) P('托付【' + R.d + '】走不通：' + why); }
+  catch (e) { QX.rnd = rng; P('托付【' + R.d + '】运行错误：' + String(e.stack).split(/\n/).slice(0, 3).join(' | ')); }
 }
 for (const R of ROUTES) {
   if (process.env.RDBG) { if (!R.d.includes(process.env.RDBG)) continue; console.log('路线', R.d); }

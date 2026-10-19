@@ -47,7 +47,7 @@
         { t: '动手抢', fight: { foes: ['asan'], win: { fx: (g) => { g.give('heiyu'); g.add('品德', -5); }, res: '阿三的手指再硬，也有软的时候。你拿走了盒子。' }, lose: { res: '阿三的手指戳在你胸口，你吐了一口血。' } } },
         { t: '告辞', res: '阿三又捏碎了一个核桃。' },
       ] },
-    { id: 'dd_sword_night', loc: 'dadu', act: '夜探王府后院', cond: (g) => g.holder('yitian') === 'zhaomin' && !g.has('yitian') && g.after(134, 7) && g.before(135, 5), once: false, t: '王府后院',
+    { id: 'dd_sword_night', loc: 'dadu', act: '夜探王府后院', cond: (g) => !(g.f('watchWfYard') && g.day - g.f('watchWfYard') < 180) && g.holder('yitian') === 'zhaomin' && !g.has('yitian') && g.after(134, 7) && g.before(135, 5), once: false, t: '王府后院',
       text: '你打听到，郡主把一把古剑挂在她书房的墙上。书房外面有玄冥二老守着。',
       choices: [
         { t: '从屋顶摸进去', check: ['轻功', '极难'], fx: (g) => { g.give('yitian'); g.add('声望', 8); }, res: '你揭开瓦片，用绳子把剑勾了上来。第二天王府里乱成一团，郡主却笑了：“这个人有点本事。”',
@@ -57,7 +57,8 @@
           fail: { res: '马夫收了钱，门缝却没留。你翻墙进去，迎面撞上了巡夜的老头。', next: 'dd_xuanming' } },
         { t: '算了', res: '你回客店睡觉去了。' },
       ] },
-    { id: 'dd_xuanming', once: false, t: '玄冥二老',
+    { id: 'dd_xuanming', once: false, fx: (g) => g.set('watchWfYard', g.day), // 被抓过一回，半年内这里戒备森严
+      t: '玄冥二老',
       text: '鹿杖客和鹤笔翁一左一右，把你堵在了房檐上。',
       choices: [
         { t: '拼了', fight: { foes: ['lu', 'he'], win: { fx: (g) => { g.give('yitian'); g.add('声望', 25); }, res: '你打退了玄冥二老，抱着剑跳下了墙。大都的江湖人传了一个月。' }, lose: { res: '你中了一掌，浑身发冷，被扔出了王府。' } } },
@@ -88,6 +89,24 @@
         { t: '接过来', fx: (g) => { g.give('yitian'); g.add('品德', -3); }, res: '剑很轻。赵敏看着你笑：“拿了我的剑，可就是我的人了。”' },
         { t: '这是峨嵋的东西，不要', fx: (g) => g.add('品德', 4), res: '赵敏撇撇嘴，把剑挂了回去。' },
       ] },
+    /* 王府书库：从重阳宫、天龙寺抢来的经书都堆在这里（大势 t_fanseng、t_dali 让它们换了主人） */
+    { id: 'dd_shuku', loc: 'dadu', act: '夜探王府的书库', once: false, cond: (g) => !(g.f('watchShuku') && g.day - g.f('watchShuku') < 180) && ['xiantian', 'yiyang'].some((it) => g.holder(it) === 'wangfu' && !g.has(it)), t: '王府书库',
+      text: (g) => '王府后院有一座两层的书库，窗户钉着铁条。' + (g.holder('xiantian') === 'wangfu' ? '重阳宫的经箱贴着封条，' : '') + (g.holder('yiyang') === 'wangfu' ? '天龙寺的书箱上还写着“经房”两个字。' : '') + '守库的是两个番僧。',
+      choices: [
+        { t: '从屋顶揭瓦下去', check: ['轻功', '难'], fx: (g) => { if (g.holder('xiantian') === 'wangfu') g.give('xiantian'); else g.give('yiyang'); g.add('声望', 5); },
+          res: '你在一堆经箱里摸了半夜，摸到了要找的那一卷，从原路爬了出去。番僧的鼾声一直没停。',
+          fail: { res: '瓦片碎了一块。底下的番僧抬起头，手已经按在了金刚杵上。', next: 'dd_shuku_caught' } },
+        { t: '求郡主赏一本看看', cond: (g) => g.f('wangTrust'), fx: (g) => { if (g.holder('xiantian') === 'wangfu') g.give('xiantian'); else g.give('yiyang'); g.add('品德', -3); },
+          res: '赵敏笑着让人开了书库：“你办事得力，挑一本吧。看完了，记得替我办下一件事。”' },
+        { t: '算了', res: '你在王府墙外转了一圈，回去了。' },
+      ] },
+    { id: 'dd_shuku_caught', once: false, fx: (g) => g.set('watchShuku', g.day), // 被抓过一回，半年内这里戒备森严
+      t: '番僧',
+      text: '两个番僧一左一右堵住了书库的门。',
+      choices: [
+        { t: '硬闯', fight: { foes: ['fanseng', 'fanseng'], win: { fx: (g) => { if (g.holder('xiantian') === 'wangfu') g.give('xiantian'); else g.give('yiyang'); g.add('声望', 10); }, res: '你打翻了两个番僧，抱着经卷翻出了王府的后墙。' }, lose: { res: '你被扔出了王府，背上留着一个大手印。' } } },
+        { t: '跳墙就跑', check: ['轻功', '中'], res: '你翻过墙头，钻进了胡同。', fail: { fx: (g) => { g.hurt(60); g.injure(1); }, res: '一杵砸在你后背上，你还是逃了出去。' } },
+      ] },
     { id: 'dd_horse', loc: 'dadu', explore: 'dadu', once: false, w: 2, t: '马市',
       text: '大都的马市上，一匹烈马踢翻了栏杆，满街乱跑。',
       choices: [
@@ -114,12 +133,12 @@
         { t: '在三清殿前跪一夜', need: ['品德', 35], fx: (g) => { g.days(10); g.add('品德', 5); }, res: '道长叹了口气，让你起来了。' },
         { t: '下山', fx: (g) => g.setSect(''), res: '你脱下了道袍。' },
       ] },
-    { id: 'zn_fanseng', loc: 'zhongnan', arrive: true, from: [132, 6], cond: (g) => g.holder('xiantian') === 'quanzhen', t: '番僧上山',
+    { id: 'zn_fanseng', cond: (g) => g.holder('xiantian') === 'quanzhen', t: '番僧上山', // 大势 t_fanseng：132 年夏天人在终南山才碰得上
       text: '几个西域番僧带着王府的武士上了终南山，说奉汝阳王之命，来借重阳宫的经书。道士们拦在藏经楼前。',
       choices: [
         { t: '帮道士们挡住', fight: { foes: ['fanseng', 'wfwushi'], win: { fx: (g) => { g.set('znDefended'); g.add('品德', 5); g.add('声望', 8); }, res: '番僧退下山去了。守经楼的老道摸着你的脸，说要好好谢你。', next: 'zn_gift' }, lose: { fx: (g) => g.set('znDefended'), res: '你被打倒了，可番僧也伤了几个，悻悻地走了。老道说你是条好汉。', next: 'zn_gift' } } },
         { t: '给番僧带路，自己先拿', cond: (g) => g.st('品德') <= 45, fx: (g) => { g.give('xiantian'); g.set('robbedQuanzhen'); g.add('品德', -15); }, res: '你趁乱上了藏经楼，把那卷先天功塞进了怀里。番僧什么也没找到。' },
-        { t: '躲开', res: '番僧闹了一天，走了。' },
+        { t: '躲开', fx: (g) => { g.hold('xiantian', 'wangfu'); g.set('xiantianLost'); }, res: '番僧闹了一天，从藏经楼上抬下一只木箱，走了。守楼的老道坐在台阶上，半天没说话。' },
       ] },
     { id: 'zn_gift', t: '先天功',
       text: '守经楼的老道把一卷发黄的纸放在你手里：“重阳祖师的先天功，只剩半部了。番僧要抢的就是它。放在楼上不安全，你带着走吧。”',
@@ -133,7 +152,7 @@
         { t: '收下', fx: (g) => { g.give('xiantian'); g.set('xiantianGiven'); }, res: '你把经卷贴身收好。' },
         { t: '再等等', res: '老道又把经卷放了回去。' },
       ] },
-    { id: 'zn_steal', loc: 'zhongnan', act: '夜上藏经楼', cond: (g) => !g.has('xiantian') && g.holder('xiantian') === 'quanzhen' && g.sect !== 'quanzhen', once: false, t: '藏经楼',
+    { id: 'zn_steal', loc: 'zhongnan', act: '夜上藏经楼', cond: (g) => !(g.f('watchZn') && g.day - g.f('watchZn') < 180) && !g.has('xiantian') && g.holder('xiantian') === 'quanzhen' && g.sect !== 'quanzhen', once: false, t: '藏经楼',
       text: '藏经楼黑着灯。守楼的老道睡在楼下，鼾声很响。',
       choices: [
         { t: '上楼', check: ['轻功', '难'], fx: (g) => { g.give('xiantian'); g.set('robbedQuanzhen'); g.add('品德', -15); }, res: '你拿到了那卷先天功。下楼的时候，鼾声停了一下，又响了起来。',
@@ -142,7 +161,8 @@
           fail: { res: '走到一半，你的气一松，楼板吱呀一声。几个道士举着火把围了上来。', next: 'zn_caught' } },
         { t: '不上去', fx: (g) => g.add('品德', 1), res: '你在楼下站了一会儿，走了。' },
       ] },
-    { id: 'zn_caught', once: false, t: '被围',
+    { id: 'zn_caught', once: false, fx: (g) => g.set('watchZn', g.day), // 被抓过一回，半年内这里戒备森严
+      t: '被围',
       text: '道士们的剑把你围在中间。',
       choices: [
         { t: '打出去', fight: { foes: ['qzdaoshi', 'qzdaoshi', 'qzdaoshi'], win: { fx: (g) => g.add('品德', -5), res: '你冲下了终南山，身后的钟声响个不停。' }, lose: { res: '你被扔下了山门。' } } },

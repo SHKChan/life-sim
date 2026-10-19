@@ -168,3 +168,13 @@
 .qx-reg .row.hi { background: color-mix(in srgb, var(--bad) 10%, transparent); }
 .qx-horse { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 13.5px; color: var(--soft); }
 .roll.great { color: var(--canon); font-weight: 600; }
+
+/* v2.3：说话时的态度、瓶颈、身上的事 */
+.qx-mood { font-size: 13.5px; color: var(--soft); margin: -2px 0 8px; }
+.qx-cred.t-敌 { border-color: var(--bad); color: var(--bad); }
+.qx-cred.t-熟 { border-color: var(--mod); color: var(--mod); }
+.qx-cred.t-信 { border-color: var(--canon); color: var(--canon); }
+.qx-track.xp.stuck i { background: var(--bad); }
+.qx-tasks-h { display: block; margin: 12px 0 4px; color: var(--muted); font-size: 13px; }
+.qx-tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; color: var(--soft); }
+.qx-tasks li { line-height: 1.6; }

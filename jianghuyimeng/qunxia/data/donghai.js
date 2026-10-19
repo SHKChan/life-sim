@@ -59,6 +59,16 @@
           res: '她站了很久，笑了：“二十年了，还有人记得这个名字。”她说她有个女儿，在光明顶上。临走给了你两颗解毒丹。',
           fail: { fx: (g) => { g.hurt(60); g.injure(1); g.set('jinhuaKnown'); }, res: '一朵金花打在你膝盖上。你跪倒在沙滩上，她已经不见了。' } },
       ] },
+    /* 胡青牛医经：133 年四月金花婆婆挖开了胡青牛的坟（大势 t_hudie_grave），医经在她手里 */
+    { id: 'ls_yijing', who: 'jinhua', act: '向金花婆婆讨胡青牛的医经', cond: (g) => g.holder('yijing') === 'jinhua' && !g.has('yijing'), once: false, t: '医经',
+      text: '金花婆婆从木屋里拿出一只铁匣，敲了敲：“胡青牛见死不救，他的书我烧了一半。剩下这本医经，你要来做什么？”',
+      choices: [
+        { t: '叫她一声“紫衫龙王”，求她还给胡家', cond: (g) => g.f('jinhuaKnown'), need: ['品德', 45], fx: (g) => { g.give('yijing'); g.add('品德', 2); },
+          res: '她的拐杖停在半空。过了很久，她把铁匣推过来：“拿去。医书救人，留在我这里只会杀人。”' },
+        { t: '拿一朵天山雪莲换', cost: { item: 'xuelian' }, fx: (g) => g.give('yijing'), res: '金花婆婆捏着雪莲闻了闻，咳嗽轻了一点。她把医经扔到你脚下。' },
+        { t: '动手抢', fight: { foes: ['jinhua'], win: { fx: (g) => { g.give('yijing'); g.add('品德', -6); g.add('声望', 8); }, res: '她的金花打完了，你夺下了铁匣。她拄着拐杖站在礁石上，看你上了船。' }, lose: { res: '一朵金花钉在你肩上，你被扔回了船上。' } } },
+        { t: '告辞', res: '金花婆婆又咳了起来。' },
+      ] },
     { id: 'ls_snake', loc: 'lingshe', explore: 'lingshe', once: false, w: 2, t: '蛇',
       text: '礁石缝里游出几条花蛇，昂着头。',
       choices: [

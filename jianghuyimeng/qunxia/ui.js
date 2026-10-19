@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.2.0';
+  const VERSION = '2.3.0';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -104,6 +104,8 @@
     let h = '<div class="card qx-ev" id="qx-ev">';
     if (E.who && QX.PEOPLE[E.who]) h += '<div class="qx-who"><canvas class="px" data-portrait="' + esc(E.who) + '" width="20" height="24"></canvas><div><h3>' + esc(E.title || QX.PEOPLE[E.who].name) + '</h3><small>' + esc(typeof QX.PEOPLE[E.who].title === 'function' ? QX.PEOPLE[E.who].title(QX.G()) : QX.PEOPLE[E.who].title || '') + '</small></div></div>';
     else if (E.title) h += '<h3 class="qx-evt">' + esc(E.title) + '</h3>';
+    // 和人说话：先写他此刻待你怎样（四档加一句，不显示数字）
+    if (E.talk && E.mood) h += '<p class="qx-mood"><span class="qx-cred t-' + esc(E.tier) + '">' + esc(t(E.tier)) + '</span> ' + esc(E.mood) + '</p>';
     if (E.text && !(E.res && !E.choices.length && E.talk)) h += '<p class="qx-text">' + esc(E.text) + '</p>';
     if (E.res !== null && E.res !== undefined && !E.choices.length) {
       if (E.picked) h += '<p class="qx-picked">' + esc(t('你选择：')) + esc(E.picked) + '</p>';
@@ -161,6 +163,16 @@
     if (S.mer) bits.push(t('经脉受损'));
     return bits.length ? '<p class="qx-body qx-badv">' + esc(bits.join('；')) + '</p>' : '';
   }
+  // 托付和差事：别人托你的事、门派派的差事（带地点和期限）
+  function tasksHtml(S) {
+    const ids = Object.keys(S.tasks || {});
+    if (!ids.length) return '';
+    return '<div class="lbl qx-tasks-h">' + t('身上的事') + '</div><ul class="qx-tasks">' + ids.map((id) => {
+      const T = S.tasks[id], left = T.until != null ? T.until - S.day : null;
+      return '<li><span>' + esc(T.t) + '</span>' + (T.loc && QX.LOCS[T.loc] ? ' <button class="b qx-look" data-act="look" data-id="' + esc(T.loc) + '">' + (T.loc === S.loc ? t('就在这里') : esc(QX.LOCS[T.loc].short)) + '</button>' : '')
+        + (left != null ? ' <small class="' + (left < 20 ? 'qx-badv' : 'qx-muted') + '">' + t('还剩 {n} 天', { n: Math.max(0, left) }) + '</small>' : '') + '</li>';
+    }).join('') + '</ul>';
+  }
   function statusCard() {
     const S = QX.state();
     const sect = S.sect ? QX.SECTS[S.sect].name + ' · ' + QX.rankName() : t('无门无派');
@@ -168,6 +180,7 @@
       + '<p class="qx-way">' + ic('门派') + esc(sect) + '</p>'
       + '<div class="qx-apts">' + APT.map(aptRow).join('') + '</div>' + bodyNote(S)
       + '<p class="qx-way">' + esc(t(deWord(S.st.品德))) + ' · ' + esc(t(fameWord(S.st.声望))) + ' · ' + t('银两') + ' ' + Math.round(S.st.银两) + '</p>'
+      + tasksHtml(S)
       + '<div class="qx-zx" title="' + esc(t('品德') + ' ' + Math.round(S.st.品德)) + '"><i style="left:' + S.st.品德 + '%"></i></div><div class="qx-zxl"><span>' + t('魔') + '</span><span>' + t('侠') + '</span></div></div>';
   }
   function partyCard() {
@@ -219,8 +232,11 @@
     const body = ids.map((id) => {
       const A = QX.ARTS[id], a = S.arts[id], can = QX.canPractise(id);
       const r1 = Math.round(QX.practiseRisk(id, false) * 100), r2 = Math.round(QX.practiseRisk(id, true) * 100);
-      return '<div class="qx-art"><div class="qx-art-h">' + ic(A.type, id) + '<b>' + esc(A.name) + '</b><span class="tag book">' + esc(t(A.type)) + '</span><span class="qx-lv">' + t('{n} 级', { n: a.lv }) + '</span></div>'
-        + (a.lv < QX.CFG.maxLv ? '<span class="qx-track xp"><i style="width:' + Math.round((a.xp / QX.need(a.lv)) * 100) + '%"></i></span>' : '<p class="qx-muted">' + t('已经练到顶了。') + '</p>')
+      const gate = QX.atGate(id), stuck = QX.stuck(id);
+      const where = QX.gateLocs(id).map((l) => QX.LOCS[l].short).join('、');
+      return '<div class="qx-art"><div class="qx-art-h">' + ic(A.type, id) + '<b>' + esc(A.name) + '</b><span class="tag book">' + esc(t(A.type)) + '</span>' + (gate ? '<span class="tag ' + (stuck ? 'bad' : '') + '">' + t(stuck ? '卡在瓶颈' : '前面是关口') + '</span>' : '') + '<span class="qx-lv">' + t('{n} 级', { n: a.lv }) + '</span></div>'
+        + (a.lv < QX.CFG.maxLv ? '<span class="qx-track xp' + (stuck ? ' stuck' : '') + '"><i style="width:' + Math.round((a.xp / QX.need(a.lv)) * 100) + '%"></i></span>' : '<p class="qx-muted">' + t('已经练到顶了。') + '</p>')
+        + (stuck ? '<p class="qx-muted qx-badv">' + esc(t('第 {n} 级是个关口：找会这门功夫的人请教、带着秘籍练、去{w}闭关，或者打赢一场硬仗。', { n: a.lv, w: where || t('合适的地方') })) + '</p>' : '')
         + '<p class="qx-muted">' + esc(A.d) + '</p>'
         + (can ? '<div class="end-btns"><button class="b" data-act="practise" data-id="' + id + '">' + t('练十天') + (r1 ? ' · ' + t('风险 {p}%', { p: r1 }) : '') + '</button><button class="b" data-act="practise" data-id="' + id + '" data-hard="1"' + (block ? ' disabled title="' + esc(block) + '"' : '') + '>' + t('冒进苦练') + ' · ' + (block ? esc(t('伤重')) : t('风险 {p}%', { p: r2 })) + '</button></div>' : '') + '</div>';
     }).join('');
@@ -403,7 +419,7 @@
     const S = QX.state();
     if (e.key === 'Escape' && (ui.modal || ui.fb)) { ui.modal = null; ui.fb = null; render(); return; }
     if (!S || ui.modal || ui.fb || S.over || ui.screen === 'start') return;
-    if (S.ev && /^[1-4]$/.test(e.key)) { const i = Number(e.key) - 1; if (S.ev.choices[i] && !S.ev.choices[i].dis) act('choose', { i }); }
+    if (S.ev && /^[1-9]$/.test(e.key)) { const i = Number(e.key) - 1; if (S.ev.choices[i] && !S.ev.choices[i].dis) act('choose', { i }); }
     else if ((e.key === 'Enter' || e.key === ' ') && document.getElementById('cont')) { e.preventDefault(); document.getElementById('cont').click(); }
   });
 
@@ -417,6 +433,7 @@
     // &day=134,3 让日子走到那一天（看风声、传闻）；&inj=3 带上内伤
     if (q.get('day')) { const S = QX.state(), d = q.get('day').split(',').map(Number); const n = QX.dv(d[0], d[1] || 1, d[2] || 1) - S.day; if (n > 0) { QX._internal.passDays(n); S.ev = null; S.queue = []; } }
     if (q.get('inj')) { const S = QX.state(); S.inj = Number(q.get('inj')); S.mer = q.get('mer') ? 1 : 0; QX.save(); }
+    if (q.get('talk')) { const S = QX.state(); S.ev = null; S.queue = []; S.loc = QX.where(q.get('talk')) || S.loc; QX.talk(q.get('talk')); }
     if (q.get('ev')) { const S = QX.state(); S.ev = null; S.mp = QX.maxMp(); if (q.get('silver')) S.st.银两 = Number(q.get('silver')); QX._internal.startEvent(q.get('ev')); }
     if (q.get('open')) ui.modal = q.get('open');
     if (q.get('fight')) { const S = QX.state(); S.ev = null; S.party = QX.CFG.companions ? ['zhoudian'] : []; QX.startFight({ foes: ['shanzei', 'zeitou'] }); QX.fightAct(QX.aiOption()); QX.fightAct(QX.aiOption()); }
