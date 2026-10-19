@@ -247,8 +247,8 @@
       text: (g) => g.pick(['林子里窜出几个拿刀的汉子：“留下买路钱！”', '几个蒙面人围了上来，看样子盯你很久了。']),
       choices: [
         { t: '拔刀相向', fight: { foes: ['shanzei', 'shanzei'], win: { fx: (g) => g.add('声望', 2), res: '强人跑了，扔下了几两银子。' }, lose: { res: '你被打晕了，醒来时钱袋空了一半。' } } },
-        { t: '交出一半银两', fx: (g) => g.add('银两', -Math.round(g.money() / 2)), res: '他们拿了钱，骂骂咧咧地走了。' },
-        { t: '撒腿就跑', check: ['轻功', '易'], res: '你跑得比他们快。', fail: { fx: (g) => { g.hurt(30); g.add('银两', -Math.round(g.money() / 3)); }, res: '你没跑掉，挨了几刀，钱也被抢了。' } },
+        { t: '交出身上一半的银两', fx: (g) => g.rob(0.5, 60), res: '他们拿了钱，骂骂咧咧地走了。存在钱庄里的，他们拿不走。' },
+        { t: '撒腿就跑', check: ['轻功', '易'], res: '你跑得比他们快。', fail: { fx: (g) => { g.hurt(30); g.rob(0.33, 40); }, res: '你没跑掉，挨了几刀，钱也被抢了。' } },
       ] },
     { id: 'ex_yuanbing', explore: '*', once: false, w: 1.5, cond: (g) => ['xiangyang', 'dadu', 'lintan', 'dali', 'shaolin'].includes(g.loc), t: '元兵',
       text: '几个元兵在街上抢一个老汉的鸡，老汉跪在地上求，被一脚踹开。',
@@ -302,7 +302,7 @@
       text: '山道拐弯处横着一棵树，树后站起来一伙强人。领头的扛着一把鬼头刀。',
       choices: [
         { t: '动手', fight: { foes: ['zeitou', 'shanzei'], win: { fx: (g) => { g.add('声望', 3); g.add('品德', 1); }, res: '你打跑了这伙强人，附近的村子请你吃了一顿饭。' }, lose: { res: '你被打倒在路边，过路的货郎把你扶上了车。' } } },
-        { t: '交钱', fx: (g) => g.add('银两', -Math.round(g.money() * 0.4)), res: '你交了钱，他们让开了路。' },
+        { t: '交钱', fx: (g) => g.rob(0.4, 60), res: '你交了钱，他们让开了路。' },
         { t: '绕小路走', fx: (g) => g.days(4), res: '你多走了四天山路，鞋都磨破了。' },
       ] },
     { id: 'rd_refugee', road: true, once: false, w: 2, t: '流民',
@@ -333,7 +333,7 @@
     { id: 'rd_yuan', road: true, once: false, w: 2, cond: (g) => !g.f('servedWang'), t: '关卡',
       text: '官道上设了卡，元兵挨个搜身，说是在拿明教的反贼。',
       choices: [
-        { t: '老老实实让他们搜', fx: (g) => g.add('银两', -Math.round(g.money() * 0.2)), res: '他们搜走了你一些银子，挥手让你过去了。' },
+        { t: '老老实实让他们搜', fx: (g) => g.rob(0.2, 30), res: '他们搜走了你一些银子，挥手让你过去了。' },
         { t: '闯过去', fight: { foes: ['yuanbing', 'yuanbing', 'baihu'], win: { fx: (g) => { g.add('声望', 5); g.add('品德', 2); }, res: '你闯过了关卡。这事传开了，说有个年轻人一个人打翻了一队元兵。' }, lose: { res: '你被元兵打了一顿，扔在了路边。' } } },
         { t: '绕远路', fx: (g) => g.days(5), res: '你多走了五天。' },
       ] },

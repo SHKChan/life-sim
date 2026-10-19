@@ -98,7 +98,7 @@
       at: [span('binghuo', [131, 1], [135, 4]), span('lingshe', [135, 5], [135, 8]), span('shaolin', [135, 10], [137, 12])],
       hello: '火山脚下坐着一个金发大汉，双眼瞎了，手里横着一把乌沉沉的大刀。他偏了偏头：“二十年了，第一回有活人上岛。你是谁派来的？”',
       talk: (g) => (g.f('xiexunTold') ? '谢逊说他每天都在想成昆那张脸，想了二十年，脸都想模糊了。' : '谢逊说他有个义子，叫无忌，十年前坐着木筏走了，不知道还活着没有。'),
-      teach: [{ art: 'qishang', cond: (g) => g.f('xiexunTrust'), why: '“你还没让我信你。”', cap: 10, say: '谢逊一拳一拳地打给你听，七股劲力，你听出了三股。' }] },
+      teach: [{ art: 'qishang', free: true, cond: (g) => g.f('xiexunTrust'), why: '“你还没让我信你。”', cap: 10, say: '谢逊一拳一拳地打给你听，七股劲力，你听出了三股。' }] },
 
     /* ---------- 大都 ---------- */
     zhaomin: { name: '赵敏', side: 'wangfu', sex: '女', look: { hair: 'bun', robe: '#3f6f80', accent: '#d8c070' }, title: '汝阳王府郡主',
@@ -138,8 +138,8 @@
       hello: (g) => (g.after(135, 2) ? '一个老道人坐在松树下，衣衫邋遢，笑眯眯的。他说他一百多岁了，记性不好，名字记不住，拳理倒都还记得。' : '道童说张真人在闭关，已经闭了很久。你远远看见后山一间小屋，窗户纸上映着一个人影，一动不动。'),
       talk: (g) => (g.after(135, 2) ? '张三丰说：“太极拳不难。忘了，就会了。”' : '小屋里没有声音。'),
       teach: [
-        { art: 'taiji_quan', cond: (g) => g.after(135, 2) && g.st('品德') >= 70 && (g.f('zhuangWudang') || g.f('yuCured')), why: (g) => (g.before(135, 2) ? '张真人在闭关。' : '“你还没让老道看清你。”（品德 70，并帮过武当）'), cap: 10 },
-        { art: 'taiji_jian', cond: (g) => g.after(135, 2) && g.st('品德') >= 70 && (g.f('zhuangWudang') || g.f('yuCured')), why: (g) => (g.before(135, 2) ? '张真人在闭关。' : '“剑意要等你心静了才教。”（品德 70，并帮过武当）'), cap: 10 },
+        { art: 'taiji_quan', free: true, cond: (g) => g.after(135, 2) && g.st('品德') >= 70 && (g.f('zhuangWudang') || g.f('yuCured')), why: (g) => (g.before(135, 2) ? '张真人在闭关。' : '“你还没让老道看清你。”（品德 70，并帮过武当）'), cap: 10 },
+        { art: 'taiji_jian', free: true, cond: (g) => g.after(135, 2) && g.st('品德') >= 70 && (g.f('zhuangWudang') || g.f('yuCured')), why: (g) => (g.before(135, 2) ? '张真人在闭关。' : '“剑意要等你心静了才教。”（品德 70，并帮过武当）'), cap: 10 },
       ] },
     songyuanqiao: { name: '宋远桥', side: 'wudang', sex: '男', look: { hair: 'topknot', hairColor: '#8d8780', robe: '#5a6a7a', accent: '#e8e6e0' }, title: '武当七侠之首',
       at: [span('wudang', [131, 1], [134, 2]), span('wudang', [135, 4], [137, 12])],
@@ -218,7 +218,7 @@
       at: [span('dali', [131, 1], [137, 12])],
       hello: '天龙寺后院有个老和尚在扫地，扫得很慢。他说他年轻时见过一灯大师的徒孙，那一阳指，点烛火不灭，点人穴道不伤。',
       talk: (g) => (g.f('tianlongHelped') ? '老和尚说寺里的田地要回来了，佛前的灯也添上了油。' : '老和尚说，段家早就不做皇帝了，一阳指还在寺里，只是没人肯学，学了也没地方用。'),
-      teach: [{ art: 'yiyang', cond: (g) => g.f('tianlongHelped') && g.st('品德') >= 55, why: '“一阳指不能教给不认得的人。”（帮过天龙寺，品德 55）', cap: 10 }] },
+      teach: [{ art: 'yiyang', free: true, cond: (g) => g.f('tianlongHelped') && g.st('品德') >= 55, why: '“一阳指不能教给不认得的人。”（帮过天龙寺，品德 55）', cap: 10 }] },
     dali_yaogui: { name: '药铺掌柜', aff0: 10, sex: '男', look: { hair: 'cap', robe: '#5a6a5a', accent: '#2b2b2b' }, title: '大理药铺',
       at: [span('dali', [131, 1], [137, 12])],
       hello: (g) => (g.S.origin === 'herb' ? '掌柜从柜台后探出头：“哟，你还知道回来？”' : '药铺掌柜在称药，戥子拿得稳稳的。'),

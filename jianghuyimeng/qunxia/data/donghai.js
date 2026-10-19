@@ -33,8 +33,8 @@
     { id: 'la_pickpocket', loc: 'lintan', explore: 'lintan', once: false, w: 2, t: '集市',
       text: '集市上人挤人。你觉得腰间一轻，一个半大孩子正往人缝里钻。',
       choices: [
-        { t: '追上去', check: ['轻功', '易'], fx: (g) => g.add('品德', 1), res: '你在巷子里堵住了他。他瘦得像根柴，你把钱拿回来，又给了他一个包子。', fail: { fx: (g) => g.add('银两', -Math.round(g.money() * 0.15)), res: '他钻进巷子就不见了。' } },
-        { t: '算了，由他去', fx: (g) => { g.add('银两', -Math.round(g.money() * 0.15)); g.add('品德', 1); }, res: '你摸了摸空了一点的钱袋，想起了自己小时候。' },
+        { t: '追上去', check: ['轻功', '易'], fx: (g) => g.add('品德', 1), res: '你在巷子里堵住了他。他瘦得像根柴，你把钱拿回来，又给了他一个包子。', fail: { fx: (g) => g.rob(0.15, 30), res: '他钻进巷子就不见了。' } },
+        { t: '算了，由他去', fx: (g) => { g.rob(0.15, 30); g.add('品德', 1); }, res: '你摸了摸空了一点的钱袋，想起了自己小时候。' },
       ] },
     { id: 'la_bosi_port', loc: 'lintan', act: '码头上的波斯人', from: [135, 8], to: [136, 6], cond: (g) => g.holder('shenghuo') === 'bosi' && !g.has('shenghuo'), t: '波斯人',
       text: '码头上两个戴高帽的波斯人在等船，腰里各挂一块黑铁牌。他们说中原话很怪，正跟船家吵架。',

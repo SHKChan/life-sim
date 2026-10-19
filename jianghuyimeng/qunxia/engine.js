@@ -22,6 +22,11 @@
   QX.addPeople = into(QX.PEOPLE);
   QX.addArts = into(QX.ARTS);
   QX.addItems = into(QX.ITEMS);
+  QX.GEAR = {}; QX.GOODS = {};
+  QX.addGear = into(QX.GEAR);   // 装备：{ id: { name, slot: 兵器 | 护身 | 鞋, tier: 1–3, price, bonus: { 属性: n }, dur, d } }
+  QX.addGoods = into(QX.GOODS); // 货物：{ id: { name, buy: { 地点: 价 }, sell: { 地点: 价 }, d } }
+  // 给已有的地点补字段（smith 铁匠、bank 钱庄、escort 镖局、black 黑市……），按地点 id 合并
+  QX.extendLocs = (o) => Object.keys(o).forEach((id) => { if (!QX.LOCS[id]) { QX.DUP.push('extendLocs:' + id + '（地点不存在）'); return; } Object.assign(QX.LOCS[id], o[id]); });
   QX.addEnemies = into(QX.ENEMIES);
   QX.addSects = into(QX.SECTS);
   QX.addFlags = (o) => Object.assign(QX.FLAGS, o);
@@ -70,7 +75,18 @@
   function addSt(k, n) {
     if (!(k in S.st)) throw new Error('未知属性 ' + k);
     const r = RANGE[k] || [0, 999];
+    const v0 = S.st[k];
     S.st[k] = clamp(Math.round((S.st[k] + n) * 10) / 10, r[0], r[1]);
+    // 银两的进出记账（试玩脚本看收入、花销、被抢了多少）：rob() 里扣的算被抢
+    if (k === '银两') { const d = S.st[k] - v0; S.acct = S.acct || { earn: 0, spend: 0, lost: 0 }; if (d > 0) S.acct.earn += d; else if (d < 0) S.acct[robbing ? 'lost' : 'spend'] -= d; }
+  }
+  /* 被抢：身上的钱最多被抢走 ROB_PCT、不超过 ROB_CAP 两（存在钱庄里的抢不走）。frac、cap 可以按剧情写得更狠 */
+  const ROB_PCT = 0.15, ROB_CAP = 50;
+  let robbing = false;
+  function rob(frac, cap) {
+    const n = Math.min(Math.round(S.st.银两 * (frac == null ? ROB_PCT : frac)), cap == null ? ROB_CAP : cap);
+    robbing = true; addSt('银两', -n); robbing = false;
+    return n;
   }
   function itemDef(id) { const it = QX.ITEMS[id]; if (!it) throw new Error('未知物品 ' + id); return it; }
   function artDef(id) { const a = QX.ARTS[id]; if (!a) throw new Error('未知武功 ' + id); return a; }
@@ -90,6 +106,8 @@
     for (const id in S.items) if (S.items[id] > 0 && QX.ITEMS[id] && QX.ITEMS[id].bonus && QX.ITEMS[id].bonus[k]) v += QX.ITEMS[id].bonus[k];
     if (k === '防御') v += QX.bestNei();
     if (k === '轻功') v += bestOf('轻功') * 2;
+    // 装备：磨损到头（wear >= dur）只剩一半的用处，要找铁匠修
+    for (const slot in S.gear || {}) { const x = S.gear[slot], Gd = x && QX.GEAR[x.id]; if (Gd && Gd.bonus && Gd.bonus[k]) v += Gd.bonus[k] * (x.wear >= gearDur(Gd) ? 0.5 : 1); }
     if (k === '攻击' && S.inj) v *= 1 - INJ_HIT * S.inj; // 带着内伤，出手就没那么重
     return Math.round(v);
   };
@@ -220,6 +238,7 @@
     for (const id in S.tasks || {}) {
       const T = S.tasks[id];
       if (T.until == null || S.day <= T.until) continue;
+      if (T.kind === 'escort') { escortLose(QX.tx('镖误期', { n: Math.round(T.pay / 2) })); S.flags['late_' + id] = true; continue; }
       delete S.tasks[id];
       S.flags['late_' + id] = true;
       if (T.kind === 'errand' && T.sect && T.sect === S.sect) S.contrib = Math.max(0, S.contrib - 1);
@@ -236,6 +255,8 @@
       st: (k) => QX.eff(k), base: (k) => S.st[k], add: (k, n) => addSt(k, n),
       f: (k) => S.flags[k], set: (k, v) => { if (!QX.FLAGS[k]) QX.FLAGS_UNKNOWN[k] = true; S.flags[k] = v === undefined ? true : v; }, unset: (k) => { delete S.flags[k]; },
       has: (id) => { itemDef(id); return QX.has(id); }, give, take, relics: () => S.relics.length,
+      rob: (frac, cap) => rob(frac, cap), escortLose: (t) => escortLose(t), escorting: () => !!(S.tasks && S.tasks.escort),
+      gear: (slot) => (S.gear && S.gear[slot] ? S.gear[slot].id : ''), bankMoney: () => S.bank || 0,
       holder: (id) => { const it = itemDef(id); return S.holder[id] !== undefined ? S.holder[id] : (it.holder0 || null); },
       hold: (id, who) => { itemDef(id); if (who !== 'me' && QX.has(id) && QX.ITEMS[id].relic) return; S.holder[id] = who; },
       lv: (id) => { artDef(id); return QX.artLv(id); }, learn, nei: () => QX.bestNei(),
@@ -309,10 +330,10 @@
     const org = QX.ORIGINS.find((x) => x.id === o.origin) || QX.ORIGINS[0];
     const sect = o.sect && QX.SECTS[o.sect] ? o.sect : '';
     S = {
-      v: 1, name: (o.name || '').trim().slice(0, 8) || QX.tx('无名'), sex: o.sex === '女' ? '女' : '男', origin: org.id, sect: '', rank: 0, contrib: 0,
+      v: SAVE_V, name: (o.name || '').trim().slice(0, 8) || QX.tx('无名'), sex: o.sex === '女' ? '女' : '男', origin: org.id, sect: '', rank: 0, contrib: 0,
       day: 0, loc: org.loc, pend: 0,
       st: { 资质: 45, 根骨: 12, 内力: 6, 攻击: 10, 防御: 6, 轻功: 10, 品德: 50, 声望: 0, 银两: 20 },
-      hp: 1, mp: 0, inj: 0, xp: 0, arts: {}, items: {}, relics: [], party: [], comp: {}, flags: {}, met: {}, dead: {}, holder: {}, done: {}, tl: {},
+      hp: 1, mp: 0, inj: 0, xp: 0, gear: {}, bank: 0, cargo: {}, tasks: {}, acct: { earn: 0, spend: 0, lost: 0 }, arts: {}, items: {}, relics: [], party: [], comp: {}, flags: {}, met: {}, dead: {}, holder: {}, done: {}, tl: {},
       log: [], news: [], ev: null, queue: [], fight: null, over: null, seen: {}, kills: 0, wins: 0, fights: 0,
     };
     for (const k in org.st || {}) addSt(k, org.st[k]);
@@ -555,8 +576,9 @@
       if (!ok && !T.why) continue;
       const cap = T.cap || CFG.maxLv;
       // 拜师要不是仇人；请教要熟
-      if (!lv) ch.push({ t: QX.tx('拜师学', { a: A.name }), a: { k: 'learn', p: pid, art: T.art }, dis: !ok ? val(T.why, g) : rk < 1 ? QX.tx('交情不够', { t: '生' }) : costOk(T), sub: A.type });
-      else if (lv < cap) ch.push({ t: QX.tx('请教', { a: A.name }), a: { k: 'coach', p: pid, art: T.art }, dis: !ok ? val(T.why, g) : rk < 2 ? QX.tx('交情不够', { t: '熟' }) : '', sub: QX.tx('级', { n: lv }) + (QX.atGate(T.art) ? ' · ' + QX.tx('能破关') : '') });
+      const fee = teachFee(P, T), cfee = fee ? Math.max(5, Math.round(fee / 10)) : 0;
+      if (!lv) ch.push({ t: QX.tx('拜师学', { a: A.name }), a: { k: 'learn', p: pid, art: T.art }, dis: !ok ? val(T.why, g) : rk < 1 ? QX.tx('交情不够', { t: '生' }) : S.st.银两 < fee ? QX.tx('银两不够', { n: fee }) : '', sub: A.type + (fee ? ' · ' + QX.tx('拜师礼', { n: fee }) : '') });
+      else if (lv < cap) ch.push({ t: QX.tx('请教', { a: A.name }), a: { k: 'coach', p: pid, art: T.art }, dis: !ok ? val(T.why, g) : rk < 2 ? QX.tx('交情不够', { t: '熟' }) : S.st.银两 < cfee ? QX.tx('银两不够', { n: cfee }) : '', sub: QX.tx('级', { n: lv }) + (cfee ? ' · ' + QX.tx('花银两', { n: cfee }) : '') + (QX.atGate(T.art) ? ' · ' + QX.tx('能破关') : '') });
     }
     if (CFG.companions && P.comp && !QX.inParty(pid)) {
       const why = joinBlock(pid, g);
@@ -594,13 +616,18 @@
       case 'bye': S.ev = null; flush(); break;
       case 'learn': {
         const T = personDef(a.p).teach.find((x) => x.art === a.art);
-        if (T.cost && T.cost.银两) addSt('银两', -T.cost.银两);
+        const fee = teachFee(personDef(a.p), T);
+        if (S.st.银两 < fee) break;
+        if (fee) addSt('银两', -fee);
         learn(a.art, 1);
         S.ev = { id: '', who: a.p, title: QX.PEOPLE[a.p].name, text: '', choices: [], res: val(T.say, g) || QX.tx('学成', { a: QX.ARTS[a.art].name }), back: a.p };
         passDays(T.days || 5);
         break;
       }
       case 'coach': {
+        const cfee = QX.coachFee(a.p, a.art);
+        if (S.st.银两 < cfee) break;
+        if (cfee) addSt('银两', -cfee);
         const r = practise(a.art, false, 2.2);
         // 师父指点能破瓶颈
         const broke = breakGate(a.art, QX.tx('师父指点', { a: QX.PEOPLE[a.p].name }));
@@ -663,6 +690,11 @@
     if (L.inn) out.push({ k: 'ask', cost: ASK_COST });
     if (L.clinic && S.inj) out.push({ k: 'clinic', cost: L.clinic });
     if (L.work) out.push({ k: 'work' });
+    if (L.smith) out.push({ k: 'smith' });
+    if (L.bank) out.push({ k: 'bankui' });
+    if (QX.market().length) out.push({ k: 'trade' });
+    if (L.escort) out.push({ k: 'escort' });
+    if (S.sect && QX.SECTS[S.sect].home === S.loc) out.push({ k: 'donate', cost: DONATE });
     if (S.sect && QX.SECTS[S.sect].home === S.loc) out.push({ k: 'chore' });
     out.push({ k: 'practise' }, { k: 'rest' }, { k: 'wait' }, { k: 'travel' });
     if (QX.canRetire()) out.push({ k: 'retire' });
@@ -679,6 +711,7 @@
       case 'ask': r = ask(); break;
       case 'clinic': r = clinic(); break;
       case 'work': r = work(); break;
+      case 'donate': r = donate(); break;
       case 'chore': r = chore(); break;
       case 'rest': r = rest(); break;
       case 'wait': passDays(30); r = QX.tx('等了一月'); log(r); break;
@@ -799,8 +832,13 @@
     log(t);
     return t;
   }
+  // 做工：五天 8–14 两；同一处连着做，活越来越少（每做一回少一成半，最少一半），隔一个月恢复一回
   function work() {
-    const n = Math.round(8 + S.st.声望 / 20 + R() * 10);
+    S.workN = S.workN || {};
+    const w = S.workN[S.loc] || { n: 0, d: S.day };
+    w.n = Math.max(0, w.n - Math.floor((S.day - w.d) / 30)); w.d = S.day;
+    const n = Math.round((8 + R() * 6) * Math.max(0.5, 1 - 0.15 * w.n));
+    w.n++; S.workN[S.loc] = w;
     passDays(5);
     addSt('银两', n);
     const L = QX.LOCS[S.loc];
@@ -966,11 +1004,144 @@
     if (S.st.银两 < it.price) return QX.tx('银两不够', { n: it.price });
     if (it.teaches && QX.has(id)) return QX.tx('已有');
     addSt('银两', -it.price);
+    if (it.black) { addSt('品德', -10); log(QX.tx('买黑货', { a: it.name }), 'bad'); }
     give(id, 1);
     QX.save();
     return QX.tx('买下', { a: it.name, n: it.price });
   };
   QX.dismiss = (pid) => { if (S.ev || S.fight) return; leaveParty(pid, QX.tx('送别', { a: QX.PEOPLE[pid].name })); QX.save(); };
+
+  /* ---------- 银两：装备、钱庄、贩货、押镖、捐献、拜师礼 ----------
+   * 定价按“一天约值三两”：花钱买的是天数、安全和捷径。
+   * 地点上的字段（data/economy.js 用 QX.extendLocs 补）：smith: [装备 id] 铁匠铺卖什么、能修；bank 钱庄；escort 镖局；
+   * 货物在哪买哪卖写在 QX.addGoods 里；black: true 的物品是黑市货，买一次品德 -10。 */
+  const SLOTS = ['兵器', '护身', '鞋'];
+  QX.SLOTS = SLOTS;
+  function gearDur(Gd) { return Gd.dur || 10 + Gd.tier * 4; }
+  QX.gearDur = (id) => gearDur(QX.GEAR[id]);
+  QX.repairCost = (slot) => { const x = S.gear && S.gear[slot]; return x ? Math.max(5, Math.round(QX.GEAR[x.id].price * 0.2 * Math.min(1, x.wear / gearDur(QX.GEAR[x.id])))) : 0; };
+  QX.buyGear = (id) => {
+    const Gd = QX.GEAR[id], L = QX.LOCS[S.loc];
+    if (!Gd || !(L.smith || []).includes(id) || S.ev || S.fight) return null;
+    if (S.st.银两 < Gd.price) return QX.tx('银两不够', { n: Gd.price });
+    S.gear = S.gear || {};
+    const old = S.gear[Gd.slot];
+    addSt('银两', -Gd.price);
+    let back = 0;
+    if (old) { back = Math.round(QX.GEAR[old.id].price * 0.3 * (old.wear >= gearDur(QX.GEAR[old.id]) ? 0.5 : 1)); addSt('银两', back); }
+    S.gear[Gd.slot] = { id, wear: 0 };
+    const t = QX.tx('买装备', { a: Gd.name, n: Gd.price }) + (old ? QX.tx('旧装备折价', { a: QX.GEAR[old.id].name, n: back }) : '');
+    log(t, 'item'); QX.save();
+    return t;
+  };
+  QX.repairGear = (slot) => {
+    const x = S.gear && S.gear[slot], L = QX.LOCS[S.loc];
+    if (!x || !L.smith || S.ev || S.fight) return null;
+    const n = QX.repairCost(slot);
+    if (!x.wear) return QX.tx('不用修');
+    if (S.st.银两 < n) return QX.tx('银两不够', { n });
+    addSt('银两', -n); x.wear = 0; passDays(1);
+    const t = QX.tx('修装备', { a: QX.GEAR[x.id].name, n }); log(t); QX.save();
+    return t;
+  };
+  // 钱庄：存着的钱打输了也抢不走
+  QX.bank = (n) => {
+    const L = QX.LOCS[S.loc];
+    if (!L.bank || S.ev || S.fight) return null;
+    S.bank = S.bank || 0;
+    const amt = n > 0 ? Math.min(n, Math.floor(S.st.银两)) : -Math.min(-n, S.bank);
+    if (!amt) return null;
+    S.st.银两 -= amt; S.bank += amt; // 存取不算收入、花销
+    const t = QX.tx(amt > 0 ? '存钱' : '取钱', { n: Math.abs(amt), b: S.bank }); log(t); QX.save();
+    return t;
+  };
+  // 贩货：价钱每月浮动两成（按地点、货物、月份算，同一个月里不变）；最多带 CARGO_MAX 包
+  const CARGO_MAX = 10;
+  QX.CARGO_MAX = CARGO_MAX;
+  function swing(key) { let h = 11; for (const c of key + ':' + Math.floor(S.day / 30)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return 0.8 + (h % 41) / 100; }
+  QX.goodPrice = (id, side, loc) => { const Gd = QX.GOODS[id], p = Gd && Gd[side] && Gd[side][loc || S.loc]; return p ? Math.max(1, Math.round(p * swing(id + side + (loc || S.loc)))) : 0; };
+  QX.cargoCount = () => Object.values(S.cargo || {}).reduce((s, x) => s + x, 0);
+  // 这里能做的买卖：能进的货，或者身上带着、这里收的货
+  QX.market = () => Object.keys(QX.GOODS).filter((id) => QX.goodPrice(id, 'buy') || (QX.goodPrice(id, 'sell') && (S.cargo || {})[id]));
+  QX.trade = (id, n) => {
+    if (S.ev || S.fight) return null;
+    S.cargo = S.cargo || {};
+    if (n > 0) {
+      const p = QX.goodPrice(id, 'buy');
+      if (!p) return null;
+      const k = Math.min(n, CARGO_MAX - QX.cargoCount(), Math.floor(S.st.银两 / p));
+      if (k <= 0) return QX.cargoCount() >= CARGO_MAX ? QX.tx('货满了', { n: CARGO_MAX }) : QX.tx('银两不够', { n: p });
+      addSt('银两', -p * k); S.cargo[id] = (S.cargo[id] || 0) + k;
+      const t = QX.tx('进货', { a: QX.GOODS[id].name, k, n: p * k }); log(t); QX.save(); return t;
+    }
+    const p = QX.goodPrice(id, 'sell'), k = Math.min(-n, S.cargo[id] || 0);
+    if (!p || k <= 0) return null;
+    addSt('银两', p * k); S.cargo[id] -= k; if (!S.cargo[id]) delete S.cargo[id];
+    const t = QX.tx('出货', { a: QX.GOODS[id].name, k, n: p * k }); log(t, 'good'); QX.save(); return t;
+  };
+  // 押镖：要声望 ESCORT_FAME；每月镖局有两趟镖；路上四成会遇劫（data 里的 esc_rob 事件），丢了镖赔一半镖银
+  const ESCORT_FAME = 20, ESCORT_ROB = 0.4;
+  QX.ESCORT_FAME = ESCORT_FAME;
+  QX.escortOffers = () => {
+    const L = QX.LOCS[S.loc];
+    if (!L.escort) return [];
+    const towns = Object.keys(QX.LOCS).filter((id) => id !== S.loc && QX.LOCS[id].escort);
+    const out = [];
+    for (let i = 0; i < 2 && towns.length; i++) {
+      const to = towns[Math.floor(swing(S.loc + 'esc' + i) * 1000) % towns.length];
+      if (out.some((o) => o.to === to)) continue;
+      const days = landDays(S.loc, to);
+      out.push({ to, days, pay: Math.round((25 + days * 2.2) * swing(S.loc + to)), limit: Math.round(days * 1.6 + 8) });
+    }
+    return out;
+  };
+  QX.takeEscort = (to) => {
+    if (S.ev || S.fight || (S.tasks && S.tasks.escort)) return null;
+    if (S.st.声望 < ESCORT_FAME) return QX.tx('声望不够押镖', { n: ESCORT_FAME });
+    const o = QX.escortOffers().find((x) => x.to === to);
+    if (!o) return null;
+    task('escort', { t: QX.tx('押镖去', { a: QX.LOCS[to].short, n: o.pay }), loc: to, until: S.day + o.limit, kind: 'escort', pay: o.pay });
+    S.escortHit = 0;
+    const t = QX.tx('接镖', { a: QX.LOCS[to].short, n: o.pay, d: o.limit }); log(t); QX.save();
+    return t;
+  };
+  function escortLose(why) {
+    const T = S.tasks && S.tasks.escort;
+    if (!T) return;
+    delete S.tasks.escort;
+    const fine = Math.min(Math.round(T.pay / 2), Math.floor(S.st.银两 + (S.bank || 0)));
+    const fromBag = Math.min(fine, Math.floor(S.st.银两));
+    addSt('银两', -fromBag); S.bank = (S.bank || 0) - (fine - fromBag);
+    addSt('声望', -3);
+    log(why || QX.tx('丢镖', { n: fine }), 'bad');
+  }
+  function escortArrive(loc) {
+    const T = S.tasks && S.tasks.escort;
+    if (!T || T.loc !== loc) return;
+    delete S.tasks.escort;
+    addSt('银两', T.pay); addSt('声望', 3);
+    log(QX.tx('交镖', { a: QX.LOCS[loc].short, n: T.pay }), 'good');
+  }
+  // 门派捐献：DONATE 两约等于三十天差事
+  const DONATE = 100;
+  QX.DONATE = DONATE;
+  function donate() {
+    if (S.st.银两 < DONATE) return QX.tx('银两不够', { n: DONATE });
+    addSt('银两', -DONATE); S.contrib += 3; addSt('声望', 1);
+    const t = QX.tx('捐献', { n: DONATE, a: QX.SECTS[S.sect].name }); log(t);
+    return t;
+  }
+  /* 拜师礼：同门不收；交情到了“信”不收；teach 写了 free 或 cost 的照写的。
+   * 其余按武功的分量：入门 30 两，进阶 100 两，绝学 300 两。请教一回收拜师礼的十分之一（至少 5 两）。 */
+  function teachFee(P, T) {
+    if (T.cost && T.cost.银两 != null) return T.cost.银两;
+    if (T.free || (P.side && P.side === S.sect) || QX.affTier(P.id) === '信') return 0;
+    const A = artDef(T.art);
+    if (A.fee != null) return A.fee;
+    return (A.diff || 1) >= 1.3 || (A.pow || 0) >= 11 ? 300 : (A.pow || 0) >= 6 || (A.type !== '拳掌' && (A.diff || 1) >= 1) ? 100 : 30;
+  }
+  QX.teachFee = (pid, art) => { const P = personDef(pid), T = (P.teach || []).find((x) => x.art === art); return T ? teachFee(P, T) : 0; };
+  QX.coachFee = (pid, art) => { const f = QX.teachFee(pid, art); return f ? Math.max(5, Math.round(f / 10)) : 0; };
 
   /* ---------- 地图、行走 ---------- */
   function dist(a, b) { const A = QX.LOCS[a], B = QX.LOCS[b]; return Math.hypot(A.x - B.x, A.y - B.y); }
@@ -1019,7 +1190,10 @@
       const id = drawFrom('_road', pool);
       if (id) S.queue.push(id);
     }
+    // 押着镖上路：一趟镖最多遇劫一回
+    if (S.tasks && S.tasks.escort && !S.escortHit && QX.EVENTS.esc_rob && R() < ESCORT_ROB) { S.escortHit = 1; S.queue.unshift('esc_rob'); }
     arrive(to);
+    escortArrive(to);
     flush();
     QX.save();
     return null;
@@ -1207,6 +1381,8 @@
       if (xp >= HARD_FIGHT) { const sid = Object.keys(S.arts).find((id) => QX.stuck(id)) || Object.keys(S.arts).find((id) => QX.atGate(id)); if (sid) breakGate(sid, QX.tx('硬仗')); }
     }
     F.xp = xp; F.silver = silver;
+    // 打一架，身上的装备就磨一点；输了磨得多
+    for (const slot in S.gear || {}) if (S.gear[slot]) S.gear[slot].wear += res === 'lose' ? 2 : 1;
     QX.save();
   }
   // 战斗结束后点“继续”：回到事件，按胜负结算
@@ -1223,7 +1399,9 @@
       const mode = F.mode;
       if (mode === 'death') { const g = G(); S.over = { kind: 'dead', text: val((fight.lose && fight.lose.res) || QX.tx('战死'), g), day: S.day }; S.ev = null; QX.save(); return; }
       S.hp = Math.max(1, Math.round(QX.maxHp() * 0.2)); S.inj = clamp(S.inj + 2, 0, 9);
-      const lost = Math.round(S.st.银两 * 0.3); addSt('银两', -lost);
+      const lost = rob();
+      // 带着的货丢一半
+      for (const id in S.cargo || {}) { S.cargo[id] = Math.floor(S.cargo[id] / 2); if (!S.cargo[id]) delete S.cargo[id]; }
       S.pend += 7;
       log(QX.tx('败了', { n: lost }), 'bad');
       applyBranch(fight.lose || { res: QX.tx('败了', { n: lost }) }, null, null);
@@ -1245,13 +1423,15 @@
   QX.finish = finish;
 
   /* ---------- 存档 ---------- */
+  const SAVE_V = 2;
   function readAll() { try { return JSON.parse(localStorage.getItem(CFG.key)) || {}; } catch (e) { return {}; } }
   function writeAll(o) { try { localStorage.setItem(CFG.key, JSON.stringify(o)); } catch (e) { /* 存储不可用 */ } }
   QX.save = () => { if (!S) return; S.hp = Math.min(S.hp, QX.maxHp()); S.mp = Math.min(S.mp, QX.maxMp()); if (QX.noSave) return; const o = readAll(); o.auto = S; o.autoAt = Date.now(); writeAll(o); };
   QX.saveManual = () => { if (!S) return; const o = readAll(); o.manual = JSON.parse(JSON.stringify(S)); o.manualAt = Date.now(); writeAll(o); };
   QX.slots = () => { const o = readAll(); return { auto: o.auto ? summary(o.auto, o.autoAt) : null, manual: o.manual ? summary(o.manual, o.manualAt) : null }; };
-  function summary(s, at) { return { name: s.name, day: s.day, loc: s.loc, relics: (s.relics || []).length, over: !!s.over, at }; }
-  QX.load = (slot) => { const o = readAll(); const s = o[slot || 'auto']; if (!s || s.v !== 1) return false; S = JSON.parse(JSON.stringify(s)); if (!CFG.companions) S.party = []; if (slot === 'manual') QX.save(); return true; };
+  // 存档版本：v2.4 加了装备、钱庄、货物，旧存档（v1）作废，开始页会提示
+  function summary(s, at) { return { name: s.name, day: s.day, loc: s.loc, relics: (s.relics || []).length, over: !!s.over, at, old: s.v !== SAVE_V }; }
+  QX.load = (slot) => { const o = readAll(); const s = o[slot || 'auto']; if (!s || s.v !== SAVE_V) return false; S = JSON.parse(JSON.stringify(s)); if (!CFG.companions) S.party = []; if (slot === 'manual') QX.save(); return true; };
   QX.clearAuto = () => { const o = readAll(); delete o.auto; writeAll(o); S = null; };
 
   /* ---------- 给检查工具用 ---------- */

@@ -175,7 +175,7 @@
       choices: [
         { t: '说你正要上武当，替她送去', cond: (g) => !g.f('yuCured') && g.alive('yudaiyan'), need: ['品德', 50], fx: (g) => { g.give('heiyu'); g.add('声望', 3); },
           res: '赵敏看了你半天，把盒子扔给你：“送到了，就说是我给的。少一点，我找你算账。”' },
-        { t: '拿五十两银子换', cost: { 银两: 50 }, fx: (g) => { g.give('heiyu'); g.add('品德', -2); }, res: '赵敏收了银子，笑得很开心：“你倒实在。”' },
+        { t: '拿两百两银子换', cost: { 银两: 200 }, fx: (g) => { g.give('heiyu'); g.add('品德', -2); }, res: '赵敏掂了掂银子，笑得很开心：“你倒实在。阿三那个蠢货，也就值这个价。”' },
         { t: '告辞', res: '赵敏把盒子收回了袖子里。' },
       ] },
     { id: 'hd_butterfly', loc: 'hudie', explore: 'hudie', once: false, w: 2, t: '蝴蝶',

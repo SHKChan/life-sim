@@ -93,7 +93,7 @@
     { id: 'dd_shuku', loc: 'dadu', act: '夜探王府的书库', once: false, cond: (g) => !(g.f('watchShuku') && g.day - g.f('watchShuku') < 180) && ['xiantian', 'yiyang'].some((it) => g.holder(it) === 'wangfu' && !g.has(it)), t: '王府书库',
       text: (g) => '王府后院有一座两层的书库，窗户钉着铁条。' + (g.holder('xiantian') === 'wangfu' ? '重阳宫的经箱贴着封条，' : '') + (g.holder('yiyang') === 'wangfu' ? '天龙寺的书箱上还写着“经房”两个字。' : '') + '守库的是两个番僧。',
       choices: [
-        { t: '从屋顶揭瓦下去', check: ['轻功', '难'], fx: (g) => { if (g.holder('xiantian') === 'wangfu') g.give('xiantian'); else g.give('yiyang'); g.add('声望', 5); },
+        { t: '从屋顶揭瓦下去', check: ['轻功', '极难'], fx: (g) => { if (g.holder('xiantian') === 'wangfu') g.give('xiantian'); else g.give('yiyang'); g.add('声望', 5); },
           res: '你在一堆经箱里摸了半夜，摸到了要找的那一卷，从原路爬了出去。番僧的鼾声一直没停。',
           fail: { res: '瓦片碎了一块。底下的番僧抬起头，手已经按在了金刚杵上。', next: 'dd_shuku_caught' } },
         { t: '求郡主赏一本看看', cond: (g) => g.f('wangTrust'), fx: (g) => { if (g.holder('xiantian') === 'wangfu') g.give('xiantian'); else g.give('yiyang'); g.add('品德', -3); },

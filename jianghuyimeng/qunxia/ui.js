@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.3.0';
+  const VERSION = '2.4.0';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -62,10 +62,15 @@
   /* ---------- 开始 ---------- */
   function startView() {
     const sl = QX.slots(), f = ui.form;
+    // 旧版本的存档读不了（v2.4 加了装备、钱庄、货物），开始页说一声
+    const oldSave = (sl.auto && sl.auto.old) || (sl.manual && sl.manual.old);
+    if (sl.auto && sl.auto.old) sl.auto = null;
+    if (sl.manual && sl.manual.old) sl.manual = null;
     const chips = (key, list) => '<div class="chips">' + list.map((x) => '<button class="chip" data-act="form" data-k="' + key + '" data-v="' + esc(x[0]) + '" aria-pressed="' + (f[key] === x[0]) + '">' + esc(t(x[1])) + '</button>').join('') + '</div>';
     const org = QX.ORIGINS.find((o) => o.id === f.origin), sc = QX.SECTS[f.sect];
     let h = '<main class="home qx-home"><div class="home-hero"><div><h1>' + t('群') + '<i>' + t('侠') + '</i></h1>'
       + '<p>' + t('倚天年间，江湖纪年 131 年。你是一个无名小卒。走遍天下，拜师学艺，结交群侠，回合比武，收齐十四件信物。你做过的事，决定你是侠还是魔。') + '</p></div></div>';
+    if (oldSave) h += '<div class="card"><p class="qx-muted">' + t('群侠 v2.4 加了装备、钱庄、押镖和贩货，旧版本的存档读不了了，请开一局新的江湖。') + '</p></div>';
     if (sl.auto && !sl.auto.over) h += '<div class="card"><div class="card-h"><h3>' + t('继续') + '</h3><small>' + t('自动存档') + '</small></div><p class="qx-muted">' + esc(sl.auto.name) + ' · ' + esc(dateText(sl.auto.day)) + ' · ' + esc(QX.LOCS[sl.auto.loc].short) + ' · ' + t('信物') + ' ' + sl.auto.relics + '/14</p><div class="end-btns" style="margin-top:12px"><button class="b primary big" data-act="load" data-v="auto">' + t('继续这一局') + '</button>'
       + (sl.manual ? '<button class="b big" data-act="load" data-v="manual">' + t('读取手动存档') + '</button>' : '') + '</div></div>';
     else if (sl.manual) h += '<div class="card"><button class="b big" data-act="load" data-v="manual">' + t('读取手动存档') + '：' + esc(sl.manual.name) + ' · ' + esc(dateText(sl.manual.day)) + '</button></div>';
@@ -135,7 +140,8 @@
     }
     return h + '</div>';
   }
-  const ACT_LABEL = { explore: ['探索', '三天'], shop: ['店铺', '买药、买书'], inn: ['住店', ''], ask: ['打听', ''], clinic: ['医馆', ''], work: ['做工', '五天，挣点银子'], chore: ['门派差事', '十天，升门中地位'], practise: ['练功', '十天'], rest: ['打坐', '三天，回气血'], wait: ['等候', '一个月'], travel: ['出行', '看地图'], retire: ['了结江湖', '结束这一局'] };
+  const ACT_LABEL = { explore: ['探索', '三天'], shop: ['店铺', '买药、买书'], inn: ['住店', ''], ask: ['打听', ''], clinic: ['医馆', ''], work: ['做工', '五天，挣点银子'],
+    smith: ['铁匠铺', '兵器、护身、鞋，修装备'], bankui: ['钱庄', '存着的钱抢不走'], trade: ['货栈', '进货、出货'], escort: ['镖局', '押镖挣镖银'], donate: ['门派捐献', ''], chore: ['门派差事', '十天，升门中地位'], practise: ['练功', '十天'], rest: ['打坐', '三天，回气血'], wait: ['等候', '一个月'], travel: ['出行', '看地图'], retire: ['了结江湖', '结束这一局'] };
   function actionsCard() {
     const acts = QX.actions();
     const people = acts.filter((a) => a.k === 'talk'), evs = acts.filter((a) => a.k === 'ev'), rest = acts.filter((a) => a.k !== 'talk' && a.k !== 'ev');
@@ -143,7 +149,7 @@
     if (ui.toast) h += '<div class="result qx-toast"><p>' + esc(ui.toast) + '</p></div>';
     if (people.length) h += '<div class="lbl">' + t('这里的人') + '</div><div class="qx-grid">' + people.map((a) => '<button class="qx-act person" data-act="do" data-k="talk" data-id="' + esc(a.id) + '"><canvas class="px" data-portrait="' + esc(a.id) + '" width="20" height="24"></canvas><span><b>' + esc(a.label) + '</b><small>' + esc(a.sub) + '</small></span></button>').join('') + '</div>';
     if (evs.length) h += '<div class="lbl">' + t('可以去做的事') + '</div><div class="qx-grid">' + evs.map((a) => '<button class="qx-act ev" data-act="do" data-k="ev" data-id="' + esc(a.id) + '"><span><b>' + esc(a.label) + '</b></span></button>').join('') + '</div>';
-    h += '<div class="lbl">' + t('行动') + '</div><div class="qx-grid">' + rest.map((a) => { const L = ACT_LABEL[a.k] || [a.k, '']; const sub = a.k === 'inn' ? t('{n} 两，一夜', { n: a.cost }) : a.k === 'ask' ? t('{n} 两，问大事、问人', { n: a.cost }) : a.k === 'clinic' ? t('{n} 两，治一层内伤', { n: a.cost }) : t(L[1]); return '<button class="qx-act' + (a.k === 'retire' ? ' end' : '') + '" data-act="do" data-k="' + a.k + '"><span><b>' + t(L[0]) + '</b><small>' + esc(sub) + '</small></span></button>'; }).join('') + '</div>';
+    h += '<div class="lbl">' + t('行动') + '</div><div class="qx-grid">' + rest.map((a) => { const L = ACT_LABEL[a.k] || [a.k, '']; const sub = a.k === 'inn' ? t('{n} 两，一夜', { n: a.cost }) : a.k === 'ask' ? t('{n} 两，问大事、问人', { n: a.cost }) : a.k === 'clinic' ? t('{n} 两，治一层内伤', { n: a.cost }) : a.k === 'donate' ? t('{n} 两，抵三十天差事', { n: a.cost }) : t(L[1]); return '<button class="qx-act' + (a.k === 'retire' ? ' end' : '') + '" data-act="do" data-k="' + a.k + '"><span><b>' + t(L[0]) + '</b><small>' + esc(sub) + '</small></span></button>'; }).join('') + '</div>';
     return h + '</div>';
   }
 
@@ -179,7 +185,8 @@
     return '<div class="card"><div class="card-h"><h3>' + esc(S.name) + '</h3><small>' + esc(t(S.sex)) + ' · ' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + '</small></div>'
       + '<p class="qx-way">' + ic('门派') + esc(sect) + '</p>'
       + '<div class="qx-apts">' + APT.map(aptRow).join('') + '</div>' + bodyNote(S)
-      + '<p class="qx-way">' + esc(t(deWord(S.st.品德))) + ' · ' + esc(t(fameWord(S.st.声望))) + ' · ' + t('银两') + ' ' + Math.round(S.st.银两) + '</p>'
+      + '<p class="qx-way">' + esc(t(deWord(S.st.品德))) + ' · ' + esc(t(fameWord(S.st.声望))) + ' · ' + t('银两') + ' ' + Math.round(S.st.银两) + (S.bank ? ' · ' + t('钱庄 {n}', { n: S.bank }) : '') + (QX.cargoCount() ? ' · ' + t('货 {n} 包', { n: QX.cargoCount() }) : '') + '</p>'
+      + '<p class="qx-way qx-gear">' + QX.SLOTS.map((sl) => { const x = S.gear && S.gear[sl]; return x ? '<span class="' + (x.wear >= QX.gearDur(x.id) ? 'qx-badv' : '') + '">' + esc(QX.GEAR[x.id].name) + '</span>' : '<span class="qx-muted">' + t('无{a}', { a: t(sl) }) + '</span>'; }).join(' · ') + '</p>'
       + tasksHtml(S)
       + '<div class="qx-zx" title="' + esc(t('品德') + ' ' + Math.round(S.st.品德)) + '"><i style="left:' + S.st.品德 + '%"></i></div><div class="qx-zxl"><span>' + t('魔') + '</span><span>' + t('侠') + '</span></div></div>';
   }
@@ -221,7 +228,7 @@
     return modal(t('人物'), head
       + '<div class="lbl">' + t('资质') + ' · ' + t('判定看这几样') + '</div><div class="qx-apts">' + APT.map(aptRow).join('') + '</div>'
       + '<div class="lbl">' + t('战斗') + '</div><div class="rows">' + row('气血', S.hp + '/' + QX.maxHp()) + row('内力', S.mp + '/' + QX.maxMp()) + row('攻击', QX.eff('攻击')) + row('防御', QX.eff('防御'))
-      + row('历练', S.xp) + row('战绩', t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights })) + '</div>' + bodyNote(S)
+      + row('历练', S.xp) + row('战绩', t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights })) + QX.SLOTS.map((sl) => '<div class="row"><span class="k">' + t(sl) + '</span><span class="v">' + esc(gearLine(S, sl)) + '</span></div>').join('') + '</div>' + bodyNote(S)
       + (S.inj ? '<p class="hint">' + t('内伤让攻击和内力上限各少了 {p}%。自己只能养好到 {n} 层，剩下的要去医馆、吃药或找高人。', { p: injPct, n: QX.INJ.self }) + '</p>' : '')
       + '<div class="lbl">' + t('路线') + '</div><div class="rows">' + row('品德', Math.round(S.st.品德) + ' · ' + t(deWord(S.st.品德))) + row('声望', Math.round(S.st.声望) + ' · ' + t(fameWord(S.st.声望))) + row('银两', Math.round(S.st.银两) + ' ' + t('两')) + '</div>'
       + '<p class="hint">' + t('资质管学武快慢；根骨管气血；轻功管身法、躲闪和赶路。事件里的判定分易、中、难、极难四档，属性到了那一档，成功率大约一半。品德和声望不掷骰，够了才有的选项，不够就灰着。品德 50 以上是侠的结局，以下是魔。') + '</p>');
@@ -278,6 +285,49 @@
     const body = (L.shop || []).map((id) => { const it = QX.ITEMS[id]; return '<div class="row"><span class="qx-irow">' + ic(it.type, id) + '<span><b class="nm">' + esc(it.name) + '</b><br><small class="qx-muted">' + esc(it.d) + '</small></span></span><span class="v"><button class="b" data-act="buy" data-id="' + id + '"' + (S.st.银两 < it.price ? ' disabled' : '') + '>' + t('{n} 两', { n: it.price }) + '</button></span></div>'; }).join('');
     return modal(t('店铺') + ' · ' + L.short, (ui.toast && ui.modal === 'shop' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + '<p class="qx-muted">' + t('身上有 {n} 两银子。', { n: Math.round(S.st.银两) }) + '</p><div class="rows">' + body + '</div>');
   }
+  /* ---------- 银两：铁匠铺、钱庄、货栈、镖局 ---------- */
+  const toastIn = (k) => (ui.toast && ui.modal === k ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '');
+  const money = (S) => '<p class="qx-muted">' + t('身上有 {n} 两银子。', { n: Math.round(S.st.银两) }) + (S.bank ? ' ' + t('钱庄里有 {n} 两。', { n: S.bank }) : '') + '</p>';
+  function gearLine(S, slot) {
+    const x = S.gear && S.gear[slot], Gd = x && QX.GEAR[x.id];
+    if (!Gd) return t('没有');
+    const dur = QX.gearDur(x.id), worn = x.wear >= dur;
+    return Gd.name + ' · ' + Object.keys(Gd.bonus).map((k) => t(k) + ' +' + (worn ? Gd.bonus[k] / 2 : Gd.bonus[k])).join('、') + ' · ' + (worn ? t('钝了') : t('磨损 {a}/{b}', { a: x.wear, b: dur }));
+  }
+  function smithModal() {
+    const S = QX.state(), L = QX.LOCS[S.loc];
+    const mine = QX.SLOTS.map((sl) => { const x = S.gear[sl], c = QX.repairCost(sl); return '<div class="row"><span><b class="nm">' + t(sl) + '</b><br><small class="qx-muted">' + esc(gearLine(S, sl)) + '</small></span><span class="v">' + (x && x.wear ? '<button class="b" data-act="repair" data-v="' + sl + '"' + (S.st.银两 < c ? ' disabled' : '') + '>' + t('修 · {n} 两', { n: c }) + '</button>' : '') + '</span></div>'; }).join('');
+    const sell = (L.smith || []).map((id) => { const Gd = QX.GEAR[id], cur = S.gear[Gd.slot] && S.gear[Gd.slot].id === id;
+      return '<div class="row"><span><b class="nm">' + esc(Gd.name) + '</b> <span class="tag">' + t(Gd.slot) + '</span><br><small class="qx-muted">' + esc(Object.keys(Gd.bonus).map((k) => t(k) + ' +' + Gd.bonus[k]).join('、') + ' · ' + Gd.d) + '</small></span><span class="v"><button class="b" data-act="buygear" data-id="' + id + '"' + (S.st.银两 < Gd.price || cur ? ' disabled' : '') + '>' + (cur ? t('穿着') : t('{n} 两', { n: Gd.price })) + '</button></span></div>'; }).join('');
+    return modal(t('铁匠铺') + ' · ' + L.short, toastIn('smith') + money(S) + '<div class="lbl">' + t('身上的') + '</div><div class="rows">' + mine + '</div><div class="lbl">' + t('铺子里的') + '</div><div class="rows">' + sell + '</div>'
+      + '<p class="hint">' + t('打一架磨一点，输了磨得多；磨到头就钝了，只剩一半的用处。换新的，旧的折价三成。') + '</p>');
+  }
+  function bankModal() {
+    const S = QX.state(), L = QX.LOCS[S.loc], m = Math.floor(S.st.银两), b = S.bank || 0;
+    const btn = (v, label, dis) => '<button class="b" data-act="bank" data-v="' + v + '"' + (dis ? ' disabled' : '') + '>' + label + '</button>';
+    return modal(t('钱庄') + ' · ' + L.short, toastIn('bank') + money(S)
+      + '<div class="end-btns">' + btn(50, t('存 50 两'), m < 1) + btn(m, t('全存进去'), m < 1) + btn(-50, t('取 50 两'), !b) + btn(-b, t('全取出来'), !b) + '</div>'
+      + '<p class="hint">' + t('打输了、被劫了，只会丢身上带着的钱，钱庄里的抢不走。襄阳、大都、临安有钱庄，哪一家都能存取。') + '</p>');
+  }
+  function tradeModal() {
+    const S = QX.state(), L = QX.LOCS[S.loc];
+    const rows = Object.keys(QX.GOODS).map((id) => {
+      const Gd = QX.GOODS[id], b = QX.goodPrice(id, 'buy'), s = QX.goodPrice(id, 'sell'), have = (S.cargo || {})[id] || 0;
+      if (!b && !(s && have)) return '';
+      const where = Object.keys(Gd.sell).map((l) => QX.LOCS[l].short).join('、');
+      return '<div class="row"><span><b class="nm">' + esc(Gd.name) + '</b>' + (have ? ' ×' + have : '') + '<br><small class="qx-muted">' + esc(Gd.d) + ' ' + t('好卖的地方：{a}', { a: where }) + '</small></span><span class="v">'
+        + (b ? '<button class="b" data-act="trade" data-id="' + id + '" data-v="1">' + t('进一包 {n} 两', { n: b }) + '</button> <button class="b" data-act="trade" data-id="' + id + '" data-v="5">' + t('进五包') + '</button>' : '')
+        + (s && have ? '<button class="b" data-act="trade" data-id="' + id + '" data-v="-' + have + '">' + t('全卖 · 每包 {n} 两', { n: s }) + '</button>' : '') + '</span></div>';
+    }).join('');
+    return modal(t('货栈') + ' · ' + L.short, toastIn('trade') + money(S) + '<p class="qx-muted">' + t('身上带着 {n}/{m} 包货。', { n: QX.cargoCount(), m: QX.CARGO_MAX }) + '</p><div class="rows">' + (rows || '<p class="empty">' + t('这里没有你能做的买卖。') + '</p>') + '</div>'
+      + '<p class="hint">' + t('价钱每个月都在变。打输了，带着的货会丢一半。') + '</p>');
+  }
+  function escortModal() {
+    const S = QX.state(), L = QX.LOCS[S.loc], cur = S.tasks && S.tasks.escort;
+    const rows = QX.escortOffers().map((o) => '<div class="row"><span><b class="nm">' + t('送到{a}', { a: QX.LOCS[o.to].short }) + '</b><br><small class="qx-muted">' + t('镖银 {n} 两 · 限 {d} 天 · 路程约 {k} 天', { n: o.pay, d: o.limit, k: o.days }) + '</small></span><span class="v"><button class="b" data-act="takeescort" data-id="' + o.to + '"' + (cur || S.st.声望 < QX.ESCORT_FAME ? ' disabled' : '') + '>' + t('接镖') + '</button></span></div>').join('');
+    return modal(t('镖局') + ' · ' + L.short, toastIn('escort') + (cur ? '<p class="qx-muted">' + esc(t('手上的镖：{a}', { a: cur.t })) + '</p>' : '') + (S.st.声望 < QX.ESCORT_FAME ? '<p class="qx-muted qx-badv">' + t('镖局只把镖交给有名有姓的人（声望 {n} 以上）。', { n: QX.ESCORT_FAME }) + '</p>' : '')
+      + '<div class="rows">' + rows + '</div><p class="hint">' + t('押着镖赶路，四成会碰上劫镖的。丢了镖或者误了期，要赔一半的镖银。') + '</p>');
+  }
   function saveModal() {
     const sl = QX.slots();
     const line = (s) => (s ? esc(s.name) + ' · ' + esc(dateText(s.day)) + ' · ' + t('信物') + ' ' + s.relics + '/14' : t('（空）'));
@@ -326,7 +376,7 @@
       setMe();
       const mid = S.fight ? fightCard() : S.ev ? eventCard() : actionsCard();
       h = topView() + '<div class="qx-shell"><div class="col qx-main">' + sceneCard() + mid + '</div><aside class="col qx-sidecol">' + statusCard() + (QX.CFG.companions ? partyCard() : '') + newsCard() + '</aside></div>' + foot();
-      const M = { char: charModal, arts: artsModal, items: itemsModal, party: partyModal, map: mapModal, shop: shopModal, save: saveModal };
+      const M = { char: charModal, arts: artsModal, items: itemsModal, party: partyModal, map: mapModal, shop: shopModal, save: saveModal, smith: smithModal, bank: bankModal, trade: tradeModal, escort: escortModal };
       if (ui.modal && M[ui.modal]) h += M[ui.modal]();
     }
     if (ui.fb) h += feedbackModal();
@@ -367,7 +417,8 @@
       case 'cont': QX.cont(); ui.toast = ''; render(); focusMid(); break;
       case 'do': {
         ui.toast = '';
-        if (d.k === 'shop' || d.k === 'travel' || d.k === 'practise') { ui.modal = d.k === 'travel' ? 'map' : d.k === 'practise' ? 'arts' : 'shop'; render(); break; }
+        const MOD = { shop: 'shop', travel: 'map', practise: 'arts', smith: 'smith', bankui: 'bank', trade: 'trade', escort: 'escort' };
+        if (MOD[d.k]) { ui.modal = MOD[d.k]; render(); break; }
         if (d.k === 'talk') QX.talk(d.id); else { const r = QX.act(d.k, d.id); if (r) ui.toast = r; }
         render(); focusMid(); break;
       }
@@ -381,6 +432,11 @@
       }
       case 'use': { const r = QX.useItem(d.id); ui.toast = r || ''; if (QX.state().ev) ui.modal = null; render(); break; }
       case 'buy': ui.toast = QX.buy(d.id) || ''; render(); break;
+      case 'buygear': ui.toast = QX.buyGear(d.id) || ''; render(); break;
+      case 'repair': ui.toast = QX.repairGear(d.v) || ''; render(); break;
+      case 'bank': ui.toast = QX.bank(Number(d.v)) || ''; render(); break;
+      case 'trade': ui.toast = QX.trade(d.id, Number(d.v)) || ''; render(); break;
+      case 'takeescort': { const r = QX.takeEscort(d.id); ui.toast = r || ''; render(); break; }
       case 'dismiss': QX.dismiss(d.id); render(); break;
       case 'savem': QX.saveManual(); ui.toast = t('已存档。'); render(); break;
       case 'fight': { const o = QX.fightOptions()[Number(d.i)]; if (o && !o.dis) QX.fightAct(o); render(); break; }

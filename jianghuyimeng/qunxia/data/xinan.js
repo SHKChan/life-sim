@@ -32,7 +32,7 @@
     { id: 'em_monkey', loc: 'emei', explore: 'emei', once: false, w: 2, t: '猴子',
       text: '一只大猴子从树上跳下来，抓起你的包袱就跑。',
       choices: [
-        { t: '追', check: ['轻功', '中'], fx: (g) => g.add('轻功', 1), res: '你追了它三个山头，它扔下包袱跑了。你脚下轻了不少。', fail: { fx: (g) => g.add('银两', -Math.round(g.money() * 0.2)), res: '猴子钻进了林子。包袱后来在山涧边找到了，银子少了一些。' } },
+        { t: '追', check: ['轻功', '中'], fx: (g) => g.add('轻功', 1), res: '你追了它三个山头，它扔下包袱跑了。你脚下轻了不少。', fail: { fx: (g) => g.rob(0.2, 30), res: '猴子钻进了林子。包袱后来在山涧边找到了，银子少了一些。' } },
         { t: '扔一个果子给它换', fx: (g) => g.add('品德', 1), res: '猴子接了果子，把包袱扔了回来。' },
       ] },
     { id: 'em_zhou_young', who: 'zhouzhiruo', act: '陪她洗剑', cond: (g) => g.before(134, 2), t: '溪边',

@@ -94,6 +94,11 @@ for (const id of evIds) {
 const referenced = new Set();
 for (const id of evIds) for (const c of QX.EVENTS[id].choices || []) [c.next, c.fail && c.fail.next, c.fight && c.fight.win && c.fight.win.next, c.fight && c.fight.lose && c.fight.lose.next].filter(Boolean).forEach((n) => referenced.add(n));
 QX.TIMELINE.forEach((T) => T.ev && referenced.add(T.ev));
+referenced.add('esc_rob'); // 引擎在押镖赶路时排进来
+// 银两：装备、货物、地点上的铺子
+for (const id in QX.GEAR) { const Gd = QX.GEAR[id]; if (!QX.SLOTS.includes(Gd.slot)) P('装备 ' + id + ' 的格子 ' + Gd.slot + ' 不对'); if (!Gd.price) P('装备 ' + id + ' 没有价钱'); }
+for (const id in QX.GOODS) { const Gd = QX.GOODS[id]; for (const side of ['buy', 'sell']) for (const l in Gd[side] || {}) if (!QX.LOCS[l]) P('货物 ' + id + ' 的地点 ' + l + ' 不存在'); }
+for (const id in QX.LOCS) for (const gid of QX.LOCS[id].smith || []) if (!QX.GEAR[gid]) P('地点 ' + id + ' 的铁匠铺卖的 ' + gid + ' 不存在');
 for (const s in QX.SECTS) { const S = QX.SECTS[s]; if (S.expel) referenced.add(S.expel); (S.ranks || []).forEach((r) => r.ev && referenced.add(r.ev)); }
 // 差遣：g.errand('id', ...) 派出去的差事，要有 errand: 'id' 的事件接着；反过来也一样
 const errandSet = new Set([...Object.keys(srcs).filter((s) => /^data\//.test(s)).map((s) => srcs[s]).join('\n').matchAll(/g\.errand\('(\w+)'/g)].map((m) => m[1]));
@@ -193,7 +198,7 @@ function playOne(persona, k) {
   const origin = QX.ORIGINS[k % QX.ORIGINS.length].id;
   const sects = ['', 'quanzhen', 'gaibang', 'emei', 'mingjiao'];
   QX.newGame({ name: '测试', sex: k % 2 ? '女' : '男', origin, sect: sects[k % sects.length] });
-  cur = { ex: [], road: [], rest: 0, ask: 0, horse: 0, ck: {} };
+  cur = { ex: [], road: [], rest: 0, ask: 0, horse: 0, ck: {}, gear: 0, escort: 0 };
   let S = QX.state(), lastDay = -1, still = 0, steps = 0, fightRounds = 0;
   while (steps < 30000) {
     steps++;
@@ -242,7 +247,22 @@ function playOne(persona, k) {
     if (S.hp < QX.maxHp() * 0.45) { if (has('inn') && S.st.银两 >= QX.LOCS[S.loc].inn) QX.act('inn'); else QX.act('rest'); continue; }
     if (has('ask') && S.st.银两 >= 40 && rng() < 0.04) { QX.act('ask'); continue; }
     if (has('retire') && (S.relics.length >= 14 || rng() < 0.01)) { QX.act('retire'); continue; }
-    const evs = acts.filter((a) => a.k === 'ev');
+    // 银两：有钱就买装备、修装备；钱多了存钱庄；有镖就押；顺路贩货；在山门捐献
+    const L0 = QX.LOCS[S.loc];
+    if (L0.smith) {
+      const slot = QX.SLOTS.find((sl) => S.gear[sl] && S.gear[sl].wear >= QX.gearDur(S.gear[sl].id));
+      if (slot && S.st.银两 >= QX.repairCost(slot) + 20) { QX.repairGear(slot); continue; }
+      const up = L0.smith.map((id) => QX.GEAR[id]).filter((Gd) => (!S.gear[Gd.slot] || QX.GEAR[S.gear[Gd.slot].id].tier < Gd.tier) && S.st.银两 >= Gd.price + 30).sort((a, b) => b.tier - a.tier)[0];
+      if (up) { QX.buyGear(up.id); cur.gear = 1; continue; }
+    }
+    if (L0.bank && S.st.银两 > 180 && rng() < 0.6) { QX.bank(Math.floor(S.st.银两 - 80)); continue; }
+    if (L0.bank && S.st.银两 < 40 && (S.bank || 0) > 60) { QX.bank(-Math.min(S.bank, 120)); continue; }
+    if (L0.escort && !(S.tasks || {}).escort && S.st.声望 >= QX.ESCORT_FAME && rng() < 0.12) { const o = QX.escortOffers()[0]; if (o && QX.takeEscort(o.to)) { const why = QX.travel(o.to); cur.escort++; if (!why) continue; } }
+    for (const id in S.cargo || {}) if (QX.goodPrice(id, 'sell')) QX.trade(id, -S.cargo[id]);
+    if (QX.market().length && S.st.银两 > 80 && rng() < 0.5) { const id = QX.market().find((x) => QX.goodPrice(x, 'buy')); if (id) QX.trade(id, 6); }
+    if (acts.find((a) => a.k === 'donate') && S.st.银两 > 280 && rng() < 0.3) { QX.act('donate'); continue; }
+    if (S.ev) continue;
+    const evs = acts.filter((a) => a.k === 'ev' && (a.id !== 'gamble' || rng() < 0.08) && (a.id !== 'rob_road' || persona !== 'xia'));
     if (evs.length && rng() < 0.7) { QX.act('ev', evs[Math.floor(rng() * evs.length)].id); continue; }
     const talks = acts.filter((a) => a.k === 'talk');
     const fresh = talks.filter((a) => interest_person(a.id));
@@ -282,6 +302,7 @@ function playOne(persona, k) {
   for (const p in S.comp) stat.comps[p] = (stat.comps[p] || 0) + 1;
   ['资质', '根骨', '轻功', '内力'].forEach((x) => (stat.dist[x] = stat.dist[x] || []).push(QX.eff(x)));
   (stat.dist.内力上限 = stat.dist.内力上限 || []).push(QX.maxMp());
+  cur.acct = Object.assign({}, S.acct); cur.gearN = Object.keys(S.gear || {}).filter((sl) => S.gear[sl]).length;
   stat.per.push(cur);
   cur = null;
 }
@@ -438,6 +459,8 @@ console.log('判定（机器人碰到时的成功率）：' + Object.keys(stat.c
   const rep = (lists) => avg(lists.filter((l) => l.length).map((l) => l.length / new Set(l).size));
   const kinds = (lists) => avg(lists.map((l) => new Set(l).size));
   const localShare = ex.flat().length ? Math.round(ex.flat().filter((id) => QX.EVENTS[id].explore !== '*').length / ex.flat().length * 100) : 0;
+  const ac = per.map((c) => c.acct || { earn: 0, spend: 0, lost: 0 });
+  console.log('银两：每局收入 ' + avg(ac.map((a) => a.earn)) + ' 两（低的一成 ' + pct(ac.map((a) => a.earn), 0.1) + '，高的一成 ' + pct(ac.map((a) => a.earn), 0.9) + '），花出去 ' + avg(ac.map((a) => a.spend)) + ' 两，被抢 ' + avg(ac.map((a) => a.lost)) + ' 两（占花销 ' + Math.round(ac.reduce((s, a) => s + a.lost, 0) / Math.max(1, ac.reduce((s, a) => s + a.spend + a.lost, 0)) * 100) + '%）；买过装备的局 ' + Math.round(per.filter((c) => c.gear).length / per.length * 100) + '%，结束时平均穿着 ' + avg(per.map((c) => c.gearN)) + ' 件；押镖每局 ' + avg(per.map((c) => c.escort)) + ' 趟');
   console.log('探索：每局 ' + avg(ex.map((l) => l.length)) + ' 次、' + kinds(ex) + ' 种，同一件平均出现 ' + rep(ex) + ' 次，本地事件占 ' + localShare + '%；路上：每局 ' + avg(road.map((l) => l.length)) + ' 次、' + kinds(road) + ' 种；打坐每局 ' + avg(per.map((c) => c.rest)) + ' 天；打听每局 ' + avg(per.map((c) => c.ask)) + ' 次');
 }
 console.log('每件信物被拿到的局数：' + relics.map((r) => QX.ITEMS[r].name + ' ' + (stat.relicsGot[r] || 0)).join('，'));
