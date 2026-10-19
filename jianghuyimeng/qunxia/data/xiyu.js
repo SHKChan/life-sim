@@ -59,7 +59,7 @@
       text: (g) => (g.f('jiuyangHint') ? '你照张教主说的，找到了那道悬崖。崖下有一个山洞，钻过去就是一个与世隔绝的山谷。' : '你在昆仑山里迷了路。一道悬崖下面像是有个山洞，洞那头隐隐有鸟叫。'),
       choices: [
         { t: '钻进山洞', check: ['轻功', '中'], fx: (g) => g.give('jiuyang'), res: '谷里有猿猴，有果树。一块大石下面埋着一个油布包，里面是四卷经书。封面上写着“九阳真经”。',
-          fail: { fx: (g) => g.hurt(50), res: '洞太窄，你卡在里面半天，退出来的时候擦掉了一层皮。' } },
+          great: { fx: (g) => g.add('根骨', 2), res: '谷里的白猿冲你叫了两声，领你走到一块大石前。石头底下埋着四卷经书。你在谷里住了几天，吃了不少奇果，身子轻了很多。' }, fail: { fx: (g) => g.hurt(50), res: '洞太窄，你卡在里面半天，退出来的时候擦掉了一层皮。' } },
         { t: '天快黑了，改天再来', res: '你记下了路，回去了。' },
       ] },
     { id: 'gm_wuji', who: 'zhangwuji', act: '向张教主请教', cond: (g) => g.f('helpedMing') && !g.has('jiuyang') && !g.f('jiuyangHint'), t: '张教主',
@@ -88,7 +88,7 @@
       choices: [
         { t: '扑上去，替庄铮挡这一剑', cond: (g) => g.alive('zhuangzheng'), check: ['轻功', '难'], fx: (g) => { g.set('savedZhuang'); g.add('品德', 8); g.add('声望', 10); },
           res: '剑擦着你的胳膊过去了。就在这时，一个年轻人从人群里走出来，挡在了庄铮前面。庄铮活了下来。',
-          fail: { fx: (g) => { g.hurt(80); g.injure(2); g.kill('zhuangzheng'); }, res: '你慢了一步。灭绝的剑先到了，又顺手划了你一剑。' }, next: 'gmd_end' },
+          great: { fx: (g) => { g.like('zhuangzheng', 20); g.like('yangxiao', 10); g.add('声望', 5); }, res: '你不光挡下了这一剑，还顺势把剑锋引开了半尺。杨逍在远处看着你，点了点头。庄铮活了下来。' }, fail: { fx: (g) => { g.hurt(80); g.injure(2); g.kill('zhuangzheng'); }, res: '你慢了一步。灭绝的剑先到了，又顺手划了你一剑。' }, next: 'gmd_end' },
         { t: '不敢动', cond: (g) => g.alive('zhuangzheng'), fx: (g) => g.kill('zhuangzheng'), res: '庄铮倒下了。', next: 'gmd_end' },
         { t: '往下看', cond: (g) => !g.alive('zhuangzheng'), res: '你往人群里看。', next: 'gmd_end' },
       ] },

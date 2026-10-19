@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.4.0';
+  const VERSION = '2.5.0';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -231,6 +231,7 @@
       + row('历练', S.xp) + row('战绩', t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights })) + QX.SLOTS.map((sl) => '<div class="row"><span class="k">' + t(sl) + '</span><span class="v">' + esc(gearLine(S, sl)) + '</span></div>').join('') + '</div>' + bodyNote(S)
       + (S.inj ? '<p class="hint">' + t('内伤让攻击和内力上限各少了 {p}%。自己只能养好到 {n} 层，剩下的要去医馆、吃药或找高人。', { p: injPct, n: QX.INJ.self }) + '</p>' : '')
       + '<div class="lbl">' + t('路线') + '</div><div class="rows">' + row('品德', Math.round(S.st.品德) + ' · ' + t(deWord(S.st.品德))) + row('声望', Math.round(S.st.声望) + ' · ' + t(fameWord(S.st.声望))) + row('银两', Math.round(S.st.银两) + ' ' + t('两')) + '</div>'
+      + (Object.keys(S.clues || {}).filter((k) => S.clues[k] && !QX.locKnown(QX.SECRETS[k].loc)).map((k) => '<p class="qx-muted">' + esc(t('关于一处秘地的线索：{n}/{m}', { n: S.clues[k], m: QX.SECRETS[k].need || 3 })) + '</p>').join(''))
       + '<p class="hint">' + t('资质管学武快慢；根骨管气血；轻功管身法、躲闪和赶路。事件里的判定分易、中、难、极难四档，属性到了那一档，成功率大约一半。品德和声望不掷骰，够了才有的选项，不够就灰着。品德 50 以上是侠的结局，以下是魔。') + '</p>');
   }
   function artsModal() {
@@ -266,10 +267,11 @@
     const S = QX.state();
     // 传闻里还没过日子的地点，地图上标出来；从传闻点“去看看”进来的那一处标得更醒目
     const leads = new Set(S.news.filter((n) => n.loc && !(n.to != null && S.day > n.to)).map((n) => n.loc));
-    const pins = Object.keys(QX.LOCS).map((id) => { const L = QX.LOCS[id]; return '<button class="qx-pin' + (id === S.loc ? ' here' : '') + (L.sea ? ' sea' : '') + (leads.has(id) ? ' lead' : '') + (ui.mapHi === id ? ' hi' : '') + '" style="left:' + L.x + '%;top:' + L.y + '%" data-act="' + (id === S.loc ? 'noop' : 'go') + '" data-id="' + id + '" title="' + esc(L.name) + '"><i></i><span>' + esc(L.short) + '</span></button>'; }).join('');
+    const pins = Object.keys(QX.LOCS).filter((id) => QX.locKnown(id)).map((id) => { const L = QX.LOCS[id]; return '<button class="qx-pin' + (id === S.loc ? ' here' : '') + (L.sea ? ' sea' : '') + (leads.has(id) ? ' lead' : '') + (ui.mapHi === id ? ' hi' : '') + '" style="left:' + L.x + '%;top:' + L.y + '%" data-act="' + (id === S.loc ? 'noop' : 'go') + '" data-id="' + id + '" title="' + esc(L.name) + '"><i></i><span>' + esc(L.short) + '</span></button>'; }).join('');
     const horse = QX.canHorse() && ui.horse;
     const regs = Object.keys(QX.REGIONS).map((rid) => {
-      const locs = Object.keys(QX.LOCS).filter((id) => QX.LOCS[id].region === rid);
+      const locs = Object.keys(QX.LOCS).filter((id) => QX.LOCS[id].region === rid && QX.locKnown(id));
+      if (!locs.length) return '';
       return '<div class="qx-reg"><div class="lbl">' + esc(QX.REGIONS[rid].name) + '</div>' + locs.map((id) => {
         const tag = leads.has(id) ? ' <span class="qx-cred c-确凿">' + t('有风声') + '</span>' : '';
         if (id === S.loc) return '<div class="row' + (ui.mapHi === id ? ' hi' : '') + '"><span class="nm">' + esc(QX.LOCS[id].short) + tag + '</span><span class="v qx-muted">' + t('你在这里') + '</span></div>';

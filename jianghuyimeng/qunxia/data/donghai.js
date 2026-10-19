@@ -57,7 +57,7 @@
         { t: '躲回去，装作没看见', fx: (g) => { g.set('jinhuaKnown'); }, res: '第二天金花婆婆照样咳嗽。她看你的时候，眼神比平常久了一点。' },
         { t: '上前拜见“紫衫龙王”', check: ['资质', '中'], fx: (g) => { g.set('jinhuaKnown'); g.set('knowXiaozhaoMother'); g.give('jiedu', 2); },
           res: '她站了很久，笑了：“二十年了，还有人记得这个名字。”她说她有个女儿，在光明顶上。临走给了你两颗解毒丹。',
-          fail: { fx: (g) => { g.hurt(60); g.injure(1); g.set('jinhuaKnown'); }, res: '一朵金花打在你膝盖上。你跪倒在沙滩上，她已经不见了。' } },
+          great: { fx: (g) => { g.like('jinhua', 20); g.give('jiedu', 2); }, res: '她站了很久，笑了：“二十年了，还有人记得这个名字。”她说她有个女儿，在光明顶上。临走给了你四颗解毒丹，又教了你一句避蛇的口诀。' }, fail: { fx: (g) => { g.hurt(60); g.injure(1); g.set('jinhuaKnown'); }, res: '一朵金花打在你膝盖上。你跪倒在沙滩上，她已经不见了。' } },
       ] },
     /* 胡青牛医经：133 年四月金花婆婆挖开了胡青牛的坟（大势 t_hudie_grave），医经在她手里 */
     { id: 'ls_yijing', who: 'jinhua', act: '向金花婆婆讨胡青牛的医经', cond: (g) => g.holder('yijing') === 'jinhua' && !g.has('yijing'), once: false, t: '医经',

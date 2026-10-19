@@ -48,7 +48,7 @@ for (const id in QX.LOCS) {
   if (!QX.REGIONS[L.region]) P('地点 ' + id + ' 的地区 ' + L.region + ' 没有注册');
   for (const it of L.shop || []) if (!QX.ITEMS[it]) P('地点 ' + id + ' 卖的 ' + it + ' 不存在');
 }
-if (Object.keys(QX.LOCS).length !== 12) warn.push('地点数是 ' + Object.keys(QX.LOCS).length + '（MVP 定的是 12）');
+if (Object.keys(QX.LOCS).filter((l) => !QX.LOCS[l].hidden).length !== 12) warn.push('地点数是 ' + Object.keys(QX.LOCS).length + '（MVP 定的是 12）');
 if (Object.keys(QX.REGIONS).length !== 8) warn.push('地区数是 ' + Object.keys(QX.REGIONS).length + '（MVP 定的是 8）');
 const relics = QX.relicIds();
 if (relics.length !== 14) P('信物不是 14 件：' + relics.length);
@@ -280,7 +280,7 @@ function playOne(persona, k) {
     if (S.party.length === 0 || rng() < 0.9) {
       // 去有事可做的地方
       let best = null, bv = -1e9;
-      for (const l in QX.LOCS) { if (l === S.loc) continue; const v = interest(l, persona) + rng() * 4; if (v > bv) { bv = v; best = l; } }
+      for (const l in QX.LOCS) { if (l === S.loc || !QX.locKnown(l)) continue; const v = interest(l, persona) + rng() * 4; if (v > bv) { bv = v; best = l; } }
       if (best) { const why = QX.travel(best, S.st.银两 > 80 && rng() < 0.5); if (why) QX.act('work'); continue; }
     }
     QX.act('explore');
@@ -424,6 +424,12 @@ const CHAINS = [
   { d: '说书先生：讲真事、听来成昆的事', at: [133, 1], loc: 'lintan', aff: { shuoshu: 30 }, flags: ['heardGuojing', 'xiexunAsk'],
     steps: [['talk', 'shuoshu', 'tk_shuo1'], ['talk', 'shuoshu', 'tk_shuo2'], ['talk', 'shuoshu', 'tk_shuo3']],
     pref: ['答应替他听', '讲郭大侠', '记下'], expect: (S) => S.flags.heardChengkun && S.flags.shuoTold },
+  // 秘地：攒线索、进去拿东西
+  { d: '桃花岛：临安、灵蛇岛、襄阳三条线索', at: [132, 1], loc: 'lintan', steps: [['explore', 'cl_th_sailor'], ['go', 'lingshe'], ['explore', 'cl_th_petal'], ['go', 'xiangyang'], ['explore', 'cl_th_book']],
+    pref: ['细问', '潮水', '买下'], expect: (S) => S.flags.knowTaohua },
+  { d: '桃花岛：过桃花阵、在书房学落英神剑掌', at: [132, 1], loc: 'lintan', flags: ['knowTaohua'], steps: [['go', 'taohua'], ['explore', 'th_study']], pref: ['奇门', '武功'], expect: (S) => !!S.arts.luoying },
+  { d: '绝情谷：过情花、斗鳄鱼拔君子剑', at: [132, 1], loc: 'xiangyang', flags: ['knowJueqing'], steps: [['go', 'jueqing'], ['explore', 'jq_pool']], pref: ['小心', '鳄鱼'], expect: (S) => S.gear.兵器 && S.gear.兵器.id === 'junzi' },
+  { d: '古墓：潜水道、照墙上的图学玉女剑法', at: [132, 1], loc: 'zhongnan', flags: ['knowGumu'], steps: [['go', 'gumu'], ['explore', 'gm2_sword']], pref: ['一口气', '照着墙'], expect: (S) => !!S.arts.yunv },
 ];
 for (const R of CHAINS) {
   if (process.env.RDBG) { if (!R.d.includes(process.env.RDBG)) continue; console.log('托付', R.d); }

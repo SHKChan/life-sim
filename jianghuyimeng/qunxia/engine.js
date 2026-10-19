@@ -23,6 +23,10 @@
   QX.addArts = into(QX.ARTS);
   QX.addItems = into(QX.ITEMS);
   QX.GEAR = {}; QX.GOODS = {};
+  /* 秘地：地点写 hidden: '标记'，没有这个标记就不在地图上、去不了。QX.addSecrets({ 线索名: { loc, need, t } })：
+   * 剧情里 g.clue('线索名') 攒线索，攒够 need 条（默认 3）就设上那个地点的 hidden 标记，并放一条确凿的传闻。 */
+  QX.SECRETS = {};
+  QX.addSecrets = (o) => Object.assign(QX.SECRETS, o);
   QX.addGear = into(QX.GEAR);   // 装备：{ id: { name, slot: 兵器 | 护身 | 鞋, tier: 1–3, price, bonus: { 属性: n }, dur, d } }
   QX.addGoods = into(QX.GOODS); // 货物：{ id: { name, buy: { 地点: 价 }, sell: { 地点: 价 }, d } }
   // 给已有的地点补字段（smith 铁匠、bank 钱庄、escort 镖局、black 黑市……），按地点 id 合并
@@ -257,6 +261,7 @@
       has: (id) => { itemDef(id); return QX.has(id); }, give, take, relics: () => S.relics.length,
       rob: (frac, cap) => rob(frac, cap), escortLose: (t) => escortLose(t), escorting: () => !!(S.tasks && S.tasks.escort),
       gear: (slot) => (S.gear && S.gear[slot] ? S.gear[slot].id : ''), bankMoney: () => S.bank || 0,
+      clue: (k) => clue(k), clues: (k) => (S.clues && S.clues[k]) || 0, known: (l) => QX.locKnown(l),
       holder: (id) => { const it = itemDef(id); return S.holder[id] !== undefined ? S.holder[id] : (it.holder0 || null); },
       hold: (id, who) => { itemDef(id); if (who !== 'me' && QX.has(id) && QX.ITEMS[id].relic) return; S.holder[id] = who; },
       lv: (id) => { artDef(id); return QX.artLv(id); }, learn, nei: () => QX.bestNei(),
@@ -1149,9 +1154,19 @@
   /* 快马：在有客店的城镇雇马，陆路少三成天数。价钱按陆路天数算，至少 HORSE_MIN 两 */
   const HORSE_CUT = 0.7, HORSE_MIN = 15;
   QX.canHorse = () => !!QX.LOCS[S.loc].inn;
+  QX.locKnown = (id) => { const L = QX.LOCS[id]; return !!L && (!L.hidden || !!S.flags[L.hidden]); };
+  function clue(k) {
+    const X = QX.SECRETS[k];
+    if (!X) throw new Error('未知线索 ' + k);
+    S.clues = S.clues || {};
+    if (QX.locKnown(X.loc)) return;
+    S.clues[k] = (S.clues[k] || 0) + 1;
+    log(QX.tx('线索', { a: QX.LOCS[X.loc].short, n: S.clues[k], m: X.need || 3 }), 'news');
+    if (S.clues[k] >= (X.need || 3)) { S.flags[QX.LOCS[X.loc].hidden] = true; const t = val(X.t, G()); news(t, { loc: X.loc, cred: '确凿' }); log(t, 'good'); }
+  }
   QX.route = (to, horse) => {
     const A = QX.LOCS[S.loc], B = QX.LOCS[to];
-    if (!B || to === S.loc) return null;
+    if (!B || to === S.loc || !QX.locKnown(to)) return null;
     let land = 0, sea = 0, cost = 0, why = '';
     if (B.sea && A.sea) sea = dist(S.loc, to) * 0.6;
     else if (B.sea) { land = S.loc === B.port ? 0 : landDays(S.loc, B.port); sea = dist(B.port, to) * 0.6; }
