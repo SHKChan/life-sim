@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.1.1';
+  const VERSION = '2.2.0';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -107,13 +107,13 @@
     if (E.text && !(E.res && !E.choices.length && E.talk)) h += '<p class="qx-text">' + esc(E.text) + '</p>';
     if (E.res !== null && E.res !== undefined && !E.choices.length) {
       if (E.picked) h += '<p class="qx-picked">' + esc(t('你选择：')) + esc(E.picked) + '</p>';
-      if (E.roll) h += '<p class="roll ' + (E.roll.ok ? 'ok' : 'no') + '">' + esc(t(E.roll.ok ? '{k}判定成功（成功率 {p}%）' : '{k}判定失败（成功率 {p}%）', { k: t(E.roll.k), p: E.roll.p })) + '</p>';
+      if (E.roll) h += '<p class="roll ' + (E.roll.great ? 'great' : E.roll.ok ? 'ok' : 'no') + '">' + esc(t(E.roll.great ? '{k}判定大成功（成功率 {p}%）' : E.roll.ok ? '{k}判定成功（成功率 {p}%）' : '{k}判定失败（成功率 {p}%）', { k: t(E.roll.k) + (E.roll.lv ? ' · ' + t(E.roll.lv) : ''), p: E.roll.p })) + '</p>';
       if (E.res) h += '<div class="result"><p>' + esc(E.res) + '</p></div>';
       h += '<div class="choices"><button class="b primary big" data-act="cont" id="cont">' + t('继续') + '</button></div>';
     } else {
       h += '<div class="choices">' + E.choices.map((c, i) => '<button class="choice" data-act="choose" data-i="' + i + '"' + (c.dis ? ' disabled aria-disabled="true"' : '') + '><span class="t"><kbd>' + (i + 1) + '</kbd> ' + esc(c.t) + '</span><span class="m">'
-        + (c.p != null ? '<span>' + esc(t(c.ck)) + ' ' + c.p + '%</span>' : '') + (c.fight ? '<span class="tag ' + (c.deadly ? 'bad' : 'mod') + '">' + t(c.deadly ? '死斗' : '动手') + '</span>' : '') + (c.sub ? '<span>' + esc(t(c.sub)) + '</span>' : '')
-        + (c.dis ? '<span class="qx-dis">' + esc(c.dis) + '</span>' : '') + '</span></button>').join('') + '</div>';
+        + (c.p != null ? '<span>' + esc(t(c.ck)) + (c.lv ? ' · ' + esc(t(c.lv)) : '') + ' ' + c.p + '%</span>' : '') + (c.cost ? '<span class="tag">' + esc(c.cost) + '</span>' : '') + (c.fight ? '<span class="tag ' + (c.deadly ? 'bad' : 'mod') + '">' + t(c.deadly ? '死斗' : '动手') + '</span>' : '') + (c.sub ? '<span>' + esc(t(c.sub)) + '</span>' : '')
+        + (c.need && !c.dis ? '<span class="tag">' + esc(c.need) + '</span>' : '') + (c.dis ? '<span class="qx-dis">' + esc(c.dis) + '</span>' : '') + '</span></button>').join('') + '</div>';
       if (E.choices.some((c) => c.deadly)) h += '<p class="hint qx-warn">' + t('标着“死斗”的，输了就是死。动手前先存档。') + '</p>';
     }
     return h + '</div>';
@@ -133,7 +133,7 @@
     }
     return h + '</div>';
   }
-  const ACT_LABEL = { explore: ['探索', '三天'], shop: ['店铺', '买药、买书'], inn: ['住店', ''], work: ['做工', '五天，挣点银子'], chore: ['门派差事', '十天，升门中地位'], practise: ['练功', '十天'], rest: ['打坐', '三天，回气血'], wait: ['等候', '一个月'], travel: ['出行', '看地图'], retire: ['了结江湖', '结束这一局'] };
+  const ACT_LABEL = { explore: ['探索', '三天'], shop: ['店铺', '买药、买书'], inn: ['住店', ''], ask: ['打听', ''], clinic: ['医馆', ''], work: ['做工', '五天，挣点银子'], chore: ['门派差事', '十天，升门中地位'], practise: ['练功', '十天'], rest: ['打坐', '三天，回气血'], wait: ['等候', '一个月'], travel: ['出行', '看地图'], retire: ['了结江湖', '结束这一局'] };
   function actionsCard() {
     const acts = QX.actions();
     const people = acts.filter((a) => a.k === 'talk'), evs = acts.filter((a) => a.k === 'ev'), rest = acts.filter((a) => a.k !== 'talk' && a.k !== 'ev');
@@ -141,19 +141,34 @@
     if (ui.toast) h += '<div class="result qx-toast"><p>' + esc(ui.toast) + '</p></div>';
     if (people.length) h += '<div class="lbl">' + t('这里的人') + '</div><div class="qx-grid">' + people.map((a) => '<button class="qx-act person" data-act="do" data-k="talk" data-id="' + esc(a.id) + '"><canvas class="px" data-portrait="' + esc(a.id) + '" width="20" height="24"></canvas><span><b>' + esc(a.label) + '</b><small>' + esc(a.sub) + '</small></span></button>').join('') + '</div>';
     if (evs.length) h += '<div class="lbl">' + t('可以去做的事') + '</div><div class="qx-grid">' + evs.map((a) => '<button class="qx-act ev" data-act="do" data-k="ev" data-id="' + esc(a.id) + '"><span><b>' + esc(a.label) + '</b></span></button>').join('') + '</div>';
-    h += '<div class="lbl">' + t('行动') + '</div><div class="qx-grid">' + rest.map((a) => { const L = ACT_LABEL[a.k] || [a.k, '']; const sub = a.k === 'inn' ? t('{n} 两，一夜', { n: a.cost }) : t(L[1]); return '<button class="qx-act' + (a.k === 'retire' ? ' end' : '') + '" data-act="do" data-k="' + a.k + '"><span><b>' + t(L[0]) + '</b><small>' + esc(sub) + '</small></span></button>'; }).join('') + '</div>';
+    h += '<div class="lbl">' + t('行动') + '</div><div class="qx-grid">' + rest.map((a) => { const L = ACT_LABEL[a.k] || [a.k, '']; const sub = a.k === 'inn' ? t('{n} 两，一夜', { n: a.cost }) : a.k === 'ask' ? t('{n} 两，问大事、问人', { n: a.cost }) : a.k === 'clinic' ? t('{n} 两，治一层内伤', { n: a.cost }) : t(L[1]); return '<button class="qx-act' + (a.k === 'retire' ? ' end' : '') + '" data-act="do" data-k="' + a.k + '"><span><b>' + t(L[0]) + '</b><small>' + esc(sub) + '</small></span></button>'; }).join('') + '</div>';
     return h + '</div>';
   }
 
   /* ---------- 右栏 ---------- */
+  /* 属性分三类：资质（拿来判定、管成长）画进度条、写档位；战斗的气血内力在顶栏，攻击防御在人物页；路线（品德、声望、银两）写成一行字 */
+  const APT = ['资质', '根骨', '轻功'];
+  const TIER_WORD = { '': '尚浅', 易: '平平', 中: '中等', 难: '上佳', 极难: '出类拔萃' };
+  const deWord = (v) => (v >= 70 ? '侠义' : v >= 50 ? '正直' : v >= 30 ? '亦正亦邪' : '心狠手辣');
+  const fameWord = (v) => (v >= 120 ? '天下闻名' : v >= 60 ? '威震江湖' : v >= 30 ? '名动一方' : v >= 10 ? '小有名气' : '无名小卒');
+  function aptRow(k) {
+    const T = QX.CHECKS[k], v = QX.eff(k), top = T ? T.极难 * 1.25 : 100;
+    return '<div class="qx-apt"><span class="qx-irow">' + ic(k) + t(k) + '</span><span class="qx-track"><i style="width:' + Math.min(100, Math.round((v / top) * 100)) + '%"></i></span><b>' + v + '</b><small>' + esc(t(TIER_WORD[QX.tierOf(k)])) + '</small></div>';
+  }
+  function bodyNote(S) {
+    const bits = [];
+    if (S.inj) bits.push(t('内伤 {n} 层', { n: S.inj }) + (S.inj > QX.INJ.self ? '' : ' · ' + t('自己养不好了')));
+    if (S.mer) bits.push(t('经脉受损'));
+    return bits.length ? '<p class="qx-body qx-badv">' + esc(bits.join('；')) + '</p>' : '';
+  }
   function statusCard() {
     const S = QX.state();
     const sect = S.sect ? QX.SECTS[S.sect].name + ' · ' + QX.rankName() : t('无门无派');
     return '<div class="card"><div class="card-h"><h3>' + esc(S.name) + '</h3><small>' + esc(t(S.sex)) + ' · ' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + '</small></div>'
-      + '<dl class="kv qx-kv"><dt>' + ic('门派') + t('门派') + '</dt><dd>' + esc(sect) + '</dd><dt>' + ic('品德') + t('品德') + '</dt><dd>' + Math.round(S.st.品德) + ' <span class="qx-muted">' + esc(t(S.st.品德 >= 70 ? '侠义' : S.st.品德 >= 50 ? '正直' : S.st.品德 >= 30 ? '亦正亦邪' : '心狠手辣')) + '</span></dd>'
-      + '<dt>' + ic('声望') + t('声望') + '</dt><dd>' + Math.round(S.st.声望) + '</dd><dt>' + ic('银两') + t('银两') + '</dt><dd>' + Math.round(S.st.银两) + ' ' + t('两') + '</dd>'
-      + (S.inj ? '<dt>' + t('内伤') + '</dt><dd class="qx-badv">' + t('{n} 层', { n: S.inj }) + '</dd>' : '') + '</dl>'
-      + '<div class="qx-zx"><i style="left:' + S.st.品德 + '%"></i></div><div class="qx-zxl"><span>' + t('魔') + '</span><span>' + t('侠') + '</span></div></div>';
+      + '<p class="qx-way">' + ic('门派') + esc(sect) + '</p>'
+      + '<div class="qx-apts">' + APT.map(aptRow).join('') + '</div>' + bodyNote(S)
+      + '<p class="qx-way">' + esc(t(deWord(S.st.品德))) + ' · ' + esc(t(fameWord(S.st.声望))) + ' · ' + t('银两') + ' ' + Math.round(S.st.银两) + '</p>'
+      + '<div class="qx-zx" title="' + esc(t('品德') + ' ' + Math.round(S.st.品德)) + '"><i style="left:' + S.st.品德 + '%"></i></div><div class="qx-zxl"><span>' + t('魔') + '</span><span>' + t('侠') + '</span></div></div>';
   }
   function partyCard() {
     const S = QX.state();
@@ -169,8 +184,15 @@
     const S = QX.state();
     const lines = S.log.slice(-14).reverse();
     // 江湖传闻放在上面：玩家靠它知道哪儿要出事、该去哪儿赶热闹；自己的经历在下面
+    // 带地点的传闻有“去看看”（打开地图、标出那里）；风声过了日子就灰掉
+    const item = (n) => {
+      const past = n.to != null && S.day > n.to;
+      return '<li class="' + (past ? 'past' : n.loc ? 'lead' : '') + '">' + (n.d != null ? '<span class="qx-muted">' + esc(QX.date(n.d).y + '.' + QX.date(n.d).m) + '</span> ' : '')
+        + (n.cred ? '<span class="qx-cred c-' + esc(n.cred) + '">' + esc(t(n.cred)) + '</span> ' : '') + esc(n.t)
+        + (n.loc && !past && QX.LOCS[n.loc] ? ' <button class="b qx-look" data-act="look" data-id="' + esc(n.loc) + '">' + (n.loc === S.loc ? t('就在这里') : t('去看看') + ' · ' + esc(QX.LOCS[n.loc].short)) + '</button>' : '') + '</li>';
+    };
     return '<div class="card"><div class="card-h"><h3>' + t('江湖传闻') + '</h3><small>' + t('最新在上') + '</small></div>'
-      + (S.news.length ? '<ul class="ulist qx-news">' + S.news.slice(-8).reverse().map((n) => '<li>' + (n.d != null ? '<span class="qx-muted">' + esc(QX.date(n.d).y + '.' + QX.date(n.d).m) + '</span> ' : '') + esc(n.t) + '</li>').join('') + '</ul>' : '<p class="empty">' + t('江湖上暂时还算平静。') + '</p>') + '</div>'
+      + (S.news.length ? '<ul class="ulist qx-news">' + S.news.slice(-8).reverse().map(item).join('') + '</ul>' : '<p class="empty">' + t('江湖上暂时还算平静。') + '</p>') + '</div>'
       + '<div class="card log-card"><div class="card-h"><h3>' + t('经历') + '</h3><small>' + t('最新在上') + '</small></div><ul class="log qx-log">' + lines.map((l) => '<li class="k-' + esc(l.k) + '"><span class="a">' + esc(QX.date(l.d).y + '.' + QX.date(l.d).m) + '</span><span class="t">' + esc(l.t) + '</span><span class="s"></span></li>').join('') + '</ul>'
       + '</div>';
   }
@@ -178,16 +200,21 @@
   /* ---------- 弹框 ---------- */
   function charModal() {
     const S = QX.state();
-    const rows = ['资质', '根骨', '内力', '攻击', '防御', '轻功'].map((k) => '<div class="row"><span class="k qx-irow">' + ic(k) + t(k) + '</span><span class="v">' + QX.eff(k) + '</span></div>').join('');
+    const row = (k, v) => '<div class="row"><span class="k qx-irow">' + ic(k) + t(k) + '</span><span class="v">' + v + '</span></div>';
     const sect = S.sect ? QX.SECTS[S.sect].name + ' · ' + QX.rankName() : t('无门无派');
     const head = '<div class="qx-charhead"><canvas class="px" data-portrait="me" width="20" height="24"></canvas><div><h3>' + esc(S.name) + '</h3><p class="qx-muted">' + esc(t(S.sex)) + ' · ' + t('{n} 岁', { n: QX.age() }) + ' · ' + esc(sect) + '</p>'
-      + '<p class="qx-muted">' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + ' · ' + t('品德') + ' ' + Math.round(S.st.品德) + ' · ' + t('声望') + ' ' + Math.round(S.st.声望) + '</p></div></div>';
-    return modal(t('人物'), head + '<div class="rows">' + rows + '<div class="row"><span class="k qx-irow">' + ic('气血') + t('气血') + '</span><span class="v">' + S.hp + '/' + QX.maxHp() + '</span></div><div class="row"><span class="k qx-irow">' + ic('内力') + t('内力') + '</span><span class="v">' + S.mp + '/' + QX.maxMp() + '</span></div>'
-      + '<div class="row"><span class="k qx-irow">' + ic('历练') + t('历练') + '</span><span class="v">' + S.xp + '</span></div><div class="row"><span class="k qx-irow">' + ic('战绩') + t('战绩') + '</span><span class="v">' + t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights }) + '</span></div></div>'
-      + '<p class="hint">' + t('资质管学武快慢；根骨管气血；内力管内力上限；轻功管身法、躲闪和赶路。品德 50 以上是侠的结局，以下是魔。') + '</p>');
+      + '<p class="qx-muted">' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + '</p></div></div>';
+    const injPct = Math.round(QX.INJ.hit * S.inj * 100);
+    return modal(t('人物'), head
+      + '<div class="lbl">' + t('资质') + ' · ' + t('判定看这几样') + '</div><div class="qx-apts">' + APT.map(aptRow).join('') + '</div>'
+      + '<div class="lbl">' + t('战斗') + '</div><div class="rows">' + row('气血', S.hp + '/' + QX.maxHp()) + row('内力', S.mp + '/' + QX.maxMp()) + row('攻击', QX.eff('攻击')) + row('防御', QX.eff('防御'))
+      + row('历练', S.xp) + row('战绩', t('{w} 胜 / {n} 战', { w: S.wins, n: S.fights })) + '</div>' + bodyNote(S)
+      + (S.inj ? '<p class="hint">' + t('内伤让攻击和内力上限各少了 {p}%。自己只能养好到 {n} 层，剩下的要去医馆、吃药或找高人。', { p: injPct, n: QX.INJ.self }) + '</p>' : '')
+      + '<div class="lbl">' + t('路线') + '</div><div class="rows">' + row('品德', Math.round(S.st.品德) + ' · ' + t(deWord(S.st.品德))) + row('声望', Math.round(S.st.声望) + ' · ' + t(fameWord(S.st.声望))) + row('银两', Math.round(S.st.银两) + ' ' + t('两')) + '</div>'
+      + '<p class="hint">' + t('资质管学武快慢；根骨管气血；轻功管身法、躲闪和赶路。事件里的判定分易、中、难、极难四档，属性到了那一档，成功率大约一半。品德和声望不掷骰，够了才有的选项，不够就灰着。品德 50 以上是侠的结局，以下是魔。') + '</p>');
   }
   function artsModal() {
-    const S = QX.state(), ids = Object.keys(S.arts);
+    const S = QX.state(), ids = Object.keys(S.arts), block = QX.hardBlock();
     if (!ids.length) return modal(t('武功'), '<p class="empty">' + t('还什么都不会。') + '</p>');
     const body = ids.map((id) => {
       const A = QX.ARTS[id], a = S.arts[id], can = QX.canPractise(id);
@@ -195,9 +222,9 @@
       return '<div class="qx-art"><div class="qx-art-h">' + ic(A.type, id) + '<b>' + esc(A.name) + '</b><span class="tag book">' + esc(t(A.type)) + '</span><span class="qx-lv">' + t('{n} 级', { n: a.lv }) + '</span></div>'
         + (a.lv < QX.CFG.maxLv ? '<span class="qx-track xp"><i style="width:' + Math.round((a.xp / QX.need(a.lv)) * 100) + '%"></i></span>' : '<p class="qx-muted">' + t('已经练到顶了。') + '</p>')
         + '<p class="qx-muted">' + esc(A.d) + '</p>'
-        + (can ? '<div class="end-btns"><button class="b" data-act="practise" data-id="' + id + '">' + t('练十天') + (r1 ? ' · ' + t('风险 {p}%', { p: r1 }) : '') + '</button><button class="b" data-act="practise" data-id="' + id + '" data-hard="1">' + t('冒进苦练') + ' · ' + t('风险 {p}%', { p: r2 }) + '</button></div>' : '') + '</div>';
+        + (can ? '<div class="end-btns"><button class="b" data-act="practise" data-id="' + id + '">' + t('练十天') + (r1 ? ' · ' + t('风险 {p}%', { p: r1 }) : '') + '</button><button class="b" data-act="practise" data-id="' + id + '" data-hard="1"' + (block ? ' disabled title="' + esc(block) + '"' : '') + '>' + t('冒进苦练') + ' · ' + (block ? esc(t('伤重')) : t('风险 {p}%', { p: r2 })) + '</button></div>' : '') + '</div>';
     }).join('');
-    return modal(t('武功'), (ui.toast && ui.modal === 'arts' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + body + '<p class="hint">' + t('冒进苦练长进加倍，可能受内伤或走火入魔。内功越深越安全。') + '</p>');
+    return modal(t('武功'), (ui.toast && ui.modal === 'arts' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + body + '<p class="hint">' + t('冒进苦练长进加倍，可能受内伤或走火入魔；走火入魔还会伤了经脉。内功越深越安全。内伤三层以上不能冒进。') + '</p>');
   }
   function itemsModal() {
     const S = QX.state(), ids = Object.keys(S.items).filter((k) => !QX.ITEMS[k].relic);
@@ -214,16 +241,21 @@
   }
   function mapModal() {
     const S = QX.state();
-    const pins = Object.keys(QX.LOCS).map((id) => { const L = QX.LOCS[id]; return '<button class="qx-pin' + (id === S.loc ? ' here' : '') + (L.sea ? ' sea' : '') + '" style="left:' + L.x + '%;top:' + L.y + '%" data-act="' + (id === S.loc ? 'noop' : 'go') + '" data-id="' + id + '" title="' + esc(L.name) + '"><i></i><span>' + esc(L.short) + '</span></button>'; }).join('');
+    // 传闻里还没过日子的地点，地图上标出来；从传闻点“去看看”进来的那一处标得更醒目
+    const leads = new Set(S.news.filter((n) => n.loc && !(n.to != null && S.day > n.to)).map((n) => n.loc));
+    const pins = Object.keys(QX.LOCS).map((id) => { const L = QX.LOCS[id]; return '<button class="qx-pin' + (id === S.loc ? ' here' : '') + (L.sea ? ' sea' : '') + (leads.has(id) ? ' lead' : '') + (ui.mapHi === id ? ' hi' : '') + '" style="left:' + L.x + '%;top:' + L.y + '%" data-act="' + (id === S.loc ? 'noop' : 'go') + '" data-id="' + id + '" title="' + esc(L.name) + '"><i></i><span>' + esc(L.short) + '</span></button>'; }).join('');
+    const horse = QX.canHorse() && ui.horse;
     const regs = Object.keys(QX.REGIONS).map((rid) => {
       const locs = Object.keys(QX.LOCS).filter((id) => QX.LOCS[id].region === rid);
       return '<div class="qx-reg"><div class="lbl">' + esc(QX.REGIONS[rid].name) + '</div>' + locs.map((id) => {
-        if (id === S.loc) return '<div class="row"><span class="nm">' + esc(QX.LOCS[id].short) + '</span><span class="v qx-muted">' + t('你在这里') + '</span></div>';
-        const r = QX.route(id);
-        return '<div class="row"><span class="nm">' + esc(QX.LOCS[id].short) + '</span><span class="v"><button class="b" data-act="go" data-id="' + id + '"' + (r.why ? ' disabled title="' + esc(r.why) + '"' : '') + '>' + t('{n} 天', { n: r.days }) + (r.cost ? ' · ' + t('{n} 两', { n: r.cost }) : '') + '</button></span>' + (r.why ? '<span class="n">' + esc(r.why) + '</span>' : '') + '</div>';
+        const tag = leads.has(id) ? ' <span class="qx-cred c-确凿">' + t('有风声') + '</span>' : '';
+        if (id === S.loc) return '<div class="row' + (ui.mapHi === id ? ' hi' : '') + '"><span class="nm">' + esc(QX.LOCS[id].short) + tag + '</span><span class="v qx-muted">' + t('你在这里') + '</span></div>';
+        const r = QX.route(id, horse);
+        return '<div class="row' + (ui.mapHi === id ? ' hi' : '') + '"><span class="nm">' + esc(QX.LOCS[id].short) + tag + '</span><span class="v"><button class="b" data-act="go" data-id="' + id + '"' + (r.why ? ' disabled title="' + esc(r.why) + '"' : '') + '>' + t('{n} 天', { n: r.days }) + (r.cost ? ' · ' + t('{n} 两', { n: r.cost }) : '') + '</button></span>' + (r.why ? '<span class="n">' + esc(r.why) + '</span>' : '') + '</div>';
       }).join('') + '</div>';
     }).join('');
-    return modal(t('地图'), '<div class="qx-map" role="img" aria-label="' + esc(t('地图')) + '"><canvas class="qx-mapbg" id="qx-mapbg"></canvas>' + pins + '</div><div class="qx-regs">' + regs + '</div><p class="hint">' + t('路上可能遇到强人、流民或比武的人。东海诸岛从临安坐船，去冰火岛要有海图。') + '</p>', 'wide');
+    const horseRow = QX.canHorse() ? '<label class="qx-horse"><input type="checkbox" id="qx-horse"' + (ui.horse ? ' checked' : '') + '> ' + t('雇快马：陆路少三成天数，按路程收钱（四天以上的陆路才雇得到）') + '</label>' : '<p class="qx-muted">' + t('这里雇不到马。') + '</p>';
+    return modal(t('地图'), '<div class="qx-map" role="img" aria-label="' + esc(t('地图')) + '"><canvas class="qx-mapbg" id="qx-mapbg"></canvas>' + pins + '</div>' + horseRow + '<div class="qx-regs">' + regs + '</div><p class="hint">' + t('路上可能遇到强人、流民或比武的人。东海诸岛从临安坐船，去冰火岛要有海图。标着“有风声”的地方，传闻里说那里要出事。') + '</p>', 'wide');
   }
   function shopModal() {
     const S = QX.state(), L = QX.LOCS[S.loc];
@@ -313,7 +345,7 @@
       case 'asknew': ui.confirmNew = true; render(); break;
       case 'cancelnew': ui.confirmNew = false; render(); break;
       case 'open': ui.modal = d.v; ui.toast = ''; ui.confirmNew = false; render(); break;
-      case 'close': case 'bg': ui.modal = null; ui.toast = ''; if (ui.fb && a === 'close') ui.fb = null; render(); break;
+      case 'close': case 'bg': ui.modal = null; ui.mapHi = ''; ui.toast = ''; if (ui.fb && a === 'close') ui.fb = null; render(); break;
       case 'theme': { const i = THEMES.findIndex((x) => x[0] === themeNow()); const nx = THEMES[(i + 1) % THEMES.length][0]; document.documentElement.dataset.theme = nx; store.set(THEME_KEY, nx); render(); break; }
       case 'choose': QX.choose(Number(d.i)); ui.toast = ''; render(); focusMid(); break;
       case 'cont': QX.cont(); ui.toast = ''; render(); focusMid(); break;
@@ -323,7 +355,8 @@
         if (d.k === 'talk') QX.talk(d.id); else { const r = QX.act(d.k, d.id); if (r) ui.toast = r; }
         render(); focusMid(); break;
       }
-      case 'go': { const why = QX.travel(d.id); ui.modal = null; ui.toast = why || ''; render(); window.scrollTo(0, 0); break; }
+      case 'go': { const why = QX.travel(d.id, QX.canHorse() && ui.horse); ui.modal = null; ui.mapHi = ''; ui.toast = why || ''; render(); window.scrollTo(0, 0); break; }
+      case 'look': ui.modal = 'map'; ui.mapHi = d.id; ui.toast = ''; render(); break;
       case 'practise': {
         const r = QX.practise(d.id, !!d.hard);
         if (r) { const A = QX.ARTS[d.id]; ui.toast = r.hurt === 'zouhuo' ? t('走火入魔！功力倒退。') : r.hurt === 'neishang' ? t('受了内伤。') + ' ' + t('长进 {n}。', { n: r.gain }) : t('{a}长进 {n}。', { a: A.name, n: r.gain }) + (r.up ? ' ' + t('升到第 {n} 级！', { n: QX.artLv(d.id) }) : ''); }
@@ -363,6 +396,7 @@
   app.addEventListener('change', (e) => {
     if (e.target.classList.contains('lang-sel') && JY.setLang) JY.setLang(e.target.value);
     if (e.target.id === 'fb-ctx' && ui.fb) ui.fb.ctx = e.target.checked;
+    if (e.target.id === 'qx-horse') { ui.horse = e.target.checked; render(); }
   });
   document.addEventListener('keydown', (e) => {
     if (e.target.matches && e.target.matches('input, textarea, select')) return;
@@ -380,6 +414,10 @@
   if (q.get('demo') && !QX.state()) { QX.newGame({ name: '阿青', sex: '女', origin: 'fisher', sect: 'emei' }); ui.screen = 'game'; }
   if (q.get('demo') && QX.state()) {
     if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
+    // &day=134,3 让日子走到那一天（看风声、传闻）；&inj=3 带上内伤
+    if (q.get('day')) { const S = QX.state(), d = q.get('day').split(',').map(Number); const n = QX.dv(d[0], d[1] || 1, d[2] || 1) - S.day; if (n > 0) { QX._internal.passDays(n); S.ev = null; S.queue = []; } }
+    if (q.get('inj')) { const S = QX.state(); S.inj = Number(q.get('inj')); S.mer = q.get('mer') ? 1 : 0; QX.save(); }
+    if (q.get('ev')) { const S = QX.state(); S.ev = null; S.mp = QX.maxMp(); if (q.get('silver')) S.st.银两 = Number(q.get('silver')); QX._internal.startEvent(q.get('ev')); }
     if (q.get('open')) ui.modal = q.get('open');
     if (q.get('fight')) { const S = QX.state(); S.ev = null; S.party = QX.CFG.companions ? ['zhoudian'] : []; QX.startFight({ foes: ['shanzei', 'zeitou'] }); QX.fightAct(QX.aiOption()); QX.fightAct(QX.aiOption()); }
   }

@@ -6,14 +6,14 @@
 
   /* ---------- 地区与地点 ----------
    * x、y 是地图上的位置（0–100，西→东、北→南），行程天数按距离算，轻功越高走得越快。
-   * sea：海岛，要从 port（临安）坐船，fare 是船钱，needs 是必须带着的东西。
+   * sea：海岛，要从 port（临安）坐船，fare 是船钱，needs 是必须带着的东西。clinic：医馆，治一层内伤要几两银子。
    * scene：像素场景，用 share/pixel.js 里已有的。 */
   QX.addRegions({
     zhongyuan: { name: '中原' }, xinan: { name: '西南' }, jiangnan: { name: '江南' }, donghai: { name: '东海' },
     xiyu: { name: '西域' }, zhongnan: { name: '终南山' }, xiangyang: { name: '襄阳' }, dadu: { name: '大都' },
   });
   QX.addLocs({
-    shaolin: { name: '嵩山少林寺', short: '少林寺', region: 'zhongyuan', scene: 'temple', x: 63, y: 42, inn: 6, shop: ['jinchuang', 'renshen', 'dahuan', 'taizu_pu'], work: true,
+    shaolin: { name: '嵩山少林寺', short: '少林寺', region: 'zhongyuan', scene: 'temple', x: 63, y: 42, inn: 6, clinic: 30, shop: ['jinchuang', 'renshen', 'dahuan', 'taizu_pu'], work: true,
       desc: '少室山下是登封镇，山上是千年古刹。钟声一早就响，香客从镇上一直排到山门。',
       workText: ['你在登封镇的米铺扛了几天米。', '你帮香客挑担子上山，一趟一趟。'] },
     wudang: { name: '武当山', short: '武当山', region: 'zhongyuan', scene: 'temple', x: 53, y: 54, inn: 5,
@@ -23,10 +23,10 @@
     emei: { name: '峨嵋山', short: '峨嵋山', region: 'xinan', scene: 'peaks', x: 35, y: 64, inn: 5, work: true,
       desc: '金顶上常年是云海。峨嵋派的女弟子三五成群，背着剑从石阶上走过，不太理会外人。',
       workText: ['你给山下的茶农摘了几天茶。', '你帮寺里的和尚劈了几天柴。'] },
-    dali: { name: '大理', short: '大理', region: 'xinan', scene: 'waterfall', x: 23, y: 82, inn: 4, shop: ['jinchuang', 'renshen', 'jiedu', 'tuna_pu'], work: true,
+    dali: { name: '大理', short: '大理', region: 'xinan', scene: 'waterfall', x: 23, y: 82, inn: 4, clinic: 20, shop: ['jinchuang', 'renshen', 'jiedu', 'tuna_pu'], work: true,
       desc: '苍山的雪，洱海的水。段氏早已不做皇帝，天龙寺的钟还在敲。城里的白族姑娘会唱很长的歌。',
       workText: ['你跟着马帮赶了几天骡子。', '你在洱海边帮渔家收了几天网。'] },
-    lintan: { name: '临安', short: '临安', region: 'jiangnan', scene: 'watertown', x: 82, y: 64, inn: 8, shop: ['jinchuang', 'renshen', 'jiedu', 'dengping_pu', 'taizu_pu', 'tuna_pu'], work: true, port: true,
+    lintan: { name: '临安', short: '临安', region: 'jiangnan', scene: 'watertown', x: 82, y: 64, inn: 8, clinic: 35, shop: ['jinchuang', 'renshen', 'jiedu', 'dengping_pu', 'taizu_pu', 'tuna_pu'], work: true, port: true,
       desc: '南宋亡了几十年，西湖还是西湖。城里有元人的衙门，也有说书的茶楼。码头上的船去东海诸岛。',
       workText: ['你在码头卸了几天货。', '你在茶楼里跑了几天堂。', '你帮绸缎庄送了几天货。'] },
     lingshe: { name: '东海 · 灵蛇岛', short: '灵蛇岛', region: 'donghai', scene: 'sea', x: 93, y: 72, sea: true, port: 'lintan', fare: 20,
@@ -37,10 +37,10 @@
       desc: '明教总坛建在昆仑山的绝顶上。教主阳顶天失踪多年，四大法王散了，五散人和光明左使杨逍互不服气。' },
     zhongnan: { name: '终南山 · 重阳宫', short: '重阳宫', region: 'zhongnan', scene: 'temple', x: 47, y: 42,
       desc: '全真教的祖庭。王重阳、丘处机都已是百年前的人，宫里的道士照旧早课晚课，香火比当年冷清。' },
-    xiangyang: { name: '襄阳', short: '襄阳', region: 'xiangyang', scene: 'citywall', x: 61, y: 59, inn: 5, shop: ['jinchuang', 'renshen', 'taizu_pu'], work: true,
+    xiangyang: { name: '襄阳', short: '襄阳', region: 'xiangyang', scene: 'citywall', x: 61, y: 59, inn: 5, clinic: 25, shop: ['jinchuang', 'renshen', 'taizu_pu'], work: true,
       desc: '六十年前城破，郭大侠夫妇殉城。如今城墙补过，城头挂的是元人的旗。丐帮在城西破庙里设了分舵。',
       workText: ['你在城外帮人修了几天城墙。', '你在汉水边拉了几天纤。'] },
-    dadu: { name: '大都 · 汝阳王府', short: '大都', region: 'dadu', scene: 'palace', x: 70, y: 13, inn: 10, shop: ['jinchuang', 'renshen', 'jiedu', 'qishang_pu'], work: true,
+    dadu: { name: '大都 · 汝阳王府', short: '大都', region: 'dadu', scene: 'palace', x: 70, y: 13, inn: 10, clinic: 40, shop: ['jinchuang', 'renshen', 'jiedu', 'qishang_pu'], work: true,
       desc: '元朝的都城，街比别处宽，马比别处多。汝阳王府占了半条街，门口的番僧比石狮子还高。',
       workText: ['你在大都的车马行喂了几天马。', '你给酒楼洗了几天碗。'] },
   });
@@ -101,7 +101,7 @@
     renshen: { name: '老山参', type: '药', price: 25, use: { mp: 80 }, d: '补气，回 80 点内力。' },
     jiedu: { name: '解毒丹', type: '药', price: 18, use: { hp: 40, inj: 1 }, d: '解毒，回 40 点气血，治一层内伤。' },
     dahuan: { name: '少林大还丹', type: '药', price: 120, use: { full: true, inj: 2 }, d: '少林秘制。气血内力全满，治两层内伤。' },
-    xuelian: { name: '天山雪莲', type: '药', price: 0, use: { full: true, inj: 9 }, d: '雪线上长的奇花。气血内力全满，内伤全好。' },
+    xuelian: { name: '天山雪莲', type: '药', price: 0, use: { full: true, inj: 9, mer: true }, d: '雪线上长的奇花。气血内力全满，内伤全好，断了的经脉也能接上。' },
     taizu_pu: { name: '太祖长拳谱', type: '秘籍', price: 15, teaches: 'taizu', d: '街头卖艺的都会几招。' },
     tuna_pu: { name: '吐纳法', type: '秘籍', price: 20, teaches: 'tuna', d: '最粗浅的呼吸吐纳。' },
     dengping_pu: { name: '登萍渡水', type: '秘籍', price: 90, teaches: 'dengping', d: '江南一路的轻功。' },
@@ -115,11 +115,11 @@
     shenghuo: { name: '圣火令', type: '信物', relic: true, holder0: 'bosi', teaches: 'shenghuo_wu', bonus: { 防御: 4 }, d: '黑黝黝的铁牌，刀剑砍不动，上面刻着波斯文字。可以学圣火令武功。' },
     wumu: { name: '武穆遗书', type: '信物', relic: true, bonus: { 防御: 6 }, d: '岳武穆的兵法。藏在屠龙刀里。带在身上防御 +6。' },
     jiuyin: { name: '九阴真经', type: '信物', relic: true, teaches: ['jiuyin_zhua', 'dafumo'], d: '藏在倚天剑里的经文。急功近利的人只学得会白骨爪。' },
-    heiyu: { name: '黑玉断续膏', type: '信物', relic: true, holder0: 'asan', use: { hp: 200, inj: 9 }, combat: false, d: '西域金刚门的秘药，能接续断骨。用一点就能治好内伤。' },
+    heiyu: { name: '黑玉断续膏', type: '信物', relic: true, holder0: 'asan', use: { hp: 200, inj: 9, mer: true }, combat: false, d: '西域金刚门的秘药，能接续断骨。用一点就能治好内伤，经脉断了也接得上。' },
     dagou: { name: '打狗棒', type: '信物', relic: true, holder0: 'shihuolong', bonus: { 攻击: 6 }, d: '碧绿的竹棒，丐帮帮主的信物。' },
     yijin: { name: '易筋经', type: '信物', relic: true, holder0: 'shaolin', teaches: 'yijin', d: '少林藏经阁的镇阁之宝，写在梵文的贝叶上，旁边有汉文注释。' },
     taiji: { name: '太极拳经', type: '信物', relic: true, holder0: 'zhangsanfeng', teaches: ['taiji_quan', 'taiji_jian'], d: '张三丰晚年悟出的拳理剑意，亲笔写下。' },
-    yijing: { name: '胡青牛医经', type: '信物', relic: true, d: '“医仙”胡青牛一生的心得。带着它，住店时内伤好得快。' },
+    yijing: { name: '胡青牛医经', type: '信物', relic: true, d: '“医仙”胡青牛一生的心得。带着它，住店时能给自己治一层内伤。' },
     yiyang: { name: '一阳指谱', type: '信物', relic: true, holder0: 'tianlong', teaches: 'yiyang', d: '大理段氏的家传指法，一灯大师一脉留下的手抄本。' },
     xiantian: { name: '先天功残篇', type: '信物', relic: true, holder0: 'quanzhen', teaches: 'xiantian', d: '王重阳的先天功，只剩前半部。' },
   });
@@ -140,6 +140,24 @@
     倒下: '{t}倒下了。', 冻住: '{t}被寒气冻住，动作慢了下来。', 反伤: '{a}自己也受了 {n} 点反震。', 毒发: '{t}毒发，掉了 {n} 点气血。', 被冻: '{a}浑身发僵，这一回合动不了。',
     运功回气: '{a}运功调息，内力回了 {n}。', 服药: '{a}服下{b}。', 逃脱: '你抽身就走，逃了出去。', 没逃掉: '你想走，被拦了回来。', 罢手: '斗了许久分不出胜负，双方各自罢手。',
     赢了: '你赢了。历练 +{n}，银两 +{s}。', 逃了: '你逃走了。', 不了了之: '这一架不了了之。', 战死: '你倒在了地上，再也没有起来。', 败了: '你被打倒了，醒来时浑身是伤，身上少了 {n} 两银子。', 战罢: '这一架打完了。',
+    // v2.2：判定门槛、内伤、医馆、快马、打听
+    门槛以上: '{k} {n} 以上', 门槛以下: '{k} {n} 以下', 内力不够: '内力不够（要 {n} 点）。', 花银两: '{n} 两', 花内力: '内力 {n}',
+    医经治伤: '你照着胡青牛医经给自己配了一服药，内伤好了一层。', 内伤未愈: '内伤还有 {n} 层，住店养不好，要找医馆或者吃药。',
+    没病: '大夫搭了搭脉：“你没病。”', 医馆治不了经脉: '大夫摇头：“经脉断了，我治不了。去找张真人那样的高人，或者天山雪莲、黑玉断续膏那样的奇药。”',
+    看不起病: '看病要 {n} 两银子，你不够。', 看病: '你花 {n} 两请大夫扎了针、开了药。内伤好了一层，还有 {k} 层。',
+    经脉好了: '你的经脉接上了，内力又能走满全身。', 易筋经治经脉: '易筋经练到第三层，断了的经脉自己接上了。', 伤重不能冒进: '内伤 {n} 层，再冒进就要出人命了。',
+    马钱不够: '马钱加船钱要 {n} 两。', 骑马上路: '你在{a}雇了一匹快马，走了 {n} 天到了{b}。',
+    打听到: '你在客店里花钱打听到：', 打听不起: '打听消息要 {n} 两银子。', 打听人: '你打听到，{a}眼下在{b}。', 没打听到: '你请人喝了几碗酒，听了一肚子闲话，没有什么用得上的。',
+    人已故: '这里的人说，{a}已经不在人世了。', 人去了: '{a}不在这里了。听说去了{b}。', 人不在: '{a}不在这里了，没人知道去了哪里。',
+  });
+
+  /* ---------- 判定的档位 ----------
+   * 事件里写 check: ['轻功', '难']。属性正好到档位的数值时成功率 50%，每差 1 点增减 step 个百分点。
+   * 数值按 300 局试玩的属性分布定（tools/playtest.js 会打印分布）：中档约是普通玩家的中间水平。平衡改了就调这张表。 */
+  QX.addChecks({
+    资质: { 易: 38, 中: 48, 难: 58, 极难: 70, step: 2.5 },
+    根骨: { 易: 14, 中: 22, 难: 32, 极难: 45, step: 2.5 },
+    轻功: { 易: 10, 中: 15, 难: 21, 极难: 28, step: 3 },
   });
 
   /* ---------- 改命标记的说明（结局里“江湖因你而变”会列出来） ---------- */
@@ -180,12 +198,12 @@
       text: (g) => g.pick(['你在草丛里踢到一个破钱袋。', '你在旧庙的供桌下摸到几块碎银子。', '河边石头缝里卡着一个小布包。']),
       choices: [
         { t: '收下', fx: (g) => g.add('银两', 6 + Math.round(g.rnd() * 10)), res: '你把银子揣进怀里。' },
-        { t: '在原地等失主', fx: (g) => { g.add('品德', 2); g.days(2); if (g.rnd() < 0.5) { g.add('声望', 2); g.add('银两', 3); } }, res: '你等了两天。来了个哭哭啼啼的老汉，硬塞给你几文钱谢你。' },
+        { t: '在原地等失主', fx: (g) => { g.add('品德', 2); g.days(2); if (g.rnd() < 0.5) { g.add('声望', 2); g.add('银两', 3); g.log('来了个哭哭啼啼的老汉，硬塞给你几文钱谢你。'); } else g.log('没有人来找。你把钱袋挂在路边的树杈上，留给它的主人。'); }, res: '你在原地等了两天。' },
       ] },
     { id: 'ex_herb', explore: '*', once: false, w: 2, t: '草药',
       text: '你在山坡上看见几株认得的草药。',
       choices: [
-        { t: '采下来自己配药', check: ['资质', 40], fx: (g) => g.give('jinchuang', 1), res: '你把草药捣碎，配成了一份金创药。', fail: { res: '你配错了方子，药都糟蹋了。' } },
+        { t: '采下来自己配药', check: ['资质', '易'], fx: (g) => g.give('jinchuang', 1), res: '你把草药捣碎，配成了一份金创药。', fail: { res: '你配错了方子，药都糟蹋了。' } },
         { t: '采了去卖钱', fx: (g) => g.add('银两', 5), res: '药铺收了，给了五两。' },
       ] },
     { id: 'ex_oldbeggar', explore: '*', once: false, w: 1, cond: (g) => g.st('银两') >= 3, t: '老乞丐',
@@ -207,7 +225,7 @@
       choices: [
         { t: '拔刀相向', fight: { foes: ['shanzei', 'shanzei'], win: { fx: (g) => g.add('声望', 2), res: '强人跑了，扔下了几两银子。' }, lose: { res: '你被打晕了，醒来时钱袋空了一半。' } } },
         { t: '交出一半银两', fx: (g) => g.add('银两', -Math.round(g.money() / 2)), res: '他们拿了钱，骂骂咧咧地走了。' },
-        { t: '撒腿就跑', check: ['轻功', 25], res: '你跑得比他们快。', fail: { fx: (g) => { g.hurt(30); g.add('银两', -Math.round(g.money() / 3)); }, res: '你没跑掉，挨了几刀，钱也被抢了。' } },
+        { t: '撒腿就跑', check: ['轻功', '易'], res: '你跑得比他们快。', fail: { fx: (g) => { g.hurt(30); g.add('银两', -Math.round(g.money() / 3)); }, res: '你没跑掉，挨了几刀，钱也被抢了。' } },
       ] },
     { id: 'ex_yuanbing', explore: '*', once: false, w: 1.5, cond: (g) => ['xiangyang', 'dadu', 'lintan', 'dali', 'shaolin'].includes(g.loc), t: '元兵',
       text: '几个元兵在街上抢一个老汉的鸡，老汉跪在地上求，被一脚踹开。',
@@ -220,7 +238,7 @@
       text: '天快黑了，林子里亮起几对绿眼睛。',
       choices: [
         { t: '背靠大树，跟它们拼', fight: { foes: ['lang', 'lang', 'lang'], win: { fx: (g) => g.add('银两', 8), res: '你剥了狼皮，拿到镇上卖了几两银子。' }, lose: { res: '你爬上了树，等到天亮才敢下来，身上全是牙印。' } } },
-        { t: '点一把火，慢慢退走', check: ['资质', 35], res: '狼怕火，没敢跟上来。', fail: { fx: (g) => g.hurt(25), res: '火把灭了，你被咬了一口才逃掉。' } },
+        { t: '点一把火，慢慢退走', check: ['资质', '易'], res: '狼怕火，没敢跟上来。', fail: { fx: (g) => g.hurt(25), res: '火把灭了，你被咬了一口才逃掉。' } },
       ] },
     { id: 'ex_view', explore: '*', once: false, w: 1, t: '登高',
       text: (g) => g.pick(['你爬到山顶，看了一夜的星星。', '你在溪边坐了半天，看鱼游来游去。', '你在破庙里躲了一夜的雨，听了一夜的雨声。']),
@@ -256,7 +274,7 @@
       text: '连下了三天的大雨，河水涨了，渡船不开。',
       choices: [
         { t: '在河边的小庙里等', fx: (g) => { g.days(4); g.restMp(50); }, res: '你在庙里打坐了几天，雨停了。' },
-        { t: '冒雨蹚水过河', check: ['根骨', 18], res: '水没到胸口，你还是过去了。', fail: { fx: (g) => { g.hurt(40); g.injure(1); }, res: '你被冲出去老远，呛了好几口水，着了凉。' } },
+        { t: '冒雨蹚水过河', check: ['根骨', '易'], res: '水没到胸口，你还是过去了。', fail: { fx: (g) => { g.hurt(40); g.injure(1); }, res: '你被冲出去老远，呛了好几口水，着了凉。' } },
       ] },
     { id: 'rd_duel', road: true, once: false, w: 1.5, t: '比武',
       text: '路边茶棚里，一个背剑的年轻人盯着你看了半天，起身拱手：“看兄台也是练家子，切磋几招？”',

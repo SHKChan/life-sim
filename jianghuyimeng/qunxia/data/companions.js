@@ -16,7 +16,7 @@
     { id: 'cp_yinli_face', anywhere: true, act: '问殷离脸上的毒', cond: (g) => g.inParty('yinli') && !g.f('yinliFace') && !g.f('yinliTalked'), t: '殷离的脸',
       text: '夜里殷离睡不着，摸着自己肿起来的脸。她说她娘就是被人欺负死的，她练千蛛万毒手，是不想再被人欺负。',
       choices: [
-        { t: '照胡青牛医经上的方子替她解毒', cond: (g) => g.has('yijing'), check: ['资质', 40], fx: (g) => { g.set('yinliFace'); g.add('品德', 5); },
+        { t: '照胡青牛医经上的方子替她解毒', cond: (g) => g.has('yijing'), check: ['资质', '易'], fx: (g) => { g.set('yinliFace'); g.add('品德', 5); },
           res: '你配了三天的药。第七天，她脸上的肿消了。她在溪边照了很久，回来的时候眼睛是红的。', fail: { fx: (g) => g.set('yinliTalked'), res: '药没配对。她说算了，反正也习惯了。' } },
         { t: '劝她别练了', fx: (g) => { g.set('yinliTalked'); g.add('品德', 2); }, res: '她没说话。第二天你发现，她把装毒蛛的金盒子扔进了河里。' },
         { t: '让她教你这门功夫', cond: (g) => g.st('品德') < 40, fx: (g) => { g.set('yinliTalked'); g.learn('qianzhu', 1); g.add('品德', -3); }, res: '她把手伸进金盒子里给你看。你学会了，手肿了三天。' },
@@ -41,7 +41,7 @@
     { id: 'cp_zhou_yang', loc: 'guangming', arrive: true, cond: (g) => g.inParty('zhoudian') && g.before(134, 5), t: '周颠上山',
       text: '一到光明顶，周颠就要冲进大殿找杨逍算账：“老周今天不打这一架，就不姓周！”',
       choices: [
-        { t: '拉住他', check: ['根骨', 25], fx: (g) => { g.set('zdCalm'); g.add('品德', 2); }, res: '你死死抱住他的腰。他骂了半天，骂累了，坐下喝酒。', fail: { fx: (g) => g.hurt(30), res: '他一甩手把你甩开，冲进去跟杨逍打了一架，鼻青脸肿地出来了。' } },
+        { t: '拉住他', check: ['根骨', '中'], fx: (g) => { g.set('zdCalm'); g.add('品德', 2); }, res: '你死死抱住他的腰。他骂了半天，骂累了，坐下喝酒。', fail: { fx: (g) => g.hurt(30), res: '他一甩手把你甩开，冲进去跟杨逍打了一架，鼻青脸肿地出来了。' } },
         { t: '帮他一起骂', fx: (g) => { g.add('声望', 2); g.set('zdLoud'); }, res: '你们两个在殿外骂了一个时辰。杨逍始终没出来。' },
       ] },
     { id: 'cp_zhou_drink', anywhere: true, act: '陪周颠喝酒', cond: (g) => g.inParty('zhoudian') && g.money() >= 5, once: false, t: '喝酒',
@@ -56,7 +56,7 @@
       text: '小昭一上岛，就看见了金花婆婆。她的手在抖。夜里她对你说：“那是我娘。”',
       choices: [
         { t: '替她保守秘密', fx: (g) => { g.set('knowXiaozhaoMother'); g.add('品德', 2); }, res: '小昭说，她娘犯了波斯总教的规矩，她进光明顶，就是想替娘找乾坤大挪移，好去赎罪。' },
-        { t: '劝她们母女相认', check: ['资质', 45], fx: (g) => { g.set('knowXiaozhaoMother'); g.set('xzReunion'); }, res: '那天晚上，木屋里传出了哭声，哭了很久。', fail: { fx: (g) => g.set('knowXiaozhaoMother'), res: '金花婆婆冷冷地说她没有女儿。小昭一夜没睡。' } },
+        { t: '劝她们母女相认', check: ['资质', '中'], fx: (g) => { g.set('knowXiaozhaoMother'); g.set('xzReunion'); }, res: '那天晚上，木屋里传出了哭声，哭了很久。', fail: { fx: (g) => g.set('knowXiaozhaoMother'), res: '金花婆婆冷冷地说她没有女儿。小昭一夜没睡。' } },
       ] },
 
     /* ---------- 常遇春 ---------- */

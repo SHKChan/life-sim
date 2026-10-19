@@ -58,7 +58,8 @@
   const RANGE = { 品德: [0, 100], 声望: [0, 999], 银两: [0, 999999] };
 
   function log(t, k) { if (!t) return; S.log.push({ d: S.day, t, k: k || '' }); if (S.log.length > 400) S.log.splice(0, S.log.length - 400); }
-  function news(t) { if (!t) return; S.news.push({ d: S.day, t }); if (S.news.length > 80) S.news.splice(0, S.news.length - 80); }
+  // 传闻。o 可以带 loc（在哪儿，界面上有“去看看”）、cred（确凿 / 听说 / 谣言）、from / to（什么时候，日子）、id
+  function news(t, o) { if (!t) return; S.news.push(Object.assign({ d: S.day, t }, o || {})); if (S.news.length > 80) S.news.splice(0, S.news.length - 80); }
   function addSt(k, n) {
     if (!(k in S.st)) throw new Error('未知属性 ' + k);
     const r = RANGE[k] || [0, 999];
@@ -82,10 +83,15 @@
     for (const id in S.items) if (S.items[id] > 0 && QX.ITEMS[id] && QX.ITEMS[id].bonus && QX.ITEMS[id].bonus[k]) v += QX.ITEMS[id].bonus[k];
     if (k === '防御') v += QX.bestNei();
     if (k === '轻功') v += bestOf('轻功') * 2;
+    if (k === '攻击' && S.inj) v *= 1 - INJ_HIT * S.inj; // 带着内伤，出手就没那么重
     return Math.round(v);
   };
+  /* 内伤：每层攻击、内力上限各降 6%。自己慢慢只能好到 SELF_HEAL 层，剩下的要靠药、医馆、名医。
+   * 经脉受损（S.mer）：走火入魔留下的，内力上限再降两成，要找高人或奇药才能治。 */
+  const INJ_HIT = 0.06, SELF_HEAL = 2, HARD_MAX_INJ = 3;
+  QX.INJ = { hit: INJ_HIT, self: SELF_HEAL, hardMax: HARD_MAX_INJ };
   QX.maxHp = () => Math.round(60 + QX.eff('根骨') * 3 + S.xp / 8 + QX.bestNei() * 6);
-  QX.maxMp = () => Math.round(10 + QX.eff('内力') * 2 + QX.bestNei() * 4);
+  QX.maxMp = () => Math.round((10 + QX.eff('内力') * 2 + QX.bestNei() * 4) * (1 - INJ_HIT * S.inj) * (S.mer ? 0.8 : 1));
   QX.age = () => CFG.age + Math.floor(S.day / DPY);
   QX.relicIds = () => Object.keys(QX.ITEMS).filter((k) => QX.ITEMS[k].relic);
 
@@ -188,6 +194,8 @@
       heal: (n) => { S.hp = clamp(S.hp + n, 1, QX.maxHp()); }, hurt: (n) => { S.hp = clamp(S.hp - n, 1, QX.maxHp()); },
       restMp: (n) => { S.mp = clamp(S.mp + n, 0, QX.maxMp()); },
       injure: (n) => { S.inj = clamp(S.inj + (n || 1), 0, 9); }, cure: (n) => { S.inj = n ? Math.max(0, S.inj - n) : 0; }, inj: () => S.inj,
+      mer: () => !!S.mer, cureMer: (t) => cureMer(t),
+      rumor: (t, o) => { news(t, Object.assign({ cred: '听说' }, o || {})); log(t, 'news'); },
       days: (n) => { S.pend += n; }, move: (l) => { if (!QX.LOCS[l]) throw new Error('未知地点 ' + l); S.loc = l; },
       log: (t) => log(t, 'ev'), news: (t) => news(t),
       die: (t) => { S.over = { kind: 'dead', text: t, day: S.day }; },
@@ -203,11 +211,38 @@
   QX.FLAGS_UNKNOWN = {};
   QX.G = () => G();
 
+  /* 判定：check: ['属性', 档位或数值, 加成]。档位（易、中、难、极难）按 QX.CHECKS 的表换成这个属性的数值，
+   * 属性正好等于档位数值时成功率 50%，每差 1 点按表里的 step 增减。写数值的照旧按每点 3%。
+   * 第三项是剧情里写定的加成（例如这个选项要花内力或银两，把握更大）。 */
+  QX.CHECKS = {};
+  QX.addChecks = (o) => Object.assign(QX.CHECKS, o);
+  QX.TIERS = ['易', '中', '难', '极难'];
+  function dcOf(chk) {
+    const T = QX.CHECKS[chk[0]];
+    if (typeof chk[1] === 'string') { if (!T || T[chk[1]] == null) throw new Error('判定档位不存在 ' + chk[0] + ' ' + chk[1]); return { dc: T[chk[1]], step: T.step }; }
+    return { dc: chk[1], step: 3 };
+  }
   function chance(chk) {
-    const v = QX.eff(chk[0]);
-    return clamp(Math.round(50 + (v - chk[1]) * 3), 5, 95);
+    const d = dcOf(chk);
+    return clamp(Math.round(50 + (QX.eff(chk[0]) - d.dc) * d.step + (chk[2] || 0)), 5, 95);
   }
   QX.chance = chance;
+  // 此刻这个属性大致在哪一档（界面上写在属性旁边）
+  QX.tierOf = (k) => {
+    const T = QX.CHECKS[k]; if (!T) return '';
+    const v = QX.eff(k);
+    let got = '';
+    for (const x of QX.TIERS) if (v >= T[x]) got = x;
+    return got;
+  };
+  // 门槛：need: ['品德', 50] 是 50 以上才能选，['品德', '<', 30] 是 30 以下才能选。不够时选项灰掉
+  function needOk(c) {
+    if (!c.need) return '';
+    const k = c.need[0], low = c.need[1] === '<', n = low ? c.need[2] : c.need[1], v = QX.eff(k);
+    if (low ? v < n : v >= n) return '';
+    return QX.tx(low ? '门槛以下' : '门槛以上', { k, n });
+  }
+  const needText = (c) => (c.need ? QX.tx(c.need[1] === '<' ? '门槛以下' : '门槛以上', { k: c.need[0], n: c.need[1] === '<' ? c.need[2] : c.need[1] }) : '');
 
   /* ---------- 新游戏 ---------- */
   QX.newGame = (o) => {
@@ -247,19 +282,34 @@
     n = Math.max(0, Math.round(n));
     if (!n) return;
     S.day += n;
-    // 路上、日常慢慢恢复；内伤一个月好一层
+    // 路上、日常慢慢恢复；内伤一个月好一层，但自己只能好到两层
     S.hp = clamp(S.hp + Math.round(QX.maxHp() * 0.03 * n * (S.inj ? 0.4 : 1)), 1, QX.maxHp());
     S.mp = clamp(S.mp + Math.round(QX.maxMp() * 0.05 * n), 0, QX.maxMp());
     S.injT = (S.injT || 0) + n;
-    while (S.injT >= 30) { S.injT -= 30; if (S.inj) S.inj--; }
+    while (S.injT >= 30) { S.injT -= 30; if (S.inj > SELF_HEAL) S.inj--; }
     timeline();
     if (!S.over && S.day >= END_DAY()) finish('deadline');
   }
+  /* 风声：大势写了 rumor: { d: 提前几天, t: 文字 }，到了日子就先放出一条带地点的传闻，玩家可以提前赶去。
+   * 打听（客店里花钱）可以把还没到日子的风声提前问出来。 */
+  function rumor(T, early) {
+    S.rum = S.rum || {};
+    if (S.rum[T.id] || !T.rumor) return false;
+    const st = dv(T.at[0], T.at[1], T.at[2]);
+    S.rum[T.id] = 1;
+    const t = val(T.rumor.t, G());
+    news(t, { loc: T.loc || '', cred: T.rumor.cred || '确凿', from: st, to: st + (T.win || 0), id: T.id });
+    log((early ? QX.tx('打听到') : '') + t, 'news');
+    return true;
+  }
+  QX.upcoming = () => QX.TIMELINE.filter((T) => T.rumor && !S.tl[T.id] && !(S.rum && S.rum[T.id]) && S.day < dv(T.at[0], T.at[1], T.at[2]))
+    .sort((a, b) => dv(a.at[0], a.at[1], a.at[2]) - dv(b.at[0], b.at[1], b.at[2]));
   function timeline() {
     const g = G();
     for (const T of QX.TIMELINE) {
       if (S.tl[T.id]) continue;
       const st = dv(T.at[0], T.at[1], T.at[2]), en = st + (T.win || 0);
+      if (T.rumor && S.day >= st - T.rumor.d && S.day < st) rumor(T);
       if (S.day < st) continue;
       if (T.loc && T.ev && S.loc === T.loc && S.day <= en && (!T.cond || T.cond(g))) {
         S.tl[T.id] = 'here';
@@ -291,6 +341,17 @@
     S.loc = loc;
     S.seen[loc] = (S.seen[loc] || 0) + 1;
     const g = G();
+    // 人跟着大势走：上回在这里见过的人，这回不在了，就记一句他去了哪里（江湖上传得开的才知道）
+    S.lastAt = S.lastAt || {};
+    for (const pid in S.lastAt) {
+      if (S.lastAt[pid] !== loc) continue;
+      const w = QX.where(pid);
+      if (w === loc) continue;
+      const P = QX.PEOPLE[pid];
+      log(S.dead[pid] ? QX.tx('人已故', { a: P.name }) : w && w !== 'party' ? QX.tx('人去了', { a: P.name, b: QX.LOCS[w].short }) : QX.tx('人不在', { a: P.name }), 'news');
+      delete S.lastAt[pid];
+    }
+    for (const pid of QX.peopleHere()) if (S.met[pid]) S.lastAt[pid] = loc;
     // 到达时自动触发的事件（arrive: true）
     for (const id in QX.EVENTS) {
       const E = QX.EVENTS[id];
@@ -315,9 +376,17 @@
   function costOk(c) {
     if (!c.cost) return '';
     if (c.cost.银两 && S.st.银两 < c.cost.银两) return QX.tx('银两不够', { n: c.cost.银两 });
+    if (c.cost.内力 && S.mp < c.cost.内力) return QX.tx('内力不够', { n: c.cost.内力 });
     if (c.cost.item && !QX.has(c.cost.item)) return QX.tx('缺少', { a: itemDef(c.cost.item).name });
     return '';
   }
+  function payCost(c) {
+    if (!c.cost) return;
+    if (c.cost.银两) addSt('银两', -c.cost.银两);
+    if (c.cost.内力) S.mp = clamp(S.mp - c.cost.内力, 0, QX.maxMp());
+    if (c.cost.item) take(c.cost.item, 1);
+  }
+  const costText = (c) => (c.cost ? [c.cost.银两 ? QX.tx('花银两', { n: c.cost.银两 }) : '', c.cost.内力 ? QX.tx('花内力', { n: c.cost.内力 }) : ''].filter(Boolean).join(' · ') : '');
   function startEvent(id) {
     const E = eventDef(id), g = G();
     S.done[id] = (S.done[id] || 0) + 1;
@@ -328,8 +397,9 @@
     (E.choices || []).forEach((c, i) => {
       if (c.cond && !c.cond(g)) return;
       const f = c.fight;
-      ch.push({ t: val(c.t, g), a: { k: 'c', i }, tag: c.tag || '', dis: costOk(c), fight: !!f, deadly: !!(f && f.lose && f.lose.mode === 'death'),
-        p: c.check ? chance(c.check) : null, ck: c.check ? c.check[0] : '' });
+      ch.push({ t: val(c.t, g), a: { k: 'c', i }, tag: c.tag || '', dis: costOk(c) || needOk(c), fight: !!f, deadly: !!(f && f.lose && f.lose.mode === 'death'),
+        p: c.check ? chance(c.check) : null, ck: c.check ? c.check[0] : '', lv: c.check && typeof c.check[1] === 'string' ? c.check[1] : '',
+        need: needText(c), cost: costText(c) });
     });
     S.ev = { id, title: val(E.t, g) || '', text: val(E.text, g) || '', who: E.who || '', choices: ch, res: null };
     if (!ch.length) S.ev.res = '';
@@ -337,16 +407,19 @@
   }
   function resolveChoice(i) {
     const E = eventDef(S.ev.id), c = E.choices[i], g = G();
-    if (costOk(c)) return;
-    if (c.cost && c.cost.银两) addSt('银两', -c.cost.银两);
-    if (c.cost && c.cost.item) take(c.cost.item, 1);
+    if (costOk(c) || needOk(c)) return;
+    payCost(c);
     S.ev.picked = val(c.t, g);
     if (c.fight) { startFight(c.fight, { ev: S.ev.id, ci: i }); return; }
     let br = c, roll = null;
     if (c.check) {
-      const p = chance(c.check), ok = R() * 100 < p;
-      roll = { k: c.check[0], p, ok };
-      if (!ok) br = c.fail || { res: QX.tx('没成') };
+      const p = chance(c.check), x = R() * 100, ok = x < p;
+      // 大成功：掷出的数比成功率的五分之一还小，而且这个选项写了 great
+      const great = ok && c.great && x < p / 5;
+      roll = { k: c.check[0], p, ok, lv: typeof c.check[1] === 'string' ? c.check[1] : '', great: !!great };
+      // 大成功在成功的结果上再多得一点：先照常结算，再结算 great
+      if (great) br = { fx: (gg) => { if (c.fx) c.fx(gg); if (c.great.fx) c.great.fx(gg); }, res: c.great.res || c.res, next: c.great.next || c.next };
+      else if (!ok) br = c.fail || { res: QX.tx('没成') };
     }
     applyBranch(br, roll, c);
   }
@@ -386,6 +459,7 @@
     const P = personDef(pid), g = G();
     const first = !S.met[pid];
     S.met[pid] = true;
+    S.lastAt = S.lastAt || {}; S.lastAt[pid] = S.loc;
     const ch = [];
     for (const id in QX.EVENTS) {
       const E = QX.EVENTS[id];
@@ -459,6 +533,8 @@
     out.push({ k: 'explore' });
     if (L.shop) out.push({ k: 'shop' });
     if (L.inn) out.push({ k: 'inn', cost: L.inn });
+    if (L.inn) out.push({ k: 'ask', cost: ASK_COST });
+    if (L.clinic && S.inj) out.push({ k: 'clinic', cost: L.clinic });
     if (L.work) out.push({ k: 'work' });
     if (S.sect && QX.SECTS[S.sect].home === S.loc) out.push({ k: 'chore' });
     out.push({ k: 'practise' }, { k: 'rest' }, { k: 'wait' }, { k: 'travel' });
@@ -473,6 +549,8 @@
       case 'ev': startEvent(id); break;
       case 'explore': r = explore(); break;
       case 'inn': r = inn(); break;
+      case 'ask': r = ask(); break;
+      case 'clinic': r = clinic(); break;
       case 'work': r = work(); break;
       case 'chore': r = chore(); break;
       case 'rest': r = rest(); break;
@@ -484,22 +562,46 @@
     QX.save();
     return r;
   };
+  /* 牌堆：同一处的事件抽过一张就先放一边，这一处的牌抽完了才重洗；通用的事件全天下共用一副。
+   * 抽牌时本地的事件优先（LOCAL_FIRST 的机会先从本地抽），本地抽完才轮到通用的。 */
+  const LOCAL_FIRST = 0.65;
+  function weighted(pool) {
+    let tot = pool.reduce((s, x) => s + x[1], 0), r = R() * tot;
+    for (const x of pool) { r -= x[1]; if (r <= 0) return x[0]; }
+    return pool.length ? pool[pool.length - 1][0] : null;
+  }
+  function drawFrom(key, pool) {
+    if (!pool.length) return null;
+    S.deck = S.deck || {};
+    let used = S.deck[key] || [];
+    let left = pool.filter((x) => !used.includes(x[0]));
+    if (!left.length) { used = []; left = pool; }
+    const id = weighted(left);
+    used.push(id);
+    S.deck[key] = used;
+    return id;
+  }
+  QX.drawFrom = drawFrom;
   function explore() {
-    const g = G(), pool = [];
+    const g = G(), local = [], general = [];
     for (const id in QX.EVENTS) {
       const E = QX.EVENTS[id];
       if (!E.explore) continue;
-      const here = E.explore === S.loc || (Array.isArray(E.explore) && E.explore.includes(S.loc)) || (E.explore === '*' && !(QX.LOCS[S.loc].wild === false && E.wild));
-      if (!here) continue;
+      const mine = E.explore === S.loc || (Array.isArray(E.explore) && E.explore.includes(S.loc));
+      const any = E.explore === '*' && !(QX.LOCS[S.loc].wild === false && E.wild);
+      if (!mine && !any) continue;
       if (!evAvailable(E, g)) continue;
-      const w = val(E.w, g) || (E.explore === '*' ? 1 : 4);
-      pool.push([id, w]);
+      (mine ? local : general).push([id, val(E.w, g) || (mine ? 4 : 1)]);
     }
     passDays(3);
     if (S.over) return null;
-    if (!pool.length) { const t = QX.tx('一无所获'); log(t); return t; }
-    let tot = pool.reduce((s, x) => s + x[1], 0), r = R() * tot;
-    for (const [id, w] of pool) { r -= w; if (r <= 0) { S.queue.unshift(id); break; } }
+    if (!local.length && !general.length) { const t = QX.tx('一无所获'); log(t); return t; }
+    // 本地这副牌还有没抽过的，就多半从本地抽
+    const usedHere = (S.deck && S.deck[S.loc]) || [];
+    const localLeft = local.some((x) => !usedHere.includes(x[0]));
+    const fromLocal = local.length && (!general.length || (localLeft && R() < LOCAL_FIRST) || (!localLeft && R() < 0.3));
+    const id = fromLocal ? drawFrom(S.loc, local) : drawFrom('*', general);
+    if (id) S.queue.unshift(id);
     return null;
   }
   function inn() {
@@ -507,9 +609,58 @@
     if (S.st.银两 < L.inn) return QX.tx('住不起', { n: L.inn });
     addSt('银两', -L.inn);
     passDays(1);
+    // 住店只养气血内力，不治内伤；带着胡青牛医经的人会给自己配药，能好一层
+    const cured = S.inj && QX.has('yijing');
+    if (cured) S.inj--;
     S.hp = QX.maxHp(); S.mp = QX.maxMp();
-    if (S.inj) S.inj = Math.max(0, S.inj - (QX.has('yijing') ? 3 : 1));
-    const t = QX.tx('住店', { n: L.inn });
+    const t = QX.tx('住店', { n: L.inn }) + (cured ? QX.tx('医经治伤') : S.inj ? QX.tx('内伤未愈', { n: S.inj }) : '');
+    log(t);
+    return t;
+  }
+  // 医馆：花钱治一层内伤，半天
+  function clinic() {
+    const L = QX.LOCS[S.loc];
+    if (!S.inj && !S.mer) return QX.tx('没病');
+    if (!S.inj) return QX.tx('医馆治不了经脉');
+    if (S.st.银两 < L.clinic) return QX.tx('看不起病', { n: L.clinic });
+    addSt('银两', -L.clinic);
+    S.inj--;
+    passDays(1);
+    const t = QX.tx('看病', { n: L.clinic, k: S.inj });
+    log(t);
+    return t;
+  }
+  // 治经脉：高人、奇药（物品的 use.mer）、易筋经
+  function cureMer(why) { if (!S.mer) return; S.mer = 0; log(why || QX.tx('经脉好了'), 'good'); }
+  /* 打听：在客店里花 ASK_COST 两、一天。先问还没到日子的大事（提前放出风声），
+   * 再问数据里 QX.addAsks 注册的消息（(g) => 文字 | { t, loc } | null），最后问认得的人去了哪里。 */
+  const ASK_COST = 10;
+  QX.ASKS = [];
+  QX.addAsks = (arr) => arr.forEach((f) => QX.ASKS.push(f));
+  function ask() {
+    if (S.st.银两 < ASK_COST) return QX.tx('打听不起', { n: ASK_COST });
+    addSt('银两', -ASK_COST);
+    passDays(1);
+    const up = QX.upcoming()[0];
+    if (up) { rumor(up, true); return QX.tx('打听到') + val(up.rumor.t, G()); }
+    const g = G();
+    for (const f of QX.ASKS.slice().sort(() => R() - 0.5)) {
+      const r = f(g);
+      if (!r) continue;
+      const o = typeof r === 'string' ? { t: r } : r;
+      news(o.t, { loc: o.loc || '', cred: o.cred || '听说' });
+      log(QX.tx('打听到') + o.t, 'news');
+      return QX.tx('打听到') + o.t;
+    }
+    const ppl = Object.keys(S.met).filter((p) => { const w = QX.where(p); return w && w !== 'party' && w !== S.loc; });
+    if (ppl.length) {
+      const p = pick(ppl), w = QX.where(p);
+      const t = QX.tx('打听人', { a: QX.PEOPLE[p].name, b: QX.LOCS[w].short });
+      news(t, { loc: w, cred: '听说' });
+      log(t, 'news');
+      return t;
+    }
+    const t = QX.tx('没打听到');
     log(t);
     return t;
   }
@@ -581,7 +732,7 @@
     const risk = coach ? 0 : QX.practiseRisk(id, hard);
     if (R() < risk) {
       if (R() < 0.3) {
-        a.lv = Math.max(1, a.lv - 1); a.xp = 0; S.hp = 1; S.inj = clamp(S.inj + 3, 0, 9); out.hurt = 'zouhuo'; gain = 0;
+        a.lv = Math.max(1, a.lv - 1); a.xp = 0; S.hp = 1; S.inj = clamp(S.inj + 3, 0, 9); S.mer = 1; out.hurt = 'zouhuo'; gain = 0;
         log(QX.tx('走火入魔', { a: A.name }), 'bad');
       } else {
         S.inj = clamp(S.inj + 1, 0, 9); S.hp = Math.max(1, S.hp - Math.round(QX.maxHp() * 0.3)); out.hurt = 'neishang'; gain = Math.round(gain / 2);
@@ -595,9 +746,14 @@
     passDays(10);
     return out;
   }
+  // 内伤三层以上不许冒进
+  QX.hardBlock = () => (S.inj >= HARD_MAX_INJ ? QX.tx('伤重不能冒进', { n: S.inj }) : '');
   QX.practise = (id, hard) => {
     if (S.ev || S.fight || S.over || !QX.canPractise(id)) return null;
+    if (hard && QX.hardBlock()) return null;
     const r = practise(id, hard);
+    // 易筋经练到三级，经脉自己就接上了
+    if (id === 'yijin' && S.mer && QX.artLv('yijin') >= 3) cureMer(QX.tx('易筋经治经脉'));
     flush();
     QX.save();
     return r;
@@ -635,6 +791,7 @@
     if (u.mp) S.mp = clamp(S.mp + u.mp, 0, QX.maxMp());
     if (u.full) { S.hp = QX.maxHp(); S.mp = QX.maxMp(); }
     if (u.inj) S.inj = Math.max(0, S.inj - u.inj);
+    if (u.mer) cureMer();
   }
   QX.buy = (id) => {
     const it = itemDef(id), L = QX.LOCS[S.loc];
@@ -651,40 +808,49 @@
   /* ---------- 地图、行走 ---------- */
   function dist(a, b) { const A = QX.LOCS[a], B = QX.LOCS[b]; return Math.hypot(A.x - B.x, A.y - B.y); }
   function landDays(a, b) { return Math.max(2, Math.round(dist(a, b) * 0.9 / (1 + QX.eff('轻功') / 120))); }
-  QX.route = (to) => {
+  /* 快马：在有客店的城镇雇马，陆路少三成天数。价钱按陆路天数算，至少 HORSE_MIN 两 */
+  const HORSE_CUT = 0.7, HORSE_MIN = 15;
+  QX.canHorse = () => !!QX.LOCS[S.loc].inn;
+  QX.route = (to, horse) => {
     const A = QX.LOCS[S.loc], B = QX.LOCS[to];
     if (!B || to === S.loc) return null;
-    let days = 0, cost = 0, why = '';
-    if (B.sea && A.sea) days = Math.round(dist(S.loc, to) * 0.6);
-    else if (B.sea) { days = (S.loc === B.port ? 0 : landDays(S.loc, B.port)) + Math.round(dist(B.port, to) * 0.6); }
-    else if (A.sea) { days = Math.round(dist(S.loc, A.port) * 0.6) + (to === A.port ? 0 : landDays(A.port, to)); }
-    else days = landDays(S.loc, to);
-    days = Math.max(2, days);
-    if (B.sea) {
-      cost = B.fare || 0;
-      if (B.needs && !QX.has(B.needs)) why = QX.tx('要海图', { a: itemDef(B.needs).name });
-      else if (S.st.银两 < cost) why = QX.tx('船钱不够', { n: cost });
-    }
-    return { to, days, cost, why };
+    let land = 0, sea = 0, cost = 0, why = '';
+    if (B.sea && A.sea) sea = dist(S.loc, to) * 0.6;
+    else if (B.sea) { land = S.loc === B.port ? 0 : landDays(S.loc, B.port); sea = dist(B.port, to) * 0.6; }
+    else if (A.sea) { sea = dist(S.loc, A.port) * 0.6; land = to === A.port ? 0 : landDays(A.port, to); }
+    else land = landDays(S.loc, to);
+    const horseOk = !!(horse && land >= 4 && QX.canHorse());
+    const horseCost = land >= 4 && QX.canHorse() ? Math.max(HORSE_MIN, Math.round(land * 1.2)) : 0;
+    if (horseOk) { land *= HORSE_CUT; cost += horseCost; }
+    const days = Math.max(2, Math.round(land + sea));
+    if (B.sea) cost += B.fare || 0;
+    if (B.sea && B.needs && !QX.has(B.needs)) why = QX.tx('要海图', { a: itemDef(B.needs).name });
+    else if (S.st.银两 < cost) why = horseOk ? QX.tx('马钱不够', { n: cost }) : QX.tx('船钱不够', { n: cost });
+    return { to, days, cost, why, horse: horseOk, horseCost };
   };
-  QX.travel = (to) => {
+  QX.travel = (to, horse) => {
     if (S.ev || S.fight || S.over) return null;
-    const r = QX.route(to);
+    const r = QX.route(to, horse);
     if (!r || r.why) return r ? r.why : null;
     if (r.cost) addSt('银两', -r.cost);
     const from = S.loc;
     S.loc = to;
-    log(QX.tx('上路', { a: QX.LOCS[from].name, b: QX.LOCS[to].name, n: r.days }), 'move');
+    log(QX.tx(r.horse ? '骑马上路' : '上路', { a: QX.LOCS[from].name, b: QX.LOCS[to].name, n: r.days }), 'move');
     passDays(r.days);
     if (S.over) { QX.save(); return null; }
-    // 路上的遭遇：路越长越容易碰上
+    // 路上的遭遇：路越长越容易碰上。road: true 哪条路都有；road: ['西域', ...] 只在起点或终点在这些地区时有（写地区 id）
     if (R() < clamp(0.08 + r.days * 0.012, 0, 0.45)) {
       const g = G(), pool = [];
-      for (const id in QX.EVENTS) { const E = QX.EVENTS[id]; if (E.road && evAvailable(E, g)) pool.push([id, val(E.w, g) || 1]); }
-      if (pool.length) {
-        let tot = pool.reduce((s, x) => s + x[1], 0), x = R() * tot;
-        for (const [id, w] of pool) { x -= w; if (x <= 0) { S.queue.push(id); break; } }
+      const regs = [QX.LOCS[from].region, QX.LOCS[to].region];
+      for (const id in QX.EVENTS) {
+        const E = QX.EVENTS[id];
+        if (!E.road || !evAvailable(E, g)) continue;
+        if (Array.isArray(E.road) && !E.road.some((x) => regs.includes(x))) continue;
+        if (E.sea != null && !!E.sea !== !!(QX.LOCS[to].sea || QX.LOCS[from].sea)) continue;
+        pool.push([id, val(E.w, g) || 1]);
       }
+      const id = drawFrom('_road', pool);
+      if (id) S.queue.push(id);
     }
     arrive(to);
     flush();
@@ -912,7 +1078,7 @@
   /* ---------- 存档 ---------- */
   function readAll() { try { return JSON.parse(localStorage.getItem(CFG.key)) || {}; } catch (e) { return {}; } }
   function writeAll(o) { try { localStorage.setItem(CFG.key, JSON.stringify(o)); } catch (e) { /* 存储不可用 */ } }
-  QX.save = () => { if (!S || QX.noSave) return; const o = readAll(); o.auto = S; o.autoAt = Date.now(); writeAll(o); };
+  QX.save = () => { if (!S) return; S.hp = Math.min(S.hp, QX.maxHp()); S.mp = Math.min(S.mp, QX.maxMp()); if (QX.noSave) return; const o = readAll(); o.auto = S; o.autoAt = Date.now(); writeAll(o); };
   QX.saveManual = () => { if (!S) return; const o = readAll(); o.manual = JSON.parse(JSON.stringify(S)); o.manualAt = Date.now(); writeAll(o); };
   QX.slots = () => { const o = readAll(); return { auto: o.auto ? summary(o.auto, o.autoAt) : null, manual: o.manual ? summary(o.manual, o.manualAt) : null }; };
   function summary(s, at) { return { name: s.name, day: s.day, loc: s.loc, relics: (s.relics || []).length, over: !!s.over, at }; }

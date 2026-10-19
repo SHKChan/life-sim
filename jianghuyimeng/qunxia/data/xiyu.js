@@ -13,7 +13,7 @@
       text: '庄铮把一面小旗交给你：“山下来了一伙元兵，要烧咱们的粮道。你带五个兄弟去守。”',
       choices: [
         { t: '守住粮道', fight: { foes: ['yuanbing', 'yuanbing', 'baihu'], win: { fx: (g) => { g.add('声望', 8); g.set('helpedMing'); }, res: '粮道守住了。庄铮当着全旗的面敬了你一碗酒。' }, lose: { fx: (g) => g.add('声望', 2), res: '粮道烧了一半。庄铮说：“人回来就好。”' } } },
-        { t: '先派人探清虚实', check: ['资质', 45], fx: (g) => { g.add('声望', 6); g.add('资质', 1); }, res: '你绕到元兵背后放了把火，他们自己乱了。庄铮说你脑子比拳头好使。', fail: { fx: (g) => g.hurt(40), res: '探路的兄弟被发现了，你冲上去救人，挨了一刀。' } },
+        { t: '先派人探清虚实', check: ['资质', '中'], fx: (g) => { g.add('声望', 6); g.add('资质', 1); }, res: '你绕到元兵背后放了把火，他们自己乱了。庄铮说你脑子比拳头好使。', fail: { fx: (g) => g.hurt(40), res: '探路的兄弟被发现了，你冲上去救人，挨了一刀。' } },
       ] },
     { id: 'gm_xiaozhao', who: 'xiaozhao', act: '帮她提水', cond: (g) => !g.f('xiaozhaoTrust') && !g.f('xiaozhaoTold'), t: '小昭',
       text: '你帮小昭把水提到后院。她低声说了句谢谢，声音很好听。你看见她扫地的时候，一直在数地上的石砖。',
@@ -38,7 +38,7 @@
     { id: 'gm_sneak', loc: 'guangming', act: '夜里撬开圣火殿的地砖', cond: (g) => !g.has('qiankun') && !g.f('midaoDone') && g.before(134, 5) && !g.f('xiaozhaoTrust'), once: false, t: '圣火殿',
       text: '你听人说圣火殿下面有一条秘道，历代教主的武功都藏在里面。半夜，殿里只有一盏长明灯。',
       choices: [
-        { t: '撬开地砖钻下去', check: ['轻功', 45], fx: (g) => { g.give('qiankun'); g.set('midaoDone'); g.add('品德', -12); }, res: '你在秘道尽头的骸骨手里拿到了一张羊皮。出来的时候，天已经亮了，没人发现。',
+        { t: '撬开地砖钻下去', check: ['轻功', '难'], fx: (g) => { g.give('qiankun'); g.set('midaoDone'); g.add('品德', -12); }, res: '你在秘道尽头的骸骨手里拿到了一张羊皮。出来的时候，天已经亮了，没人发现。',
           fail: { res: '地砖还没撬开，巡夜的教众就到了。', next: 'gm_sneak_caught' } },
         { t: '不动明教的东西', fx: (g) => g.add('品德', 1), res: '你回去睡了。' },
       ] },
@@ -51,13 +51,13 @@
     { id: 'gm_xuelian', loc: 'guangming', explore: 'guangming', once: false, w: 2, t: '雪线',
       text: '雪线上有一朵白花，长在悬崖的石缝里。',
       choices: [
-        { t: '爬上去采', check: ['轻功', 35], fx: (g) => g.give('xuelian'), res: '你摘到了一朵天山雪莲。', fail: { fx: (g) => g.hurt(40), res: '你滑了下来，摔得不轻。' } },
+        { t: '爬上去采', check: ['轻功', '中'], fx: (g) => g.give('xuelian'), res: '你摘到了一朵天山雪莲。', fail: { fx: (g) => g.hurt(40), res: '你滑了下来，摔得不轻。' } },
         { t: '太险了', res: '你看了它一会儿，下山了。' },
       ] },
     { id: 'gm_valley', loc: 'guangming', explore: 'guangming', once: false, w: 4, from: [134, 6], cond: (g) => !g.has('jiuyang') && !g.f('jiuyangLeft'), t: '山谷',
       text: (g) => (g.f('jiuyangHint') ? '你照张教主说的，找到了那道悬崖。崖下有一个山洞，钻过去就是一个与世隔绝的山谷。' : '你在昆仑山里迷了路。一道悬崖下面像是有个山洞，洞那头隐隐有鸟叫。'),
       choices: [
-        { t: '钻进山洞', check: ['轻功', 45], fx: (g) => g.give('jiuyang'), res: '谷里有猿猴，有果树。一块大石下面埋着一个油布包，里面是四卷经书。封面上写着“九阳真经”。',
+        { t: '钻进山洞', check: ['轻功', '中'], fx: (g) => g.give('jiuyang'), res: '谷里有猿猴，有果树。一块大石下面埋着一个油布包，里面是四卷经书。封面上写着“九阳真经”。',
           fail: { fx: (g) => g.hurt(50), res: '洞太窄，你卡在里面半天，退出来的时候擦掉了一层皮。' } },
         { t: '天快黑了，改天再来', res: '你记下了路，回去了。' },
       ] },
@@ -78,7 +78,7 @@
     { id: 'gmd_zhuang', t: '庄铮',
       text: (g) => (g.alive('zhuangzheng') ? '灭绝师太的剑指着庄铮的喉咙。庄铮浑身是血，还在骂。' : '光明顶上到处是血。'),
       choices: [
-        { t: '扑上去，替庄铮挡这一剑', cond: (g) => g.alive('zhuangzheng'), check: ['轻功', 40], fx: (g) => { g.set('savedZhuang'); g.add('品德', 8); g.add('声望', 10); },
+        { t: '扑上去，替庄铮挡这一剑', cond: (g) => g.alive('zhuangzheng'), check: ['轻功', '难'], fx: (g) => { g.set('savedZhuang'); g.add('品德', 8); g.add('声望', 10); },
           res: '剑擦着你的胳膊过去了。就在这时，一个年轻人从人群里走出来，挡在了庄铮前面。庄铮活了下来。',
           fail: { fx: (g) => { g.hurt(80); g.injure(2); g.kill('zhuangzheng'); }, res: '你慢了一步。灭绝的剑先到了，又顺手划了你一剑。' }, next: 'gmd_end' },
         { t: '不敢动', cond: (g) => g.alive('zhuangzheng'), fx: (g) => g.kill('zhuangzheng'), res: '庄铮倒下了。', next: 'gmd_end' },

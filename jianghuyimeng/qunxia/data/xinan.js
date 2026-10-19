@@ -7,8 +7,8 @@
     { id: 'em_join', who: 'jingxuan', act: '求拜入峨嵋', cond: (g) => !g.sect && g.before(134, 2), once: false, t: '拜师',
       text: '静玄看了你半天：“峨嵋收弟子，先看品行，再看根骨。你为什么要学剑？”',
       choices: [
-        { t: '为了行侠仗义', check: ['品德', 50], fx: (g) => { g.setSect('emei'); g.learn('emei_jian', 1); g.add('品德', 2); }, res: '静玄带你去见了灭绝师太。师太说：“记住你今天的话。”你成了峨嵋弟子。', fail: { res: '静玄说：“行侠仗义，说说容易。你先回去吧。”' } },
-        { t: '为了不再受人欺负', check: ['根骨', 18], fx: (g) => { g.setSect('emei'); g.learn('emei_jian', 1); }, res: '静玄说这个理由实在。你成了峨嵋弟子。', fail: { res: '静玄捏了捏你的胳膊，摇了摇头。' } },
+        { t: '为了行侠仗义', need: ['品德', 50], fx: (g) => { g.setSect('emei'); g.learn('emei_jian', 1); g.add('品德', 2); }, res: '静玄带你去见了灭绝师太。师太说：“记住你今天的话。”你成了峨嵋弟子。' },
+        { t: '为了不再受人欺负', check: ['根骨', '易'], fx: (g) => { g.setSect('emei'); g.learn('emei_jian', 1); }, res: '静玄说这个理由实在。你成了峨嵋弟子。', fail: { res: '静玄捏了捏你的胳膊，摇了摇头。' } },
         { t: '算了', res: '你下山去了。' },
       ] },
     { id: 'em_rank3', t: '师父的话',
@@ -20,7 +20,7 @@
     { id: 'em_expel', t: '逐出师门',
       text: '你一上金顶，静玄就拦住了你：“你在山下做的事，师父都知道了。”',
       choices: [
-        { t: '跪下认错', check: ['品德', 40], fx: (g) => { g.add('品德', 5); g.days(30); }, res: '你面壁一个月。静玄说，再有下次，谁也保不了你。', fail: { fx: (g) => g.setSect(''), res: '静玄没有让你进门。你从此不是峨嵋弟子了。' } },
+        { t: '跪下认错', need: ['品德', 40], fx: (g) => { g.add('品德', 5); g.days(30); }, res: '你面壁一个月。静玄说，再有下次，谁也保不了你。' },
         { t: '转身下山', fx: (g) => g.setSect(''), res: '你把峨嵋的剑穗解下来，挂在了山门上。' },
       ] },
     { id: 'em_jinding', loc: 'emei', explore: 'emei', once: false, w: 3, t: '金顶',
@@ -32,7 +32,7 @@
     { id: 'em_monkey', loc: 'emei', explore: 'emei', once: false, w: 2, t: '猴子',
       text: '一只大猴子从树上跳下来，抓起你的包袱就跑。',
       choices: [
-        { t: '追', check: ['轻功', 30], fx: (g) => g.add('轻功', 1), res: '你追了它三个山头，它扔下包袱跑了。你脚下轻了不少。', fail: { fx: (g) => g.add('银两', -Math.round(g.money() * 0.2)), res: '猴子钻进了林子。包袱后来在山涧边找到了，银子少了一些。' } },
+        { t: '追', check: ['轻功', '中'], fx: (g) => g.add('轻功', 1), res: '你追了它三个山头，它扔下包袱跑了。你脚下轻了不少。', fail: { fx: (g) => g.add('银两', -Math.round(g.money() * 0.2)), res: '猴子钻进了林子。包袱后来在山涧边找到了，银子少了一些。' } },
         { t: '扔一个果子给它换', fx: (g) => g.add('品德', 1), res: '猴子接了果子，把包袱扔了回来。' },
       ] },
     { id: 'em_zhou_young', who: 'zhouzhiruo', act: '陪她洗剑', cond: (g) => g.before(134, 2), t: '溪边',
@@ -44,7 +44,7 @@
     { id: 'em_zhou_sword', who: 'zhouzhiruo', act: '向周掌门讨倚天剑', cond: (g) => g.after(135, 8) && g.holder('yitian') === 'zhouzhiruo' && !g.has('yitian'), once: false, t: '倚天剑',
       text: '周芷若坐在掌门的位子上，倚天剑横在膝前。“这是峨嵋祖师的剑。你凭什么要？”',
       choices: [
-        { t: '说出灵蛇岛那一夜你看见的事', cond: (g) => g.f('knowZhouSecret'), check: ['资质', 50],
+        { t: '说出灵蛇岛那一夜你看见的事', cond: (g) => g.f('knowZhouSecret'), check: ['资质', '中'],
           fx: (g) => { g.give('yitian'); g.give('jiuyin'); g.add('品德', -6); }, res: '她的脸一下白了。过了很久，她把剑和一卷经文推到你面前：“拿走。你今天没来过峨嵋。”',
           fail: { res: '她冷笑一声：“你看错了。”' } },
         { t: '按江湖规矩，比一场', fight: { foes: ['zhouzhiruo'], win: { fx: (g) => { g.give('yitian'); g.give('jiuyin'); g.add('品德', -10); g.add('声望', 15); }, res: '你赢了。她把剑递过来的时候手很稳，眼睛很冷。剑柄里藏着一卷九阴真经。' }, lose: { res: '她的指尖在你喉咙前停住了。“下山去。”' } } },
@@ -78,10 +78,16 @@
         { t: '请他亲口教', fx: (g) => { g.learn('yiyang', 1); g.add('声望', 3); }, res: '老和尚点了你三处穴道，又解开。“就是这个劲。”册子他收回去了。' },
         { t: '不敢收', fx: (g) => g.add('品德', 2), res: '老和尚把册子放回经柜：“想要的时候再来。”' },
       ] },
+    { id: 'dl_mer', who: 'tianlong_seng', act: '请老和尚看看经脉', cond: (g) => g.mer() && g.f('tianlongHelped'), once: false, t: '经脉',
+      text: '老和尚伸出一根手指，在你胸口几处穴道上轻轻一点，又一点：“经脉断了三处。一阳指能接，要慢慢来。”',
+      choices: [
+        { t: '在寺里住下，请他接', fx: (g) => { g.days(20); g.cureMer('老和尚每天给你点一回穴，二十天后，三处断了的经脉都接上了。'); }, res: '你在天龙寺住了二十天，每天跟着老和尚扫地。' },
+        { t: '先不麻烦他', res: '老和尚说，什么时候想好了再来。' },
+      ] },
     { id: 'dl_steal', loc: 'dali', act: '夜里翻进天龙寺经房', cond: (g) => !g.has('yiyang') && g.holder('yiyang') === 'tianlong' && !g.f('tianlongCaught'), t: '经房',
       text: '天龙寺的经房没有上锁。经柜最底层有一本册子，封面写着“一阳指”三个字。',
       choices: [
-        { t: '拿走', check: ['轻功', 45], fx: (g) => { g.give('yiyang'); g.add('品德', -15); }, res: '你翻墙出来，寺里一点动静也没有。第二天你在街上看见老和尚，他在扫地，没看你。', fail: { fx: (g) => { g.set('tianlongCaught'); g.add('品德', -5); }, res: '老和尚就坐在经柜前，像是等了你很久。“拿去看吧，看完放回来。”你放下册子跑了。' } },
+        { t: '拿走', check: ['轻功', '难'], fx: (g) => { g.give('yiyang'); g.add('品德', -15); }, res: '你翻墙出来，寺里一点动静也没有。第二天你在街上看见老和尚，他在扫地，没看你。', fail: { fx: (g) => { g.set('tianlongCaught'); g.add('品德', -5); }, res: '老和尚就坐在经柜前，像是等了你很久。“拿去看吧，看完放回来。”你放下册子跑了。' } },
         { t: '放回去', fx: (g) => g.add('品德', 2), res: '你把经房的门掩上了。' },
       ] },
     { id: 'dl_erhai', loc: 'dali', explore: 'dali', once: false, w: 3, t: '洱海',

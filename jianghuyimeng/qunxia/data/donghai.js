@@ -14,8 +14,8 @@
     { id: 'la_zhoudian_bet', who: 'zhoudian', act: '跟周颠打赌', cond: (g) => !g.f('zhoudianBet'), once: false, t: '打赌',
       text: '周颠把两坛酒往桌上一放：“比喝酒。你赢了，老周跟你走；你输了，付酒钱。”',
       choices: [
-        { t: '喝', check: ['根骨', 22], fx: (g) => { g.set('zhoudianBet'); g.add('声望', 3); }, res: '第二坛喝到一半，周颠先趴下了。他醒来以后说，这是他头一回喝输。', fail: { fx: (g) => { g.add('银两', -Math.min(g.money(), 10)); g.hurt(20); }, res: '你醒来的时候在茶楼的地板上，酒钱已经替你付了，是从你钱袋里拿的。' } },
-        { t: '换个赌法：比谁先骂杨逍骂不出新词', check: ['资质', 50], fx: (g) => { g.set('zhoudianBet'); g.add('品德', -1); }, res: '你骂了半个时辰。周颠拍着桌子大笑，说你比他还颠。', fail: { res: '周颠骂了一个时辰还没重样，你认输了。' } },
+        { t: '喝', check: ['根骨', '中'], fx: (g) => { g.set('zhoudianBet'); g.add('声望', 3); }, res: '第二坛喝到一半，周颠先趴下了。他醒来以后说，这是他头一回喝输。', fail: { fx: (g) => { g.add('银两', -Math.min(g.money(), 10)); g.hurt(20); }, res: '你醒来的时候在茶楼的地板上，酒钱已经替你付了，是从你钱袋里拿的。' } },
+        { t: '换个赌法：比谁先骂杨逍骂不出新词', check: ['资质', '中'], fx: (g) => { g.set('zhoudianBet'); g.add('品德', -1); }, res: '你骂了半个时辰。周颠拍着桌子大笑，说你比他还颠。', fail: { res: '周颠骂了一个时辰还没重样，你认输了。' } },
         { t: '不赌', res: '周颠说你没意思，自己把两坛酒都喝了。' },
       ] },
     { id: 'la_tianying', who: 'yintianzheng', act: '替天鹰教押一趟货', cond: (g) => g.before(134, 3) && !g.f('tianyingFriend'), t: '天鹰教',
@@ -33,7 +33,7 @@
     { id: 'la_pickpocket', loc: 'lintan', explore: 'lintan', once: false, w: 2, t: '集市',
       text: '集市上人挤人。你觉得腰间一轻，一个半大孩子正往人缝里钻。',
       choices: [
-        { t: '追上去', check: ['轻功', 25], fx: (g) => g.add('品德', 1), res: '你在巷子里堵住了他。他瘦得像根柴，你把钱拿回来，又给了他一个包子。', fail: { fx: (g) => g.add('银两', -Math.round(g.money() * 0.15)), res: '他钻进巷子就不见了。' } },
+        { t: '追上去', check: ['轻功', '易'], fx: (g) => g.add('品德', 1), res: '你在巷子里堵住了他。他瘦得像根柴，你把钱拿回来，又给了他一个包子。', fail: { fx: (g) => g.add('银两', -Math.round(g.money() * 0.15)), res: '他钻进巷子就不见了。' } },
         { t: '算了，由他去', fx: (g) => { g.add('银两', -Math.round(g.money() * 0.15)); g.add('品德', 1); }, res: '你摸了摸空了一点的钱袋，想起了自己小时候。' },
       ] },
     { id: 'la_bosi_port', loc: 'lintan', act: '码头上的波斯人', from: [135, 8], to: [136, 6], cond: (g) => g.holder('shenghuo') === 'bosi' && !g.has('shenghuo'), t: '波斯人',
@@ -55,7 +55,7 @@
       text: '半夜你睡不着，在岛上走。月光下有个女人在练剑，身段很好，腰一点也不弯。她回过头来，是金花婆婆那张脸。',
       choices: [
         { t: '躲回去，装作没看见', fx: (g) => { g.set('jinhuaKnown'); }, res: '第二天金花婆婆照样咳嗽。她看你的时候，眼神比平常久了一点。' },
-        { t: '上前拜见“紫衫龙王”', check: ['资质', 50], fx: (g) => { g.set('jinhuaKnown'); g.set('knowXiaozhaoMother'); g.give('jiedu', 2); },
+        { t: '上前拜见“紫衫龙王”', check: ['资质', '中'], fx: (g) => { g.set('jinhuaKnown'); g.set('knowXiaozhaoMother'); g.give('jiedu', 2); },
           res: '她站了很久，笑了：“二十年了，还有人记得这个名字。”她说她有个女儿，在光明顶上。临走给了你两颗解毒丹。',
           fail: { fx: (g) => { g.hurt(60); g.injure(1); g.set('jinhuaKnown'); }, res: '一朵金花打在你膝盖上。你跪倒在沙滩上，她已经不见了。' } },
       ] },
@@ -63,7 +63,7 @@
       text: '礁石缝里游出几条花蛇，昂着头。',
       choices: [
         { t: '打', fight: { foes: ['dushe', 'dushe', 'dushe'], win: { fx: (g) => g.add('银两', 6), res: '蛇胆能卖钱，你剖了三个。' }, lose: { res: '你被咬了一口，腿肿了好几天。' } } },
-        { t: '慢慢退开', check: ['轻功', 20], res: '蛇没有追。', fail: { fx: (g) => g.hurt(20), res: '退的时候被咬了一口。' } },
+        { t: '慢慢退开', check: ['轻功', '易'], res: '蛇没有追。', fail: { fx: (g) => g.hurt(20), res: '退的时候被咬了一口。' } },
       ] },
     { id: 'ls_bosi', t: '波斯三使',
       text: (g) => '三条大船靠了岛，下来三个戴高帽的波斯人，手里拿着黑铁牌。他们说中原明教背叛了总教，要拿谢逊回去治罪。' + (g.f('xiaozhaoGone') ? '' : '小昭站了出来。她说她是圣女的女儿，愿意跟他们回波斯。'),
@@ -86,7 +86,7 @@
     { id: 'ls_xiexun_meet', who: 'xiexun', act: '跟谢逊说话', cond: (g) => g.at('lingshe') && !g.f('xiexunTrust'), t: '金毛狮王',
       text: '谢逊被金花婆婆从冰火岛接了回来。他耳朵很灵，你还没走近就说：“是生人。来做什么？”',
       choices: [
-        { t: '说你只是来看看狮王', check: ['品德', 55], fx: (g) => { g.set('xiexunTrust'); g.set('heardChengkun'); }, res: '谢逊笑了一声。他说了很多成昆的事，说那人手指又白又细，笑起来很和气。', fail: { fx: (g) => g.hurt(40), res: '谢逊一声长啸，你耳朵嗡嗡响了一整天。' } },
+        { t: '说你只是来看看狮王', need: ['品德', 55], fx: (g) => { g.set('xiexunTrust'); g.set('heardChengkun'); }, res: '谢逊笑了一声。他说了很多成昆的事，说那人手指又白又细，笑起来很和气。' },
         { t: '告辞', res: '你没有打扰他。' },
       ] },
 
@@ -94,9 +94,8 @@
     { id: 'bh_meet', who: 'xiexun', act: '跟谢逊说话', cond: (g) => g.at('binghuo') && !g.f('xiexunTrust') && !g.f('xiexunAngry'), t: '金毛狮王',
       text: '谢逊的刀横在膝上：“二十年来第一个活人。你是成昆派来的？”',
       choices: [
-        { t: '说实话：一个无名小卒，听说书人讲了屠龙刀，就来了', check: ['品德', 50], fx: (g) => { g.set('xiexunTrust'); g.set('heardChengkun'); g.add('品德', 2); },
-          res: '谢逊沉默了很久，忽然大笑：“好，好一个傻子。”那天晚上他说了很多成昆的事。成昆的手指又白又细，笑起来很和气。',
-          fail: { fx: (g) => { g.hurt(60); g.injure(1); }, res: '谢逊不信。他一声长啸，你耳朵里流出了血，晕了过去。' } },
+        { t: '说实话：一个无名小卒，听说书人讲了屠龙刀，就来了', need: ['品德', 50], fx: (g) => { g.set('xiexunTrust'); g.set('heardChengkun'); g.add('品德', 2); },
+          res: '谢逊沉默了很久，忽然大笑：“好，好一个傻子。”那天晚上他说了很多成昆的事。成昆的手指又白又细，笑起来很和气。' },
         { t: '不说话，给他烤一条鱼', fx: (g) => { g.days(5); g.set('xiexunTrust'); }, res: '你烤了五天的鱼。第五天，谢逊开口问你叫什么名字。' },
         { t: '拔刀：屠龙刀我要了', fight: { foes: ['xiexun'], noFlee: true,
           win: { fx: (g) => { g.give('tulong'); g.add('品德', -20); g.set('xiexunAngry'); }, res: '谢逊倒在冰上，喘着粗气。你拿走了刀，他没再出声。你划船离开的时候，听见身后一声长啸。' },
@@ -114,7 +113,7 @@
       text: '冰原上一头白熊站了起来，比人高出一头。',
       choices: [
         { t: '打', fight: { foes: [{ id: 'lang', name: '白熊', k: 2.5 }], win: { fx: (g) => { g.add('根骨', 1); g.give('jinchuang', 1); }, res: '你剥了熊皮。熊胆苦得要命，吃下去浑身发热。' }, lose: { res: '你被熊掌拍飞了。等你醒来，熊已经走了。' } } },
-        { t: '往火山那边跑', check: ['轻功', 30], res: '熊怕火，没有追过来。', fail: { fx: (g) => g.hurt(50), res: '你被追上了，挨了一掌。' } },
+        { t: '往火山那边跑', check: ['轻功', '易'], res: '熊怕火，没有追过来。', fail: { fx: (g) => g.hurt(50), res: '你被追上了，挨了一掌。' } },
       ] },
     { id: 'bh_volcano', loc: 'binghuo', explore: 'binghuo', w: 3, t: '火山口',
       text: '火山口的热气往上冒，四周的冰化成了水。你坐在冰与火中间。',

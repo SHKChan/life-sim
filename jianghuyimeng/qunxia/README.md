@@ -23,11 +23,15 @@
 
 ## 系统
 
-- **时间**：一年 360 天。只有赶路、练功（10 天）、探索（3 天）、打坐（3 天）、住店（1 天）、做工（5 天）、门派差事（10 天）、等候（30 天）会过日子。138 年腊月是最后期限；137 年起（或收齐 14 件）可以随时“了结江湖”。
-- **地图**：8 个地区、12 处地点，坐标在 `QX.addLocs` 里。行程天数按距离算，轻功越高越快。海岛（`sea`）要从临安坐船，冰火岛还要海图。路上按路程长短有几率遇到 `road` 事件。
+- **时间**：一年 360 天。只有赶路、练功（10 天）、探索（3 天）、打坐（3 天）、住店（1 天）、打听（1 天）、看病（1 天）、做工（5 天）、门派差事（10 天）、等候（30 天）会过日子。138 年腊月是最后期限；137 年起（或收齐 14 件）可以随时“了结江湖”。
+- **地图**：8 个地区、12 处地点，坐标在 `QX.addLocs` 里。行程天数按距离算，轻功越高越快。在有客店的地方可以雇快马，陆路少三成天数，按路程收钱。海岛（`sea`）要从临安坐船，冰火岛还要海图。路上按路程长短有几率遇到 `road` 事件。
+- **牌堆**：探索和路上的事件都像抽牌。一处地方的事件抽过就先放一边，抽完才重洗；通用事件全天下共用一副。探索时先从本地的牌里抽。
+- **风声**：有地点的大势会提前一两个月在传闻里放出风声（`rumor`），传闻旁边有“去看看”，地图上标“有风声”。在客店花 10 两“打听”，能更早问出下一件大事，或者问到认得的人去了哪里。人跟着大势走：上回在这里见过的人不在了，到了会记一句他去了哪里。
 - **大势（铁律）**：`timeline.js` 的事到了日子一定发生。人在当地就亲历（`ev`），由你的选择决定个人的生死、东西归谁；不在场就按原著结局写进传闻（`away`）。
 - **人物**：主角是无名小卒，谁也不认识。人物按 `at` 的纪年出现在原著里该在的地方。
-- **属性**：资质（学武快慢）、根骨（气血）、内力、攻击、防御、轻功、品德（0–100，50 是侠魔分界）、声望、银两；气血、内力两个池子；内伤（住店、时间、药能治）。
+- **属性**：分三类显示。资质（学武快慢）、根骨（气血）、轻功（身法、赶路）是拿来判定的，画进度条、写档位；气血、内力两个池子在顶栏，攻击、防御在人物页；品德（0–100，50 是侠魔分界）、声望、银两是路线，写成一行字。
+- **判定**：`check: ['轻功', '难']`，档位有易、中、难、极难，每个属性各档的数值在 `world.js` 的 `QX.addChecks`（按试玩的属性分布定，平衡改了就调表）。属性到了那一档，成功率约 50%。只在剧情本身要花内力或银两的选项上写加成：`cost: { 内力: 30 }` 配 `check: ['轻功', '极难', 20]`，或者花钱换一个低一档的判定。可选的 `great: { fx, res }` 是大成功（掷出的数小于成功率的五分之一）。品德、声望不掷骰，写成门槛 `need: ['品德', 50]`（或 `['品德', '<', 30]`），不够时选项灰着、写明要多少。
+- **内伤**：每层攻击、内力上限各降 6%。自己慢慢只能好到两层；住店不治内伤（带着胡青牛医经能好一层），要去医馆（`clinic`，花钱治一层）或吃药。三层以上不能冒进。走火入魔还会“经脉受损”，内力上限再降两成，要找张三丰、天龙寺的老和尚，或者用天山雪莲、黑玉断续膏，或者把易筋经练到三级。
 - **武功**：内功、拳掌、兵器、轻功，每门 1–10 级。来源：拜师（人物的 `teach`）、秘籍（物品的 `teaches`）、奇遇。练十天长一截；冒进加倍，但可能受内伤或走火入魔（掉级）。内功越深越安全。
 - **战斗**：你加最多 2 个同伴，对 1–4 个对手。每回合选招式（伤害看等级和攻击、防御，耗内力）、运功、吃药、逃走；同伴自己出手；可以开自动。输了默认是重伤、丢钱、躺几天；标着“死斗”的输了就是死。
 - **同伴**：殷离、韦一笑、周颠、小昭、常遇春、赵敏。各有入队条件、互相合不来的人（`clash`）、离开的时机（`leave`），和自己的小故事。
@@ -38,17 +42,19 @@
 ## 数据格式（要点）
 
 ```js
-QX.addLocs({ id: { name, short, region, scene /* pixel.js 的场景 */, x, y, inn /* 住店价 */, shop: [物品], work, sea, port, fare, needs, desc } });
+QX.addLocs({ id: { name, short, region, scene /* pixel.js 的场景 */, x, y, inn /* 住店价，有客店才能打听、雇马 */, clinic /* 医馆治一层内伤的价钱 */, shop: [物品], work, sea, port, fare, needs, desc } });
+QX.addChecks({ 属性: { 易, 中, 难, 极难, step /* 每差 1 点增减几个百分点 */ } });
 QX.addPeople({ id: { name, sex, look, title, at: [{ loc, from: [年, 月], to: [年, 月], cond }], hello, talk,
   teach: [{ art, cond, why, cap, cost }], comp: { cond, why, clash, leave, st: { hp, atk, def, agi, moves } } } });
 QX.addArts({ id: { name, type, pow, mp, moves: [[级, 招式, 倍数]], grow: { 属性: 每级 }, diff, risky, needs, req, reqText, sp, passive, evil, item } });
-QX.addEvents([{ id, loc | who | anywhere, act /* 按钮字 */ | arrive | explore | road, from, to, cond, once, t, text, fx,
-  choices: [{ t, cond, check: ['属性', 难度], cost: { 银两 }, fx, res, fail: { fx, res }, next,
+QX.addEvents([{ id, loc | who | anywhere, act /* 按钮字 */ | arrive | explore | road /* true 或 [地区 id] */, sea /* 路上事件：只在坐船时 */, from, to, cond, once, t, text, fx,
+  choices: [{ t, cond, check: ['属性', '档位', 加成], need: ['品德', 50], cost: { 银两, 内力, item }, fx, res, fail: { fx, res, next }, great: { fx, res, next }, next,
              fight: { foes, noFlee, win: { fx, res, next }, lose: { mode: 'injury' | 'death', res, next } } }] }]);
-QX.addTimeline([{ id, at: [年, 月, 日], win, loc, ev, fx, away, news }]);
+QX.addTimeline([{ id, at: [年, 月, 日], win, loc, ev, fx, away, news, rumor: { d /* 提前几天 */, t, cred /* 确凿 | 听说 | 谣言 */ } }]);
+QX.addAsks([(g) => 文字 | { t, loc, cred } | null]); // 在客店打听时可能问到的消息
 ```
 
-`fx` 收到 `g`：`g.st / add / f / set / has / give / take / holder / hold / lv / learn / setSect / recruit / dismiss / alive / kill / heal / hurt / injure / days / move / log / news / die` 等，见 `engine.js` 的 `G()`。
+`fx` 收到 `g`：`g.st / add / f / set / has / give / take / holder / hold / lv / learn / setSect / recruit / dismiss / alive / kill / heal / hurt / injure / mer / cureMer / days / move / log / news / rumor / die` 等，见 `engine.js` 的 `G()`。
 
 ## 怎么加内容
 
@@ -69,4 +75,6 @@ RDBG=守武当 node jianghuyimeng/qunxia/tools/playtest.js 0   # 只跑名字里
 
 它会做静态检查（id 重复、引用不存在、选项没结果、触发不了的事件、读了没人设的标记、文风），再让侠、魔、乱三种机器人各玩若干局（查运行错误、卡死、打不完的战斗、两种结局是否都到过），最后按 `ROUTES` 让一个练成了的玩家把每件信物的路线走一遍（走真实事件），确认 14 件都拿得到。
 
-界面截图：`index.html?demo=1` 开一局示例，可加 `&open=map`、`&fight=1`、`&theme=light|gray`、`&lang=zh`。
+试玩每次都会打印结束时的属性分布、各属性判定的平均成功率、探索和路上的重复情况，判定档位表照这些数调。判定没写失败结果、拿品德掷骰、档位写错都会报问题。
+
+界面截图：`index.html?demo=1` 开一局示例，可加 `&open=map`、`&fight=1`、`&theme=light|gray`、`&lang=zh`、`&day=134,3`（日子走到那天）、`&inj=3&mer=1`（带内伤、经脉受损）、`&ev=事件id`（直接打开一件事）。

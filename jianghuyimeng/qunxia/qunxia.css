@@ -146,3 +146,25 @@
 .qx-unit .qx-track { flex: none; width: 100%; height: 6px; }
 /* 右栏状态：图标和字在同一行 */
 .qx-kv dt { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* v2.2：资质分档、路线一行、传闻的风声和“去看看”、地图标风声、快马 */
+.qx-apts { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+.qx-apt { display: grid; grid-template-columns: 5.2em minmax(0, 1fr) 2.4em 4.6em; align-items: center; gap: 8px; font-size: 13.5px; }
+.qx-apt .qx-track { width: auto; }
+.qx-apt .qx-track i { background: var(--xin); }
+.qx-apt b { font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; }
+.qx-apt small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.qx-way { font-size: 13.5px; color: var(--soft); margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.qx-body { font-size: 13px; margin: 2px 0 4px; }
+.qx-cred { display: inline-block; font-size: 11.5px; line-height: 1.5; padding: 0 5px; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); vertical-align: 1px; }
+.qx-cred.c-确凿 { border-color: var(--canon); color: var(--canon); }
+.qx-cred.c-谣言 { border-style: dashed; }
+.qx-news li.past { opacity: .55; }
+.qx-news li.lead { color: var(--fg); }
+.qx-look { font-size: 12px; padding: 1px 8px; margin-left: 4px; }
+.qx-pin.lead i { background: var(--bad); }
+.qx-pin.hi i { box-shadow: 0 0 0 4px color-mix(in srgb, var(--bad) 40%, transparent); }
+.qx-pin.hi span { color: var(--fg); font-weight: 600; }
+.qx-reg .row.hi { background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.qx-horse { display: flex; align-items: center; gap: 8px; margin: 10px 0 2px; font-size: 13.5px; color: var(--soft); }
+.roll.great { color: var(--canon); font-weight: 600; }

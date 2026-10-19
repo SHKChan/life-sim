@@ -79,6 +79,12 @@ for (const id of evIds) {
     if (!c.t) P(where + '没有文字');
     if (!c.fx && !c.res && !c.fight && !c.next) P(where + '什么也不发生');
     if (c.check && (!Array.isArray(c.check) || !(c.check[0] in { 资质: 1, 根骨: 1, 内力: 1, 攻击: 1, 防御: 1, 轻功: 1, 品德: 1, 声望: 1, 银两: 1 }))) P(where + '的判定写错了');
+    if (c.check && typeof c.check[1] === 'string' && !(QX.CHECKS[c.check[0]] && QX.CHECKS[c.check[0]][c.check[1]] != null)) P(where + '的判定档位 ' + c.check[1] + ' 在 QX.CHECKS 里没有');
+    if (c.check && typeof c.check[1] === 'number' && QX.CHECKS[c.check[0]]) P(where + '的判定写了数值，' + c.check[0] + ' 要写档位（易、中、难、极难）');
+    if (c.check && c.check[0] === '品德') P(where + '拿品德掷骰：品德是侠魔路线，改成 need 门槛');
+    if (c.check && !c.fail) P(where + '有判定却没写失败的结果（fail）');
+    if (c.great && !c.check) P(where + '写了大成功（great）却没有判定');
+    if (c.need && (!Array.isArray(c.need) || !(c.need[0] in { 资质: 1, 根骨: 1, 内力: 1, 攻击: 1, 防御: 1, 轻功: 1, 品德: 1, 声望: 1, 银两: 1 }))) P(where + '的门槛写错了');
     const nexts = [c.next, c.fail && c.fail.next, c.fight && c.fight.win && c.fight.win.next, c.fight && c.fight.lose && c.fight.lose.next].filter(Boolean);
     for (const n of nexts) if (!QX.EVENTS[n]) P(where + '接的事件 ' + n + ' 不存在');
     if (c.fight) { for (const f of c.fight.foes || []) { const fid = typeof f === 'string' ? f : f.id; if (!QX.ENEMIES[fid]) P(where + '的对手 ' + fid + ' 不存在'); } if (!c.fight.win) P(where + '的战斗没有写赢了怎样'); }
@@ -160,11 +166,17 @@ function interest(loc, persona) {
   S.loc = keepLoc;
   return v;
 }
-const stat = { games: 0, ends: {}, relicsGot: {}, relicsMax: 0, relicsByEnd: {}, evSeen: {}, steps: 0, fights: 0, draws: 0, deaths: [], days: [], comps: {}, maxRelicGame: null };
+// 每局记下探索、路上抽到了什么，打坐用了多少天（看重复、看日子是不是在填空）
+let cur = null;
+const actOrig = QX.act, travelOrig = QX.travel;
+QX.act = (k, id) => { const r = actOrig(k, id); if (cur) { const S = QX.state(); if (k === 'explore' && S.ev && S.ev.id) cur.ex.push(S.ev.id); if (k === 'rest') cur.rest += 3; if (k === 'ask') cur.ask++; } return r; };
+QX.travel = (to, h) => { const S0 = QX.state(), m0 = S0.st.银两; const r = travelOrig(to, h); if (cur) { const S = QX.state(); if (S.ev && S.ev.id && QX.EVENTS[S.ev.id].road) cur.road.push(S.ev.id); if (h && !r && S.log.length && /快马/.test(S.log[S.log.length - 1].t + (S.log[S.log.length - 2] || { t: '' }).t)) cur.horse++; } return r; };
+const stat = { games: 0, ckp: {}, per: [], dist: {}, ends: {}, relicsGot: {}, relicsMax: 0, relicsByEnd: {}, evSeen: {}, steps: 0, fights: 0, draws: 0, deaths: [], days: [], comps: {}, maxRelicGame: null };
 function playOne(persona, k) {
   const origin = QX.ORIGINS[k % QX.ORIGINS.length].id;
   const sects = ['', 'quanzhen', 'gaibang', 'emei', 'mingjiao'];
   QX.newGame({ name: '测试', sex: k % 2 ? '女' : '男', origin, sect: sects[k % sects.length] });
+  cur = { ex: [], road: [], rest: 0, ask: 0, horse: 0, ck: {} };
   let S = QX.state(), lastDay = -1, still = 0, steps = 0, fightRounds = 0;
   while (steps < 30000) {
     steps++;
@@ -182,6 +194,8 @@ function playOne(persona, k) {
     }
     if (S.ev) {
       if (S.ev.id) stat.evSeen[S.ev.id] = (stat.evSeen[S.ev.id] || 0) + 1;
+      // 每局每件事只记第一次（可重复的偷东西事件会被机器人反复去试，不算）
+      if (cur && !cur.ck[S.ev.id]) { cur.ck[S.ev.id] = 1; for (const c of S.ev.choices) if (c.p != null && !c.dis) (stat.ckp[c.ck] = stat.ckp[c.ck] || []).push(c.p); }
       const ch = S.ev.choices.map((c, i) => [c, i]).filter((x) => !x[0].dis);
       if (!ch.length || S.ev.res !== null && !S.ev.choices.length) { QX.cont(); continue; }
       if (S.ev.talk) {
@@ -202,7 +216,10 @@ function playOne(persona, k) {
     const acts = QX.actions();
     const has = (k2) => acts.find((a) => a.k === k2);
     if (S.inj >= 3 && S.items.heiyu) { QX.useItem('heiyu'); continue; }
-    if (S.hp < QX.maxHp() * 0.45 || S.inj >= 2) { if (has('inn') && S.st.银两 >= QX.LOCS[S.loc].inn) QX.act('inn'); else QX.act('rest'); continue; }
+    if (S.inj >= 3 && has('clinic') && S.st.银两 >= QX.LOCS[S.loc].clinic) { QX.act('clinic'); continue; }
+    if (S.inj >= 3) { const med = ['dahuan', 'jiedu'].find((m) => S.items[m]); if (med) { QX.useItem(med); continue; } }
+    if (S.hp < QX.maxHp() * 0.45) { if (has('inn') && S.st.银两 >= QX.LOCS[S.loc].inn) QX.act('inn'); else QX.act('rest'); continue; }
+    if (has('ask') && S.st.银两 >= 40 && rng() < 0.04) { QX.act('ask'); continue; }
     if (has('retire') && (S.relics.length >= 14 || rng() < 0.01)) { QX.act('retire'); continue; }
     const evs = acts.filter((a) => a.k === 'ev');
     if (evs.length && rng() < 0.7) { QX.act('ev', evs[Math.floor(rng() * evs.length)].id); continue; }
@@ -214,7 +231,7 @@ function playOne(persona, k) {
     const r = rng();
     if (r < 0.42) {
       const arts = Object.keys(S.arts).filter((a) => QX.canPractise(a));
-      if (arts.length) { const a = arts[Math.floor(rng() * arts.length)]; QX.practise(a, rng() < (persona === 'luan' ? 0.4 : 0.15)); continue; }
+      if (arts.length) { const a = arts[Math.floor(rng() * arts.length)]; const hard = rng() < (persona === 'luan' ? 0.4 : 0.15) && !QX.hardBlock(); QX.practise(a, hard); continue; }
     }
     const exHere = Object.keys(QX.EVENTS).some((id) => { const E = QX.EVENTS[id]; return E.explore === S.loc && evValue(id) > 0 && (!E.cond || E.cond(g)); });
     if (r < 0.58 || (exHere && rng() < 0.6)) { QX.act('explore'); continue; }
@@ -223,7 +240,7 @@ function playOne(persona, k) {
       // 去有事可做的地方
       let best = null, bv = -1e9;
       for (const l in QX.LOCS) { if (l === S.loc) continue; const v = interest(l, persona) + rng() * 4; if (v > bv) { bv = v; best = l; } }
-      if (best) { const why = QX.travel(best); if (why) QX.act('work'); continue; }
+      if (best) { const why = QX.travel(best, S.st.银两 > 80 && rng() < 0.5); if (why) QX.act('work'); continue; }
     }
     QX.act('explore');
   }
@@ -242,6 +259,10 @@ function playOne(persona, k) {
   stat.pow = (stat.pow || []).concat([QX.power()]); stat.hp = (stat.hp || []).concat([QX.maxHp()]); stat.atk = (stat.atk || []).concat([QX.eff('攻击')]);
   stat.lv = (stat.lv || []).concat([Math.max(0, ...Object.values(S.arts).map((a) => a.lv))]); stat.nart = (stat.nart || []).concat([Object.keys(S.arts).length]);
   for (const p in S.comp) stat.comps[p] = (stat.comps[p] || 0) + 1;
+  ['资质', '根骨', '轻功', '内力'].forEach((x) => (stat.dist[x] = stat.dist[x] || []).push(QX.eff(x)));
+  (stat.dist.内力上限 = stat.dist.内力上限 || []).push(QX.maxMp());
+  stat.per.push(cur);
+  cur = null;
 }
 function interest_person(pid) {
   const S = QX.state(), g = QX.G(), P2 = QX.PEOPLE[pid];
@@ -364,6 +385,16 @@ const avg = (a) => (a && a.length ? (a.reduce((s, x) => s + x, 0) / a.length).to
 console.log('平均信物数：侠 ' + avg(stat.relicsByEnd.xia) + '，魔 ' + avg(stat.relicsByEnd.mo) + '，死 ' + avg(stat.relicsByEnd.dead) + '；最多一局 ' + stat.relicsMax + ' 件（' + stat.maxRelicGame + '）');
 console.log('结束时：强弱 ' + avg(stat.pow) + '，气血 ' + avg(stat.hp) + '，攻击 ' + avg(stat.atk) + '，最高武功等级 ' + avg(stat.lv) + '，会的武功 ' + avg(stat.nart) + ' 门');
 console.log('平均活了 ' + avg(stat.days.map((d) => d / 360)) + ' 年');
+const pct = (a, q) => { const b = a.slice().sort((x, y) => x - y); return b.length ? b[Math.min(b.length - 1, Math.floor(b.length * q))] : '-'; };
+console.log('结束时属性（低的一成 / 中间 / 高的一成）：' + Object.keys(stat.dist).map((x) => x + ' ' + pct(stat.dist[x], 0.1) + ' / ' + pct(stat.dist[x], 0.5) + ' / ' + pct(stat.dist[x], 0.9)).join('，'));
+console.log('判定（机器人碰到时的成功率）：' + Object.keys(stat.ckp).map((x) => { const a = stat.ckp[x]; return x + ' ' + a.length + ' 次，平均 ' + avg(a) + '%，不到 20% 的 ' + Math.round(a.filter((v) => v <= 20).length / a.length * 100) + '%'; }).join('；'));
+{
+  const per = stat.per, ex = per.map((c) => c.ex), road = per.map((c) => c.road);
+  const rep = (lists) => avg(lists.filter((l) => l.length).map((l) => l.length / new Set(l).size));
+  const kinds = (lists) => avg(lists.map((l) => new Set(l).size));
+  const localShare = ex.flat().length ? Math.round(ex.flat().filter((id) => QX.EVENTS[id].explore !== '*').length / ex.flat().length * 100) : 0;
+  console.log('探索：每局 ' + avg(ex.map((l) => l.length)) + ' 次、' + kinds(ex) + ' 种，同一件平均出现 ' + rep(ex) + ' 次，本地事件占 ' + localShare + '%；路上：每局 ' + avg(road.map((l) => l.length)) + ' 次、' + kinds(road) + ' 种；打坐每局 ' + avg(per.map((c) => c.rest)) + ' 天；打听每局 ' + avg(per.map((c) => c.ask)) + ' 次');
+}
 console.log('每件信物被拿到的局数：' + relics.map((r) => QX.ITEMS[r].name + ' ' + (stat.relicsGot[r] || 0)).join('，'));
 console.log('路线检查：' + ROUTES.length + ' 条，走通 ' + Object.values(routeOk).reduce((a, b) => a + b, 0) + ' 条；每件信物走得通的路线数：' + relics.map((x) => QX.ITEMS[x].name + ' ' + (routeOk[x] || 0)).join('，'));
 console.log('同行过的同伴（局数）：' + comps.map((p) => QX.PEOPLE[p].name + ' ' + (stat.comps[p] || 0)).join('，'));

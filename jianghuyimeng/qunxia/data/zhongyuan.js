@@ -17,13 +17,13 @@
     { id: 'sl_luohan_tang', loc: 'shaolin', explore: 'shaolin', once: false, w: 3, t: '罗汉堂外',
       text: '罗汉堂外的空地上，几十个武僧在晨雾里练拳，脚下的青石板踩出了一个个浅坑。',
       choices: [
-        { t: '躲在树后偷看', check: ['资质', 45], fx: (g) => { if (g.lv('luohan')) g.S.arts.luohan.xp += 15; else g.add('攻击', 0.5); }, res: '你看懂了几式，回去比划，好像真有点样子。', fail: { fx: (g) => g.add('声望', -1), res: '你被巡山的武僧发现，轰下了山。' } },
+        { t: '躲在树后偷看', check: ['资质', '中'], fx: (g) => { if (g.lv('luohan')) g.S.arts.luohan.xp += 15; else g.add('攻击', 0.5); }, res: '你看懂了几式，回去比划，好像真有点样子。', fail: { fx: (g) => g.add('声望', -1), res: '你被巡山的武僧发现，轰下了山。' } },
         { t: '上前请教', fx: (g) => g.add('品德', 1), res: '武僧说少林的拳要在寺里学，让你去找知客僧。' },
       ] },
     { id: 'sl_yuanzhen_hand', who: 'yuanzhen', act: '留意圆真的手', cond: (g) => g.f('heardChengkun') && !g.f('knowChengkun'), t: '圆真',
       text: '谢逊说过，成昆的手指又白又细，笑起来很和气。你看着眼前这个和尚，他的手也是这样。',
       choices: [
-        { t: '借口请教，看他出指', check: ['资质', 45], fx: (g) => { g.set('knowChengkun'); g.add('声望', 2); },
+        { t: '借口请教，看他出指', check: ['资质', '中'], fx: (g) => { g.set('knowChengkun'); g.add('声望', 2); },
           res: '他随手一指，你看见了一点阴寒的气。谢逊说过的幻阴指，就是这个样子。圆真就是成昆。你没有说破，他也在看你。',
           fail: { fx: (g) => g.hurt(30), res: '他笑着拍了拍你的肩膀，你半边身子麻了一整天。你什么也没看出来。' } },
         { t: '先不打草惊蛇', fx: (g) => g.add('资质', 0.5), res: '你记下了他的样子。还不能确定。' },
@@ -31,9 +31,12 @@
     { id: 'sl_cangjing', loc: 'shaolin', act: '夜探藏经阁', cond: (g) => !g.has('yijin') && g.holder('yijin') === 'shaolin', once: false, t: '藏经阁',
       text: '半夜，藏经阁的灯还亮着。最高一层供着一部用贝叶写的经，听说就是达摩祖师留下的易筋经。',
       choices: [
-        { t: '从后窗翻进去', check: ['轻功', 60], fx: (g) => { g.give('yijin'); g.set('robbedShaolin'); g.add('品德', -15); },
+        { t: '从后窗翻进去', check: ['轻功', '极难'], fx: (g) => { g.give('yijin'); g.set('robbedShaolin'); g.add('品德', -15); },
           res: '你摸到了那个木匣，揣进怀里，从屋檐上一路跑下了山。身后的钟声响了一夜。',
           fail: { res: '你踩响了一片瓦。四个武僧提着棍子围了上来。', next: 'sl_cangjing_caught' } },
+        { t: '运起内力，屏住呼吸从塔檐纵上顶层', cost: { 内力: 30 }, check: ['轻功', '极难', 20], fx: (g) => { g.give('yijin'); g.set('robbedShaolin'); g.add('品德', -15); },
+          res: '你提着一口真气，踩着飞檐一层一层翻上去，落脚一点声音也没有。木匣到手，你从另一面滑了下去。',
+          fail: { res: '真气走到一半散了，你扒着檐角吊在半空。底下的武僧提着灯笼围了过来。', next: 'sl_cangjing_caught' } },
         { t: '算了，佛门的东西不碰', fx: (g) => g.add('品德', 2), res: '你在藏经阁外站了一会儿，回去了。' },
       ] },
     { id: 'sl_cangjing_caught', once: false, t: '被围',
@@ -119,6 +122,12 @@
         { t: '双手接过', fx: (g) => { g.give('taiji'); g.add('品德', 2); }, res: '纸上的字歪歪扭扭，写的是圆。一个圆套着一个圆。' },
         { t: '请真人当面指点', fx: (g) => { g.learn('taiji_quan', 1); g.add('声望', 5); g.hold('taiji', 'zhangsanfeng'); }, res: '张三丰教了你一路太极拳，教完问你记住了几招。你说忘了一半。他笑了：“好。”' },
       ] },
+    { id: 'wd_zsf_mer', who: 'zhangsanfeng', act: '请张真人看看经脉', cond: (g) => g.after(135, 2) && g.mer(), once: false, t: '经脉',
+      text: '张三丰搭着你的手腕，眯着眼睛听了很久：“走火入魔，伤了经脉。年轻人，急什么。”',
+      choices: [
+        { t: '请真人出手', fx: (g) => { g.days(10); g.cureMer('张三丰用十天时间，一寸一寸替你把断了的经脉接上了。他说：“练功是一辈子的事。”'); g.add('品德', 1); }, res: '你在武当山上住了十天。下山那天，真气又能走满全身了。' },
+        { t: '不敢劳动真人', res: '张三丰笑了笑，放开了你的手。' },
+      ] },
     { id: 'wd_siege', t: '武当之围',
       text: (g) => '王府的高手上了武当山，番僧、武士、神箭手，把真武大殿围了个水泄不通。领头的是个穿男装的姑娘。张三丰受了重伤，坐在殿上。' + (g.f('servedWang') ? '她看见你，眨了眨眼。' : ''),
       choices: [
@@ -129,7 +138,7 @@
     { id: 'wd_siege_taiji', t: '太极',
       text: '一个年轻人从山下赶来，替张三丰接下了王府的人。张三丰当着众人的面，一招一招地教他太极拳，又教他太极剑。教一遍，问他忘了多少。',
       choices: [
-        { t: '在一旁用心记', check: ['资质', 55], fx: (g) => { if (g.st('品德') >= 55) g.learn('taiji_quan', 1); else g.add('资质', 1); g.set('sawTaiji'); }, res: (g) => (g.st('品德') >= 55 ? '你记住了一个圆。后来你才知道，那就是太极拳。' : '你记住了招式，却怎么也打不圆。'), fail: { res: '招式太慢，你看着看着就看不懂了。' } },
+        { t: '在一旁用心记', check: ['资质', '难'], fx: (g) => { if (g.st('品德') >= 55) g.learn('taiji_quan', 1); else g.add('资质', 1); g.set('sawTaiji'); }, res: (g) => (g.st('品德') >= 55 ? '你记住了一个圆。后来你才知道，那就是太极拳。' : '你记住了招式，却怎么也打不圆。'), fail: { res: '招式太慢，你看着看着就看不懂了。' } },
         { t: '去照看受伤的武当弟子', fx: (g) => { g.add('品德', 4); g.set('zhuangWudang'); }, res: '你给几个武当弟子包扎伤口。宋远桥事后说，张真人问起过你。' },
       ] },
     { id: 'wd_siege_steal', t: '后殿',
@@ -151,7 +160,7 @@
     { id: 'hd_hut', loc: 'hudie', explore: 'hudie', once: false, w: 5, cond: (g) => g.f('graveTended') && !g.has('yijing'), t: '草屋',
       text: '草屋里的药柜还在，抽屉上贴着字条，一格一格写着药名。墙角有一块地砖是松的。',
       choices: [
-        { t: '照着药柜上的字条找', check: ['资质', 45], fx: (g) => { g.give('yijing'); g.add('品德', 1); },
+        { t: '照着药柜上的字条找', check: ['资质', '中'], fx: (g) => { g.give('yijing'); g.add('品德', 1); },
           res: '字条上的药名连起来，是一句话：“医者，救人。”松动的地砖下面，埋着胡青牛的医经。你在坟前又磕了一个头。',
           fail: { res: '你翻了一下午，没看出名堂。' } },
         { t: '不动死人的东西', fx: (g) => g.add('品德', 1), res: '你把门掩上了。' },

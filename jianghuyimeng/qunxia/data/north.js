@@ -25,7 +25,7 @@
     { id: 'dd_fanyao', who: 'kutoutuo', act: '留意苦头陀', cond: (g) => !g.f('knowFanyao') && !g.f('fanyaoTold'), t: '苦头陀',
       text: '你看见苦头陀在墙角用手指划字，划完又抹掉。那是一团火的样子，明教的圣火。',
       choices: [
-        { t: '悄悄对他说一句：“熊熊圣火”', check: ['资质', 40], fx: (g) => { g.set('knowFanyao'); g.add('声望', 2); },
+        { t: '悄悄对他说一句：“熊熊圣火”', check: ['资质', '易'], fx: (g) => { g.set('knowFanyao'); g.add('声望', 2); },
           res: '苦头陀停住了。夜里他把你拉到马厩，开口说话了：“我是明教光明右使范遥。你知道了，就别说出去。”',
           fail: { res: '苦头陀看了你一眼，走开了。' } },
         { t: '报给王府的管事', fx: (g) => { g.set('fanyaoTold'); g.add('品德', -8); g.add('银两', 30); }, res: '管事赏了你三十两。苦头陀第二天照样在王府里走来走去，看你的眼神冷了。' },
@@ -34,8 +34,10 @@
     { id: 'dd_heiyu_fan', who: 'kutoutuo', act: '求他弄一点黑玉断续膏', cond: (g) => g.f('knowFanyao') && g.holder('heiyu') === 'asan' && !g.has('heiyu'), t: '黑玉断续膏',
       text: '范遥说，金刚门的阿三有一盒黑玉断续膏，天天揣在怀里。“你把他引开半个时辰，我就能拿到。”',
       choices: [
-        { t: '去引开阿三', check: ['轻功', 40], fx: (g) => { g.give('heiyu'); g.add('品德', 2); }, res: '你在大街上跟阿三绕了半个时辰。回来的时候，范遥把一只黑盒子塞进了你手里。“武当的俞三侠，等这个等了二十年。”',
+        { t: '去引开阿三', check: ['轻功', '中'], fx: (g) => { g.give('heiyu'); g.add('品德', 2); }, res: '你在大街上跟阿三绕了半个时辰。回来的时候，范遥把一只黑盒子塞进了你手里。“武当的俞三侠，等这个等了二十年。”',
           fail: { fx: (g) => g.hurt(60), res: '阿三一指戳在你肩上，你半边身子麻了。范遥没能得手。' } },
+        { t: '花三十两请阿三喝酒，把他灌倒', cost: { 银两: 30 }, check: ['根骨', '中'], fx: (g) => { g.give('heiyu'); g.add('品德', 1); }, res: '阿三喝到第三坛，趴在桌上打起了呼噜。范遥从他怀里摸走了那只黑盒子，塞进你手里。“武当的俞三侠，等这个等了二十年。”',
+          fail: { fx: (g) => g.hurt(30), res: '你先醉倒了。阿三拍着你的脸笑，盒子还在他怀里。' } },
         { t: '再等等', res: '范遥点点头，又不说话了。' },
       ] },
     { id: 'dd_heiyu_asan', who: 'asan', act: '向阿三讨黑玉断续膏', cond: (g) => g.holder('heiyu') === 'asan' && !g.has('heiyu'), once: false, t: '阿三',
@@ -48,15 +50,18 @@
     { id: 'dd_sword_night', loc: 'dadu', act: '夜探王府后院', cond: (g) => g.holder('yitian') === 'zhaomin' && !g.has('yitian') && g.after(134, 7) && g.before(135, 5), once: false, t: '王府后院',
       text: '你打听到，郡主把一把古剑挂在她书房的墙上。书房外面有玄冥二老守着。',
       choices: [
-        { t: '从屋顶摸进去', check: ['轻功', 55], fx: (g) => { g.give('yitian'); g.add('声望', 8); }, res: '你揭开瓦片，用绳子把剑勾了上来。第二天王府里乱成一团，郡主却笑了：“这个人有点本事。”',
+        { t: '从屋顶摸进去', check: ['轻功', '极难'], fx: (g) => { g.give('yitian'); g.add('声望', 8); }, res: '你揭开瓦片，用绳子把剑勾了上来。第二天王府里乱成一团，郡主却笑了：“这个人有点本事。”',
           fail: { res: '瓦片一响，两个老头已经站在你面前了。', next: 'dd_xuanming' } },
+        { t: '花五十两买通马夫，从马厩那边摸进去', cost: { 银两: 50 }, check: ['轻功', '难'], fx: (g) => { g.give('yitian'); g.add('声望', 8); g.add('品德', -2); },
+          res: '马夫收了银子，半夜给你留了一道门缝。你贴着墙根摸进书房，把剑摘了下来。郡主第二天把马夫叫去问了半天，什么也没问出来。',
+          fail: { res: '马夫收了钱，门缝却没留。你翻墙进去，迎面撞上了巡夜的老头。', next: 'dd_xuanming' } },
         { t: '算了', res: '你回客店睡觉去了。' },
       ] },
     { id: 'dd_xuanming', once: false, t: '玄冥二老',
       text: '鹿杖客和鹤笔翁一左一右，把你堵在了房檐上。',
       choices: [
         { t: '拼了', fight: { foes: ['lu', 'he'], win: { fx: (g) => { g.give('yitian'); g.add('声望', 25); }, res: '你打退了玄冥二老，抱着剑跳下了墙。大都的江湖人传了一个月。' }, lose: { res: '你中了一掌，浑身发冷，被扔出了王府。' } } },
-        { t: '跳下房檐就跑', check: ['轻功', 50], res: '你跑掉了。', fail: { fx: (g) => { g.hurt(80); g.injure(2); }, res: '一掌打在你背上，寒气钻进了骨头。' } },
+        { t: '跳下房檐就跑', check: ['轻功', '难'], res: '你跑掉了。', fail: { fx: (g) => { g.hurt(80); g.injure(2); }, res: '一掌打在你背上，寒气钻进了骨头。' } },
       ] },
     { id: 'dd_wanan', t: '万安寺',
       text: (g) => '万安寺的塔上关着六大派的人，每天有人被斩断一根手指。今晚，塔下起了火。' + (g.f('knowFanyao') ? '范遥朝你使了个眼色。' : ''),
@@ -68,9 +73,12 @@
     { id: 'dd_wanan_top', t: '塔顶',
       text: '塔顶站着一个老尼姑，是灭绝师太。她不肯让魔教的人救，扶着栏杆，往下看了一眼。',
       choices: [
-        { t: '冲上塔顶去接她', cond: (g) => g.alive('miejue'), check: ['轻功', 60], fx: (g) => { g.set('miejueLives'); g.add('品德', 6); g.add('声望', 10); },
+        { t: '冲上塔顶去接她', cond: (g) => g.alive('miejue'), check: ['轻功', '难'], fx: (g) => { g.set('miejueLives'); g.add('品德', 6); g.add('声望', 10); },
           res: '她跳下来的那一刻，你从侧面接住了她。两个人一起滚在瓦上。她骂了你一句，没有再跳。她把掌门之位交给了周芷若，自己回峨嵋后山去了。',
           fail: { fx: (g) => { g.kill('miejue'); g.hurt(50); }, res: '你差了一步。她从你指尖前落了下去。' } },
+        { t: '提一口真气，从塔檐直冲上去', cond: (g) => g.alive('miejue'), cost: { 内力: 40 }, check: ['轻功', '难', 20], fx: (g) => { g.set('miejueLives'); g.add('品德', 6); g.add('声望', 10); },
+          res: '你一口气踩着塔檐冲了七层，在她跳下来的那一刻抓住了她的袖子。她骂了你一句，没有再跳。她把掌门之位交给了周芷若，自己回峨嵋后山去了。',
+          fail: { fx: (g) => { g.kill('miejue'); g.hurt(50); }, res: '冲到第六层，你的真气接不上了。她从你头顶落了下去。' } },
         { t: '由她去', cond: (g) => g.alive('miejue'), fx: (g) => g.kill('miejue'), res: '她纵身一跳，落在了火光里。' },
         { t: '走', cond: (g) => !g.alive('miejue'), res: '你离开了万安寺。' },
       ] },
@@ -83,7 +91,7 @@
     { id: 'dd_horse', loc: 'dadu', explore: 'dadu', once: false, w: 2, t: '马市',
       text: '大都的马市上，一匹烈马踢翻了栏杆，满街乱跑。',
       choices: [
-        { t: '上去拉住缰绳', check: ['根骨', 22], fx: (g) => { g.add('声望', 3); g.add('银两', 15); }, res: '你被拖了十几丈，马停下了。马主人赏了你十五两。', fail: { fx: (g) => g.hurt(40), res: '你被马踢了一脚。' } },
+        { t: '上去拉住缰绳', check: ['根骨', '中'], fx: (g) => { g.add('声望', 3); g.add('银两', 15); }, res: '你被拖了十几丈，马停下了。马主人赏了你十五两。', fail: { fx: (g) => g.hurt(40), res: '你被马踢了一脚。' } },
         { t: '躲开', res: '马从你身边冲了过去。' },
       ] },
 
@@ -91,7 +99,7 @@
     { id: 'zn_join', who: 'qz_jianyuan', act: '求拜入全真', cond: (g) => !g.sect, once: false, t: '拜师',
       text: '监院道长说：“全真门下，先要守戒。不杀生，不妄语，不偷盗。你守得住吗？”',
       choices: [
-        { t: '守得住', check: ['品德', 40], fx: (g) => { g.setSect('quanzhen'); g.learn('quanzhen_xinfa', 1); }, res: '你在三清像前磕了头，成了全真弟子。', fail: { res: '道长看了你一眼：“你的心还不静。过些日子再来。”' } },
+        { t: '守得住', need: ['品德', 40], fx: (g) => { g.setSect('quanzhen'); g.learn('quanzhen_xinfa', 1); }, res: '你在三清像前磕了头，成了全真弟子。' },
         { t: '守不住，算了', res: '道长点点头：“实话。”' },
       ] },
     { id: 'zn_rank3', t: '早课',
@@ -103,7 +111,7 @@
     { id: 'zn_expel', t: '逐出门墙',
       text: '监院道长在宫门口等你：“你在外面做的事，全真容不下。”',
       choices: [
-        { t: '在三清殿前跪一夜', check: ['品德', 35], fx: (g) => { g.days(10); g.add('品德', 5); }, res: '道长叹了口气，让你起来了。', fail: { fx: (g) => g.setSect(''), res: '天亮了，宫门还是关着的。你不再是全真弟子了。' } },
+        { t: '在三清殿前跪一夜', need: ['品德', 35], fx: (g) => { g.days(10); g.add('品德', 5); }, res: '道长叹了口气，让你起来了。' },
         { t: '下山', fx: (g) => g.setSect(''), res: '你脱下了道袍。' },
       ] },
     { id: 'zn_fanseng', loc: 'zhongnan', arrive: true, from: [132, 6], cond: (g) => g.holder('xiantian') === 'quanzhen', t: '番僧上山',
@@ -128,8 +136,10 @@
     { id: 'zn_steal', loc: 'zhongnan', act: '夜上藏经楼', cond: (g) => !g.has('xiantian') && g.holder('xiantian') === 'quanzhen' && g.sect !== 'quanzhen', once: false, t: '藏经楼',
       text: '藏经楼黑着灯。守楼的老道睡在楼下，鼾声很响。',
       choices: [
-        { t: '上楼', check: ['轻功', 45], fx: (g) => { g.give('xiantian'); g.set('robbedQuanzhen'); g.add('品德', -15); }, res: '你拿到了那卷先天功。下楼的时候，鼾声停了一下，又响了起来。',
+        { t: '上楼', check: ['轻功', '难'], fx: (g) => { g.give('xiantian'); g.set('robbedQuanzhen'); g.add('品德', -15); }, res: '你拿到了那卷先天功。下楼的时候，鼾声停了一下，又响了起来。',
           fail: { res: '楼梯响了。几个道士举着火把围了上来。', next: 'zn_caught' } },
+        { t: '运功压住脚步，一级一级挪上去', cost: { 内力: 20 }, check: ['轻功', '难', 15], fx: (g) => { g.give('xiantian'); g.set('robbedQuanzhen'); g.add('品德', -15); }, res: '你把真气沉到脚底，楼梯一声也没响。下楼的时候，老道的鼾声还很匀。',
+          fail: { res: '走到一半，你的气一松，楼板吱呀一声。几个道士举着火把围了上来。', next: 'zn_caught' } },
         { t: '不上去', fx: (g) => g.add('品德', 1), res: '你在楼下站了一会儿，走了。' },
       ] },
     { id: 'zn_caught', once: false, t: '被围',
@@ -148,7 +158,7 @@
       text: '山后有一座古墓，石门封死了。山里的人说，从前墓里住着一对神仙眷侣，后来去了绝情谷底，再也没出来过。',
       choices: [
         { t: '在墓前站一会儿', fx: (g) => { g.add('品德', 1); g.set('sawGumu'); }, res: '墓前的野花开得很好。' },
-        { t: '找找有没有别的入口', check: ['资质', 55], fx: (g) => { g.add('轻功', 2); }, res: '你在一处石缝里看见几行刻字，是一路轻功的口诀。你记下了。', fail: { res: '石门封得严严实实。' } },
+        { t: '找找有没有别的入口', check: ['资质', '难'], fx: (g) => { g.add('轻功', 2); }, res: '你在一处石缝里看见几行刻字，是一路轻功的口诀。你记下了。', fail: { res: '石门封得严严实实。' } },
       ] },
 
     /* ---------- 襄阳 · 丐帮 ---------- */
@@ -211,7 +221,7 @@
     { id: 'xy_dagou_steal', loc: 'xiangyang', act: '夜里摸进史红石的屋子', cond: (g) => g.holder('dagou') === 'shihongshi' && !g.has('dagou'), once: false, t: '打狗棒',
       text: '史红石睡着了，打狗棒靠在她床头。',
       choices: [
-        { t: '拿走', check: ['轻功', 50], fx: (g) => { g.give('dagou'); g.add('品德', -20); }, res: '你拿走了打狗棒。第二天，丐帮的人满城找你。', fail: { fx: (g) => { g.hurt(60); g.add('品德', -5); if (g.sect === 'gaibang') g.setSect(''); }, res: '门口守夜的长老一棒打在你背上。你逃了出去，丐帮从此把你当成仇人。' } },
+        { t: '拿走', check: ['轻功', '难'], fx: (g) => { g.give('dagou'); g.add('品德', -20); }, res: '你拿走了打狗棒。第二天，丐帮的人满城找你。', fail: { fx: (g) => { g.hurt(60); g.add('品德', -5); if (g.sect === 'gaibang') g.setSect(''); }, res: '门口守夜的长老一棒打在你背上。你逃了出去，丐帮从此把你当成仇人。' } },
         { t: '退出来', fx: (g) => g.add('品德', 2), res: '你轻轻带上了门。' },
       ] },
   ]);
