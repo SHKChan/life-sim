@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.5.0';
+  const VERSION = '2.5.1';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -129,9 +129,13 @@
     const F = QX.state().fight;
     const unit = (u, i, foe) => '<button class="qx-unit' + (foe ? ' foe' : '') + (u.hp <= 0 ? ' down' : '') + (foe && F.target === i ? ' tgt' : '') + '"' + (foe ? ' data-act="target" data-i="' + i + '"' : ' disabled') + '><b>' + esc(u.name) + '</b>'
       + '<span class="qx-track hp"><i style="width:' + Math.max(0, Math.round((u.hp / u.max) * 100)) + '%"></i></span><small>' + Math.max(0, u.hp) + '/' + u.max + (u.id === 'me' ? ' · ' + t('内力') + ' ' + u.mp + '/' + u.maxMp : '') + '</small></button>';
+    // 小擂台：左边是你，右边是此刻的目标；出招、挨打时在这里放动画（fightFx）
+    const tg = F.foes[F.target] && F.foes[F.target].hp > 0 ? F.foes[F.target] : F.foes.find((x) => x.hp > 0) || F.foes[0];
+    const stage = '<div class="qx-stage" aria-hidden="true"><div class="qx-actor" id="fx-me"><canvas class="px" data-portrait="me" width="20" height="24"></canvas></div>'
+      + '<div class="qx-actor foe" id="fx-foe"><span class="qx-foeglyph">' + esc(String(tg.name).slice(0, 1)) + '</span><small>' + esc(tg.name) + '</small></div></div>';
     let h = '<div class="card qx-fight" id="qx-ev"><div class="card-h"><h3>' + t('交手') + '</h3><small>' + t('第 {n} 回合', { n: F.round }) + '</small>'
       + (F.result ? '' : '<button class="b" data-act="auto" aria-pressed="' + !!F.auto + '">' + t(F.auto ? '停止自动' : '自动战斗') + '</button>') + '</div>'
-      + '<div class="qx-side"><div class="qx-units">' + F.foes.map((u, i) => unit(u, i, true)).join('') + '</div><div class="qx-vs">' + t('对') + '</div><div class="qx-units">' + F.allies.map((u, i) => unit(u, i, false)).join('') + '</div></div>'
+      + stage + '<div class="qx-side"><div class="qx-units">' + F.foes.map((u, i) => unit(u, i, true)).join('') + '</div><div class="qx-vs">' + t('对') + '</div><div class="qx-units">' + F.allies.map((u, i) => unit(u, i, false)).join('') + '</div></div>'
       + '<ol class="qx-flog">' + F.lines.slice(-7).map((l) => '<li>' + esc(l) + '</li>').join('') + '</ol>';
     if (F.result) h += '<div class="choices"><button class="b primary big" data-act="fightdone" id="cont">' + t('继续') + '</button></div>';
     else {
@@ -376,10 +380,12 @@
     else if (S.over) h = endView();
     else {
       setMe();
-      const mid = S.fight ? fightCard() : S.ev ? eventCard() : actionsCard();
+      // 打架用弹框：盖在画面上，点外面不关
+      const mid = S.fight ? '' : S.ev ? eventCard() : actionsCard();
       h = topView() + '<div class="qx-shell"><div class="col qx-main">' + sceneCard() + mid + '</div><aside class="col qx-sidecol">' + statusCard() + (QX.CFG.companions ? partyCard() : '') + newsCard() + '</aside></div>' + foot();
       const M = { char: charModal, arts: artsModal, items: itemsModal, party: partyModal, map: mapModal, shop: shopModal, save: saveModal, smith: smithModal, bank: bankModal, trade: tradeModal, escort: escortModal };
-      if (ui.modal && M[ui.modal]) h += M[ui.modal]();
+      if (S.fight) h += '<div class="overlay center"><div class="modal qx-modal wide qx-fightm" role="dialog" aria-modal="true" aria-label="' + esc(t('交手')) + '">' + fightCard() + '</div></div>';
+      else if (ui.modal && M[ui.modal]) h += M[ui.modal]();
     }
     if (ui.fb) h += feedbackModal();
     app.innerHTML = h;
@@ -395,11 +401,23 @@
     if (c && JY.drawScene) JY.drawScene(c, { loc: S.loc, year: S.day, me: 'me', age: QX.age(), party: S.party.slice(0, 2), partyAges: S.party.map(() => 30) });
     document.querySelectorAll('canvas[data-portrait]').forEach((cv) => { if (JY.drawPortrait) JY.drawPortrait(cv, cv.dataset.portrait, 30); });
   }
+  /* 简易的对战动画（照 typing-game 的做法）：打中对手，你往前一冲、对手身上一道斩光、飘伤害数；挨了打，你晃一下、飘红字 */
+  function fightSnap() { const F = QX.state() && QX.state().fight; return F ? { me: F.allies[0].hp, foes: F.foes.map((x) => x.hp) } : null; }
+  function fxEl(host, cls, text) { if (!host) return; const s = document.createElement('div'); s.className = cls; s.textContent = text || ''; s.onanimationend = () => s.remove(); host.appendChild(s); }
+  function bump(el, cls) { if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+  function fightFx(b) {
+    const F = QX.state() && QX.state().fight;
+    if (!b || !F) return;
+    const dealt = b.foes.reduce((s, h, i) => s + Math.max(0, h - Math.max(0, F.foes[i].hp)), 0), took = Math.max(0, b.me - Math.max(0, F.allies[0].hp));
+    const me = document.getElementById('fx-me'), foe = document.getElementById('fx-foe');
+    if (dealt) { bump(me, 'lunge'); fxEl(foe, 'qx-slash'); fxEl(foe, 'qx-dmg hit', '-' + dealt); }
+    if (took) setTimeout(() => { bump(me, 'shake'); fxEl(me, 'qx-dmg hurt', '-' + took); }, 200);
+  }
   function focusMid() { const el = document.getElementById('qx-ev'); if (el && window.innerWidth <= 820) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
   function stopAuto() { if (ui.autoT) { clearInterval(ui.autoT); ui.autoT = null; } }
   function startAuto() {
     stopAuto();
-    ui.autoT = setInterval(() => { const F = QX.state() && QX.state().fight; if (!F || F.result || !F.auto) { stopAuto(); render(); return; } QX.fightAct(QX.aiOption()); render(); }, 380);
+    ui.autoT = setInterval(() => { const F = QX.state() && QX.state().fight; if (!F || F.result || !F.auto) { stopAuto(); render(); return; } const b = fightSnap(); QX.fightAct(QX.aiOption()); render(); fightFx(b); }, 380);
   }
 
   /* ---------- 操作 ---------- */
@@ -441,7 +459,7 @@
       case 'takeescort': { const r = QX.takeEscort(d.id); ui.toast = r || ''; render(); break; }
       case 'dismiss': QX.dismiss(d.id); render(); break;
       case 'savem': QX.saveManual(); ui.toast = t('已存档。'); render(); break;
-      case 'fight': { const o = QX.fightOptions()[Number(d.i)]; if (o && !o.dis) QX.fightAct(o); render(); break; }
+      case 'fight': { const o = QX.fightOptions()[Number(d.i)]; const b = fightSnap(); if (o && !o.dis) QX.fightAct(o); render(); fightFx(b); break; }
       case 'target': QX.fightTarget(Number(d.i)); render(); break;
       case 'auto': QX.fightAuto(); if (S.fight.auto) startAuto(); else stopAuto(); render(); break;
       case 'fightdone': stopAuto(); QX.fightDone(); render(); focusMid(); break;
