@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.1.0';
+  const VERSION = '2.1.1';
   JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
   const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -168,10 +168,11 @@
   function newsCard() {
     const S = QX.state();
     const lines = S.log.slice(-14).reverse();
-    return '<div class="card log-card"><div class="card-h"><h3>' + t('经历') + '</h3><small>' + t('最新在上') + '</small></div><ul class="log qx-log">' + lines.map((l) => '<li class="k-' + esc(l.k) + '"><span class="a">' + esc(QX.date(l.d).y + '.' + QX.date(l.d).m) + '</span><span class="t">' + esc(l.t) + '</span><span class="s"></span></li>').join('') + '</ul>'
-      + '</div>'
-      + '<div class="card"><div class="card-h"><h3>' + t('江湖大事记') + '</h3><small>' + t('最新在上') + '</small></div>'
-      + (S.news.length ? '<ul class="ulist qx-news">' + S.news.slice(-8).reverse().map((n) => '<li>' + (n.d != null ? '<span class="qx-muted">' + esc(QX.date(n.d).y + '.' + QX.date(n.d).m) + '</span> ' : '') + esc(n.t) + '</li>').join('') + '</ul>' : '<p class="empty">' + t('江湖上暂时还算平静。') + '</p>') + '</div>';
+    // 江湖传闻放在上面：玩家靠它知道哪儿要出事、该去哪儿赶热闹；自己的经历在下面
+    return '<div class="card"><div class="card-h"><h3>' + t('江湖传闻') + '</h3><small>' + t('最新在上') + '</small></div>'
+      + (S.news.length ? '<ul class="ulist qx-news">' + S.news.slice(-8).reverse().map((n) => '<li>' + (n.d != null ? '<span class="qx-muted">' + esc(QX.date(n.d).y + '.' + QX.date(n.d).m) + '</span> ' : '') + esc(n.t) + '</li>').join('') + '</ul>' : '<p class="empty">' + t('江湖上暂时还算平静。') + '</p>') + '</div>'
+      + '<div class="card log-card"><div class="card-h"><h3>' + t('经历') + '</h3><small>' + t('最新在上') + '</small></div><ul class="log qx-log">' + lines.map((l) => '<li class="k-' + esc(l.k) + '"><span class="a">' + esc(QX.date(l.d).y + '.' + QX.date(l.d).m) + '</span><span class="t">' + esc(l.t) + '</span><span class="s"></span></li>').join('') + '</ul>'
+      + '</div>';
   }
 
   /* ---------- 弹框 ---------- */
