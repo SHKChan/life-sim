@@ -31,7 +31,7 @@
 │       ├── consequence.js 列出每个抉择的每个选项有没有后果
 │       ├── relations.js   静态找“熟人写成陌生人”（辅助，simulate 里有更准的运行时检查）
 │       ├── shot.js      无界面 Chrome 截图（含手机宽度；SHOT_LANG=en 截其他语言）
-│       └── build.js     打包到 dist/
+│       └── build.js     打包到 dist/（Cloudflare 走根目录 tools/build.js，固定 --base=life-sim）
 ├── 1in1.4b/             十四亿分之一（随机人生模式），结构同下；data/ 按人生阶段分文件，另有 scenes.js 画现代场景，economy.js 算钱、房子、和谁住
 ├── jianghuyimeng/       江湖一梦：只放这个游戏独有的东西
 │   ├── index.html       页面，按顺序引用 config → ../share/i18n、lang → game → ../share/engine → data/* → JY.loadLangData() → ../share/pixel、sharecard、ui
@@ -41,7 +41,9 @@
 │   ├── data/            故事数据（world.js + 每本书一个文件 + encounters.js 通用奇遇与贵人）
 │   ├── docs/SPEC.md     内容规范：时间线、数据格式、写作要求。写剧情前必读
 │   └── docs/ref/        用户给的设计参考截图（1in8B 的主界面、分享、回顾）
-├── docs/DEPLOY.md       阿里云部署（OSS / ECS+Nginx / Docker）
+├── tools/build.js       Cloudflare 打包入口（和其他游戏统一）
+├── cloudflare-deploy-guide.md  Cloudflare 部署约定（www.vibe-game.com/life-sim/）
+├── docs/DEPLOY.md       其他部署方式（阿里云 OSS / ECS+Nginx / Docker）
 ├── deploy/              nginx.conf、deploy-oss.sh
 ├── Dockerfile
 └── dist/                打包产物，不要手改，不进版本库
@@ -104,11 +106,11 @@
 
 **逻辑检查**：`GAME.lint(g, 文字, 种类)` 按此刻的状态检查每一行生平和抉择正文（已婚写成单身、有人同住写成独居、一岁吃牛肉面、九十岁领舞……），`simulate.js` 报“前后矛盾、不合年龄的文字”，必须清零。
 
-**多语言**：界面文字以中文为准，写成 `t('中文')`，英日西词表在 `share/lang.js`；游戏用词和剧情的翻译在 `<游戏>/lang/<语言>/`：`game.js` 覆盖 `JY.GAME` 的用词并用 `JY.addI18n` 加属性名、重心名等的翻译，其余是 `data/` 每个文件的完整翻译版（代码、id、标记名、记忆键、属性名、重心名、地点 id 一律不改，只翻译给玩家看的字）。`game.js` 的 `langs` 列出有剧情翻译的语言；没列出的语言只翻译界面、剧情用中文。改了中文剧情，翻译版要跟着改（或重新翻译那个文件）。`SIM_LANG=en node share/tools/simulate.js <游戏> 10` 测翻译版，会报“没翻译的中文”。
+**多语言**（暂时锁定中文：`share/i18n.js` 的 `LANG_OPEN = false`，下面的机制都保留，以后开放时和 vibe-game 的 `nav.js` 一起改）：界面文字以中文为准，写成 `t('中文')`，英日西词表在 `share/lang.js`；游戏用词和剧情的翻译在 `<游戏>/lang/<语言>/`：`game.js` 覆盖 `JY.GAME` 的用词并用 `JY.addI18n` 加属性名、重心名等的翻译，其余是 `data/` 每个文件的完整翻译版（代码、id、标记名、记忆键、属性名、重心名、地点 id 一律不改，只翻译给玩家看的字）。`game.js` 的 `langs` 列出有剧情翻译的语言；没列出的语言只翻译界面、剧情用中文。改了中文剧情，翻译版要跟着改（或重新翻译那个文件）。`SIM_LANG=en node share/tools/simulate.js <游戏> 10` 测翻译版，会报“没翻译的中文”。
 
 **江湖一梦 v1.4**：名单人物默认十岁醒来（`game.js` 的 `wakeAge`，首页可勾“从出生开始”），醒来前自己的节点按原著结算并在醒来页列出；练功分稳扎稳打、闭关（苦练）、冒进求成，有内伤和走火入魔；内功深的人老得慢；45 岁后有传艺、长老、论剑、闭关、著书、归隐、传人等后半生事件。细节见 `jianghuyimeng/docs/SPEC.md` 的 v1.4 一节。群侠模式（文字武侠 RPG）在 `jianghuyimeng/qunxia/`，有自己的引擎和存档，见那里的 README。
 
-**导航和反馈**：首页顶上和每一页底部有导航（总页面 → 浮生录大厅 → 本游戏）、语言下拉和“问题反馈”。地址在各游戏 `config.js`：`homeUrl` `hubUrl` `feedbackRepo`（GitHub Issues 预填链接）`feedbackApi`（以后有后端时直接 POST）。
+**导航和反馈**：页面最上面是全站顶栏（vibe-game 的 `/nav.js`：游戏列表、版本号、问题反馈、定时提醒），本仓库**不做底栏、不放语言下拉**。顶栏的“问题反馈”调用 `window.VG_FEEDBACK`（`share/ui.js` 和群侠 `ui.js` 里定义），打开带进度的反馈框；游戏顶栏里的“反馈”按钮也是同一个框。地址在各游戏 `config.js`：`feedbackRepo`（GitHub Issues 预填链接）`feedbackApi`（以后有后端时直接 POST）。
 
 ## 内容规范速查
 
@@ -164,7 +166,7 @@
 4. 照 `jianghuyimeng/docs/SPEC.md` 的格式写人物和剧情，写一份自己的 SPEC 记下时间线。
 5. 改新目录的 `index.html` 里的数据文件列表和 `<title>`、`description`。
 6. 在根目录 `index.html` 的 `GAMES` 列表里加一项（`id` 要等于目录名和 `game.js` 的 `id`）。
-7. 跑 simulate 到零问题，截图检查，`build.js` 打包。
+7. 跑 simulate 到零问题，截图检查，`node tools/build.js` 打包。
 
 ## 验证（每次改完都要做）
 
@@ -185,9 +187,17 @@ node share/tools/build.js                          # 打包
 
 ## 部署
 
-见 `docs/DEPLOY.md`。
+线上是 Cloudflare：见 `cloudflare-deploy-guide.md`。推送到 `main` 自动部署：
 
-- 要点：纯静态，`dist/` 整个目录传到 OSS 或 Nginx。
+```
+Build command:  node tools/build.js
+Deploy command: npx wrangler deploy --name life-sim --assets ./dist --compatibility-date=2025-06-01
+Route:          www.vibe-game.com/life-sim*
+```
+
+其他方式（阿里云 OSS / ECS+Nginx / Docker）见 `docs/DEPLOY.md`。
+
+- 要点：纯静态，`dist/` 整个目录传上去。
 - `config.js` 和 html 不缓存，其他文件带版本号长期缓存。
 - 国内地域绑定域名要 ICP 备案。
 
@@ -195,8 +205,8 @@ node share/tools/build.js                          # 打包
 
 - 整个 Vibe Game 系列的共同约定（网站结构、命名、版本号、主题、语言、画风、经验）在总页面仓库 `vibe-game` 的 `docs/GUIDE.md`。全站顶栏是那边的 `public/nav.js`，本仓库页面只引用 `/nav.js`。
 - 仓库名、目录名：只有古风项目用拼音（`jianghuyimeng`），其他用英文。
-- 每个游戏底部显示版本号（`game.js` 的 `version`），发布新内容时改。
-- 主题三种：暗、灰、白。剧情不预先翻译，其他语言用谷歌网页翻译；界面文字用 `share/lang.js` 词表。
+- 每个游戏的版本号显示在全站顶栏（`game.js` 的 `version`，打包时写进页面的 `vg:version`），发布新内容时改。
+- 主题三种：暗、灰、白。语言暂时只开中文；以后开放时剧情不预先翻译，其他语言用谷歌网页翻译，界面文字用 `share/lang.js` 词表。
 
 - 用中文交流，文案用简体中文。
 - 项目名“浮生录”，大厅里选不同背景的人生模拟器。游戏目录用英文名（如 `1in1.4b`）。

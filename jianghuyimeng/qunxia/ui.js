@@ -34,27 +34,12 @@
   function meLook() { const S = QX.state(); return S.sex === '女' ? { hair: 'bun', robe: '#8a6a7a', accent: '#d8c070' } : { hair: 'topknot', robe: '#6a6f7a', accent: '#c9a45c' }; }
   function setMe() { const S = QX.state(); if (S) JY.byId.me = { id: 'me', name: S.name, sex: S.sex, look: meLook() }; }
   const ICON = {
-    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
     chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5" stroke-linecap="round"/></svg>',
     theme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
   };
   const THEMES = [['dark', '暗'], ['gray', '灰'], ['light', '白']];
   const themeNow = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   function themeBtn() { const cur = THEMES.find((x) => x[0] === themeNow()) || THEMES[0]; return '<button class="b icon-b" data-act="theme" title="' + esc(t('切换主题')) + '">' + ICON.theme + '<span>' + esc(t(cur[1])) + '</span></button>'; }
-  function langSelect(id) {
-    return '<label class="lang-wrap notranslate" title="' + esc(t('语言')) + '">' + ICON.globe + '<select class="lang-sel" id="' + id + '" aria-label="' + esc(t('语言')) + '">'
-      + (JY.LANGS || [['zh', '中文']]).map((l) => '<option value="' + l[0] + '"' + (l[0] === (JY.LANG || 'zh') ? ' selected' : '') + '>' + l[1] + '</option>').join('') + '</select></label>';
-  }
-  function foot() {
-    const bits = [];
-    if (CFG.homeUrl) bits.push('<a href="' + esc(CFG.homeUrl) + '">' + esc(CFG.homeName || 'Vibe Game') + '</a>');
-    if (CFG.hubUrl) bits.push('<a href="' + esc(CFG.hubUrl) + '">' + esc(t(CFG.hubName || '浮生录')) + '</a>');
-    if (CFG.gameUrl) bits.push('<a href="' + esc(CFG.gameUrl) + '">' + esc(t(CFG.gameName || '江湖一梦')) + '</a>');
-    bits.push('<span class="cur">' + esc(t('群侠')) + '</span>');
-    return '<footer class="site-foot"><div class="crumbs">' + bits.join('<span class="sep" aria-hidden="true">›</span>') + '<span class="ver">v' + VERSION + '</span></div><div class="nav-tools">'
-      + langSelect('lang-foot') + '<button class="b icon-b" data-act="feedback">' + ICON.chat + '<span>' + t('问题反馈') + '</span></button></div>'
-      + (JY.MT ? '<p class="mt-note">' + t('剧情由谷歌网页翻译自动翻译，可能不够准确。') + '</p>' : '') + '</footer>';
-  }
   function modal(title, body, cls) {
     return '<div class="overlay center" data-act="bg"><div class="modal qx-modal ' + (cls || '') + '" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><div class="modal-h"><span>' + esc(title) + '</span><button class="b" data-act="close">' + t('关闭') + '</button></div><div class="modal-b">' + body + '</div></div></div>';
   }
@@ -83,7 +68,7 @@
       + (sl.auto && !sl.auto.over ? '<p class="hint">' + t('开新局会覆盖自动存档（手动存档不受影响）。') + '</p>' : '') + '</div>'
       + '<div class="how"><div><b>' + t('走') + '</b>' + t('十二处地方，路远的要走几十天。轻功越好走得越快。东海的岛要从临安坐船。') + '</div><div><b>' + t('练') + '</b>' + t('拜师、读秘籍、奇遇都能学武功。每门十级，冒进练得快，也容易走火入魔。') + '</div><div><b>' + t('打') + '</b>' + t('回合制，最多带两个同伴。选招式、运功、吃药，打不过可以跑。') + '</div><div><b>' + t('收') + '</b>' + t('十四件信物散在天下。有的要行侠才拿得到，有的只有不择手段才行。') + '</div></div>'
       + '</main>';
-    return h + foot();
+    return h;
   }
 
   /* ---------- 顶栏 ---------- */
@@ -94,7 +79,7 @@
       + '<button class="logo" data-act="home" title="' + esc(t('回到开始')) + '">' + t('群') + '<i>' + t('侠') + '</i></button>'
       + '<div class="qx-when"><span class="qx-date">' + esc(dateText(S.day)) + '</span><span class="qx-age">' + t('{n} 岁', { n: QX.age() }) + '</span></div>'
       + '<div class="qx-bars">' + bar('hp', S.hp, QX.maxHp(), t('气血')) + bar('mp', S.mp, QX.maxMp(), t('内力')) + '</div>'
-      + '<div class="ctl">' + btn('char', '人物') + btn('arts', '武功') + btn('items', '物品') + (QX.CFG.companions ? btn('party', '队伍') : '') + btn('map', '地图') + btn('save', '存档') + themeBtn() + langSelect('lang-top')
+      + '<div class="ctl">' + btn('char', '人物') + btn('arts', '武功') + btn('items', '物品') + (QX.CFG.companions ? btn('party', '队伍') : '') + btn('map', '地图') + btn('save', '存档') + themeBtn()
       + '<button class="b icon-b" data-act="feedback">' + ICON.chat + '<span>' + t('反馈') + '</span></button></div></div></header>';
   }
 
@@ -367,7 +352,7 @@
       + '<div class="big-num"><div><span>' + t('信物') + '</span><b>' + S.relics.length + '/14</b></div><div><span>' + t('品德') + '</span><b>' + Math.round(S.st.品德) + '</b></div><div><span>' + t('声望') + '</span><b>' + Math.round(S.st.声望) + '</b></div><div><span>' + t('战绩') + '</span><b>' + S.wins + '/' + S.fights + '</b></div></div>'
       + '<div class="card">' + relicsList(S) + '</div>'
       + (Object.keys(S.flags).some((f) => QX.FLAGS[f]) ? '<div class="card"><div class="card-h"><h3>' + t('江湖因你而变') + '</h3></div><ul class="ulist">' + Object.keys(S.flags).filter((f) => QX.FLAGS[f]).map((f) => '<li class="mod">' + esc(QX.FLAGS[f]) + '</li>').join('') + '</ul></div>' : '')
-      + '<div class="end-btns"><button class="b primary big" data-act="home">' + t('新的江湖') + '</button>' + (QX.slots().manual ? '<button class="b big" data-act="load" data-v="manual">' + t('读取手动存档') + '</button>' : '') + '</div></div></main>' + foot();
+      + '<div class="end-btns"><button class="b primary big" data-act="home">' + t('新的江湖') + '</button>' + (QX.slots().manual ? '<button class="b big" data-act="load" data-v="manual">' + t('读取手动存档') + '</button>' : '') + '</div></div></main>';
   }
   function relicsList(S) { return '<div class="card-h"><h3>' + t('十四件信物') + '</h3></div><div class="qx-relics">' + QX.relicIds().map((r) => '<span class="qx-relic' + (S.relics.includes(r) ? ' got' : '') + '">' + esc(QX.ITEMS[r].name) + '</span>').join('') + '</div>'; }
 
@@ -382,7 +367,7 @@
       setMe();
       // 打架用弹框：盖在画面上，点外面不关
       const mid = S.fight ? '' : S.ev ? eventCard() : actionsCard();
-      h = topView() + '<div class="qx-shell"><div class="col qx-main">' + sceneCard() + mid + '</div><aside class="col qx-sidecol">' + statusCard() + (QX.CFG.companions ? partyCard() : '') + newsCard() + '</aside></div>' + foot();
+      h = topView() + '<div class="qx-shell"><div class="col qx-main">' + sceneCard() + mid + '</div><aside class="col qx-sidecol">' + statusCard() + (QX.CFG.companions ? partyCard() : '') + newsCard() + '</aside></div>';
       const M = { char: charModal, arts: artsModal, items: itemsModal, party: partyModal, map: mapModal, shop: shopModal, save: saveModal, smith: smithModal, bank: bankModal, trade: tradeModal, escort: escortModal };
       if (S.fight) h += '<div class="overlay center"><div class="modal qx-modal wide qx-fightm" role="dialog" aria-modal="true" aria-label="' + esc(t('交手')) + '">' + fightCard() + '</div></div>';
       else if (ui.modal && M[ui.modal]) h += M[ui.modal]();
@@ -485,8 +470,8 @@
     if (e.target.id === 'f-name') ui.form.name = e.target.value;
     if (e.target.id === 'fb-text' && ui.fb) ui.fb.text = e.target.value;
   });
+  window.VG_FEEDBACK = () => act('feedback', {}); // 全站顶栏的“问题反馈”
   app.addEventListener('change', (e) => {
-    if (e.target.classList.contains('lang-sel') && JY.setLang) JY.setLang(e.target.value);
     if (e.target.id === 'fb-ctx' && ui.fb) ui.fb.ctx = e.target.checked;
     if (e.target.id === 'qx-horse') { ui.horse = e.target.checked; render(); }
   });

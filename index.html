@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>浮生录</title>
+<title>浮生录 · Vibe Game</title>
 <meta name="description" content="浮生录：人生模拟器合集。选一个背景，投一次胎，从出生活到离世。">
 <meta name="theme-color" content="#0e1315">
 <link rel="stylesheet" href="share/style.css">
@@ -22,6 +22,7 @@
   .world .save { font-size: 13px; color: var(--muted); }
   .world .save b { color: var(--fg); font-weight: 500; }
   .world .go { margin-top: auto; align-self: flex-start; }
+  .world .world-ver { position: absolute; right: 22px; bottom: 26px; font: 11px/1 var(--f-mono, ui-monospace, monospace); color: var(--muted); opacity: .8; }
   .soon { opacity: .55; }
 </style>
 <!-- 全站顶栏（总页面 vibe-game 仓库提供；本地打开时没有，不影响游戏） -->
@@ -34,8 +35,7 @@
 <script>
 (function () {
   'use strict';
-  // 所有游戏的总页面（网站导航的第一级）。部署到别处时改这里
-  var HOME_URL = 'https://www.vibe-game.com/', HOME_NAME = 'Vibe Game';
+  // 大厅里的游戏（世界）列表
   var GAMES = [
     { id: '1in1.4b', color: '#d0473a',
       name: { zh: '十四亿分之一', en: 'One in 1.4 Billion', ja: '十四億分の一', es: 'Uno entre 1400 millones' },
@@ -80,7 +80,7 @@
   var tx = function (k) { var v = TX[k]; return v[L] || v.zh; };
   var pick = function (o) { return o[L] || o.zh; };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
-  document.title = tx('title');
+  document.title = tx('title') + ' · Vibe Game';
   // 读各游戏的存档，显示活过几世、有没有正在过的一生（读不到就不显示）
   function saveLine(id) {
     try {
@@ -95,11 +95,6 @@
       return { t: bits.join(' · '), live: !!s.L };
     } catch (e) { return { t: '', live: false }; }
   }
-  var langSel = function (id) {
-    return '<label class="lang-wrap" title="' + tx('lang') + '"><span aria-hidden="true">文</span><select class="lang-sel" id="' + id + '" aria-label="' + tx('lang') + '">'
-      + JY.LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === L ? ' selected' : '') + '>' + l[1] + '</option>'; }).join('') + '</select></label>';
-  };
-  var crumbs = '<div class="crumbs"><a href="' + HOME_URL + '">' + HOME_NAME + '</a><span class="sep" aria-hidden="true">›</span><span class="cur">' + tx('title') + '</span></div>';
   var h = '<div class="home"><div class="home-hero hub-hero"><div><h1>' + (L === 'zh' ? '浮生<i>录</i>' : L === 'ja' ? '浮生<i>録</i>' : esc(tx('title'))) + '</h1><p>' + tx('lead') + '</p></div></div>'
     + '<section><div class="section-h"><h2>' + tx('pick') + '</h2><span>' + tx('pickSub') + '</span></div><div class="worlds">'
     + GAMES.map(function (g) {
@@ -111,10 +106,17 @@
         + (sv.t ? '<div class="save">' + sv.t + '</div>' : '')
         + '<span class="b primary go">' + (sv.live ? tx('cont') : tx('enter')) + '</span></a>';
     }).join('') + '</div></section>'
-    + '<section class="how">' + ['how1', 'how2', 'how3'].map(function (k) { var v = tx(k); return '<div><b>' + v[0] + '</b>' + v[1] + '</div>'; }).join('') + '</section></div>'
-    + '<footer class="site-foot">' + crumbs + '<div class="nav-tools">' + langSel('lang-foot') + '</div></footer>';
+    + '<section class="how">' + ['how1', 'how2', 'how3'].map(function (k) { var v = tx(k); return '<div><b>' + v[0] + '</b>' + v[1] + '</div>'; }).join('') + '</section></div>';
   document.getElementById('hub').innerHTML = h;
-  document.addEventListener('change', function (e) { if (e.target.classList.contains('lang-sel')) JY.setLang(e.target.value); });
+  // 版本号写在各游戏页面的 <meta name="vg:version">（打包时从 game.js 的 version 写进去），这里去读，发版不用改大厅
+  [].forEach.call(document.querySelectorAll('#hub a.world'), function (a) {
+    if (!window.fetch || !/^https?:$/.test(location.protocol)) return;
+    fetch(a.getAttribute('href'), { cache: 'no-cache' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (html) {
+      var m = /<meta\s+name=["']vg:version["']\s+content=["']v?([^"']+)["']/i.exec(html);
+      var go = a.querySelector('.go');
+      if (m && go) go.insertAdjacentHTML('afterend', '<span class="world-ver">v' + esc(m[1]) + '</span>');
+    }).catch(function () { /* 读不到就不显示 */ });
+  });
 })();
 </script>
 </body>

@@ -9,6 +9,7 @@
  *   dist/<游戏>/...          每个游戏自己的页面、设定、故事数据
  * css、js 引用会加上内容哈希作为版本号，浏览器和 CDN 不会读到旧文件。
  * config.js 不加版本号，上线后可以直接改。
+ * 每个游戏页面会加上 <meta name="vg:version">（从 game.js 的 version 或群侠 ui.js 的 VERSION 读），全站顶栏和首页靠它显示版本号。
  */
 'use strict';
 const fs = require('fs');
@@ -38,6 +39,8 @@ function copyFile(src, dst) {
 // 把页面引用的本地 css/js 拷过去并加版本号
 function buildPage(srcHtml, srcDir, outDir) {
   let html = fs.readFileSync(srcHtml, 'utf8');
+  const ver = pageVersion(srcDir);
+  if (ver) html = html.replace('<script src="/nav.js"', '<meta name="vg:version" content="' + ver + '">\n<script src="/nav.js"');
   const refs = [...new Set([...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map((m) => m[1]).filter((r) => !/^(https?:|\/)/.test(r)))]; // 外链和以 / 开头的全站文件（例如总页面的 /nav.js）不打包
   for (const ref of refs) {
     const buf = copyFile(path.join(srcDir, ref), path.join(outDir, ref));
@@ -49,6 +52,16 @@ function buildPage(srcHtml, srcDir, outDir) {
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, path.basename(srcHtml)), html);
   return refs;
+}
+
+// 本页面的版本号：同目录 game.js 的 version，或者 ui.js 的 VERSION（群侠）；大厅没有
+function pageVersion(dir) {
+  for (const [f, re] of [['game.js', /\bversion:\s*'([\d.]+)'/], ['ui.js', /\bconst VERSION = '([\d.]+)'/]]) {
+    const p = path.join(dir, f);
+    const m = fs.existsSync(p) && re.exec(fs.readFileSync(p, 'utf8'));
+    if (m) return m[1];
+  }
+  return '';
 }
 
 // 所有游戏 lang/ 目录里文件的内容（算 i18n.js 的版本号）

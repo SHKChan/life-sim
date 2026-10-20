@@ -64,7 +64,7 @@
   const bookOf = (b) => Object.assign({ short: b || '', code: 'BOOK', color: '#888', ink: '#111' }, T.books[b] || {});
   const PRE = T.id + '.';
   if (T.brand) document.documentElement.style.setProperty('--brand', T.brand);
-  document.title = T.title;
+  document.title = T.title + ' · Vibe Game';
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 忽略 */ } },
@@ -124,11 +124,11 @@
   }
 
   /* ---------- 网站导航、语言、反馈 ----------
-   * config.js 里：homeUrl / homeName（所有游戏的总页面）、hubUrl / hubName（这个合集的大厅）、
-   * feedbackRepo（'用户名/仓库'，有了才能提交到 GitHub Issues）、feedbackApi（以后有后端时，POST 到这个地址）。 */
+   * 页面最上面的全站顶栏（游戏列表、版本号、问题反馈、定时提醒）由总页面的 /nav.js 提供（vibe-game 仓库），这里不做底栏。
+   * 顶栏的“问题反馈”会调用 window.VG_FEEDBACK，打开下面这个带进度的反馈框。
+   * config.js 里：feedbackRepo（'用户名/仓库'，有了才能提交到 GitHub Issues）、feedbackApi（以后有后端时，POST 到这个地址）。 */
   // 小图标（线条，跟着文字颜色）
   const ICON = {
-    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>',
     chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5" stroke-linecap="round"/></svg>',
     theme: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
   };
@@ -139,26 +139,7 @@
     const cur = THEMES.find((x) => x[0] === themeNow()) || THEMES[0];
     return '<button class="b icon-b" id="' + id + '" data-act="theme" title="' + esc(t('主题：{x}（点一下换）', { x: t(cur[1]) })) + '">' + ICON.theme + '<span>' + esc(t(cur[1])) + (withText ? ' · ' + t('主题') : '') + '</span></button>';
   }
-  function langSelect(id) {
-    return '<label class="lang-wrap" title="' + esc(t('语言')) + '">' + ICON.globe + '<select class="lang-sel" id="' + id + '" aria-label="' + esc(t('语言')) + '">'
-      + (JY.LANGS || [['zh', '中文']]).map((l) => '<option value="' + l[0] + '"' + (l[0] === (JY.LANG || 'zh') ? ' selected' : '') + '>' + l[1] + '</option>').join('')
-      + '</select></label>';
-  }
   const feedbackBtn = (id, label) => '<button class="b icon-b" id="' + id + '" data-act="feedback">' + ICON.chat + '<span>' + label + '</span></button>';
-  function crumbs() {
-    const bits = [];
-    if (CFG.homeUrl) bits.push('<a href="' + esc(CFG.homeUrl) + '">' + esc(CFG.homeName || t('首页')) + '</a>');
-    if (CFG.hubUrl !== '') bits.push('<a href="' + esc(CFG.hubUrl || '../') + '">' + esc(t(CFG.hubName || '大厅')) + '</a>');
-    bits.push('<span class="cur">' + esc(T.title) + '</span>');
-    return bits.join('<span class="sep" aria-hidden="true">›</span>');
-  }
-  // 页面最上面的全站导航由总页面的 /nav.js 提供（vibe-game 仓库），这里只做每页底部这一条
-  function footNav() {
-    return '<footer class="site-foot"><div class="crumbs">' + crumbs() + (T.version ? '<span class="ver" title="' + esc(t('版本')) + '">v' + esc(T.version) + '</span>' : '') + '</div><div class="nav-tools">'
-      + langSelect('lang-foot') + feedbackBtn('f-feedback', t('问题反馈')) + '</div>' + mtNote() + '</footer>';
-  }
-  // 机器翻译剧情时，在底部说一声
-  const mtNote = () => (JY.MT ? '<p class="mt-note">' + t('剧情由谷歌网页翻译自动翻译，可能不够准确。') + '</p>' : '');
   const FB_KINDS = [['bug', '程序出错'], ['story', '剧情不合理'], ['idea', '建议'], ['other', '其他']];
   function feedbackContext() {
     const { L } = E.get();
@@ -445,7 +426,7 @@
       : '<p class="empty">' + t('还没有。') + '</p>';
     h += '</section>';
     h += '<section class="how">' + T.howto.map((x) => '<div><b>' + esc(x[0]) + '</b>' + esc(x[1]) + '</div>').join('') + '</section></div>';
-    return h + footNav();
+    return h;
   }
 
   /* ---------- 醒来 ---------- */
@@ -477,7 +458,7 @@
       + '<div style="margin-top:16px">' + SUI.bars.map((x) => lifeBar(x.cls, statName(x.k), L.st[x.k])).join('') + '</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="b primary big" id="w-begin" data-act="begin">' + esc(T.beginBtn) + '</button></div>'
       + '</div></div>';
-    return h + footNav();
+    return h;
   }
 
   /* ---------- 这一生 ---------- */
@@ -499,7 +480,6 @@
       + '<button class="b" id="c-next" data-act="next"' + (showDecision ? ' disabled' : '') + '>' + t('下一抉择') + ' »</button>'
       + '<button class="b" id="c-auto" data-act="auto" aria-pressed="' + ui.auto + '">' + t('自动') + '</button>'
       + themeBtn('c-theme')
-      + langSelect('lang-ctl')
       + feedbackBtn('c-feedback', t('反馈'))
       + '<button class="b" id="c-chron" data-act="drawer">' + esc(T.chronicle) + '</button>'
       + '<button class="b" id="c-exit" data-act="home">' + t('离开') + '</button>'
@@ -552,7 +532,6 @@
       + card(t('人生图'), t('一格一年'), lifeMap(c.born, L.start, Y, Y, L.marks))
       + rumorCard(W) + '</div>';
     h += '</div>';
-    h += footNav();
     if (showDecision) h += ui.peek ? decisionPill(ui.pending) : decisionModal(ui.pending, c);
     return h;
   }
@@ -704,7 +683,7 @@
       + '<button class="b big" id="e-review" data-act="review">' + t('再看一遍') + '</button>'
       + '<button class="b big" id="e-home" data-act="home">' + t('再入轮回') + '</button><button class="b big" id="e-chron" data-act="drawer">' + esc(T.chronicle) + '</button></div>';
     h += '</div></div>';
-    return h + footNav();
+    return h;
   }
   /* ---------- 终局回顾 ---------- */
   function reviewView() {
@@ -918,8 +897,8 @@
     }
     if (e.target.id === 'fb-text' && ui.feedback) ui.feedback.text = e.target.value;
   });
+  window.VG_FEEDBACK = () => act('feedback', {}); // 全站顶栏的“问题反馈”
   app.addEventListener('change', (e) => {
-    if (e.target.classList.contains('lang-sel')) { E.save(); if (JY.setLang) JY.setLang(e.target.value); }
     if (e.target.id === 'fb-ctx' && ui.feedback) ui.feedback.ctx = e.target.checked;
   });
   document.addEventListener('keydown', (e) => {

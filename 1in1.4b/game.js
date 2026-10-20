@@ -52,7 +52,7 @@ JY.GAME = {
     deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
     flavorRepeat: true,
   },
-  version: '1.5.0',                 // 显示在每页底部；发布新内容时改
+  version: '1.5.0',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人

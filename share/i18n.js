@@ -5,6 +5,7 @@
  *       各游戏的 game.js 可以再加自己的用词，并在 JY.GAME.i18n.<语言> 里覆盖界面用词字段。
  * 剧情文字的翻译放在各游戏 data/<语言>/ 下，按 id 覆盖中文节点（见 CLAUDE.md“多语言”）。
  * 语言存在 localStorage 的 vibe.lang（同一个网站下所有游戏共用），第一次按浏览器语言选。
+ * 全站翻译暂时只开中文（vibe-game 的 nav.js 里 LANG_OPEN）：这里也把 LANG_OPEN 设成 false，一律用中文、不载入谷歌翻译。
  */
 (function () {
   'use strict';
@@ -12,14 +13,16 @@
   const KEY = 'vibe.lang';
   JY.LANGS = [['zh', '中文'], ['en', 'English'], ['ja', '日本語'], ['es', 'Español']];
   const ok = (l) => JY.LANGS.some((x) => x[0] === l);
+  const LANG_OPEN = false; // 以后开放翻译时改成 true（和 vibe-game 的 nav.js 一起改）
   let lang = null;
-  try { lang = localStorage.getItem(KEY); } catch (e) { /* 存储不可用 */ }
+  try { lang = LANG_OPEN ? localStorage.getItem(KEY) : 'zh'; } catch (e) { /* 存储不可用 */ }
   if (!ok(lang)) {
     const n = String((typeof navigator !== 'undefined' && navigator.language) || '').toLowerCase();
     lang = /^ja/.test(n) ? 'ja' : /^es/.test(n) ? 'es' : /^en/.test(n) ? 'en' : 'zh';
   }
   // 网址里带 ?lang=en 时优先（方便分享某个语言的链接）
-  try { const q = new URLSearchParams(location.search).get('lang'); if (ok(q)) lang = q; } catch (e) { /* 无界面环境 */ }
+  try { const q = new URLSearchParams(location.search).get('lang'); if (LANG_OPEN && ok(q)) lang = q; } catch (e) { /* 无界面环境 */ }
+  if (!LANG_OPEN) lang = 'zh';
   JY.LANG = lang;
   JY.I18N = JY.I18N || {};
   JY.addI18n = (l, dict) => { JY.I18N[l] = Object.assign(JY.I18N[l] || {}, dict); };

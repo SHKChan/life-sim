@@ -69,7 +69,9 @@ docker run -d -p 80:80 jianghu-yimeng
 
 推到阿里云容器镜像服务 ACR 后，可以在 ECS、Serverless 应用引擎 SAE 或 ACK 上直接运行。
 
-### 方式 D：Cloudflare（免备案）
+### 方式 D：Cloudflare（免备案，线上正在用）
+
+现在的线上部署见仓库根目录的 `cloudflare-deploy-guide.md`（Worker `life-sim`，Build command `node tools/build.js`，挂在 `www.vibe-game.com/life-sim*`）。下面是独立部署到一个域名根目录时的做法。
 
 适合不想备案的情况。国内能打开，但速度和稳定性不如国内节点，适合小流量。
 
