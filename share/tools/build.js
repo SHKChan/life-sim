@@ -89,7 +89,7 @@ for (const g of games) {
 }
 if (fs.existsSync(path.join(repo, 'index.html'))) buildPage(path.join(repo, 'index.html'), repo, dist);
 if (fs.existsSync(path.join(repo, 'share', 'fonts'))) fs.cpSync(path.join(repo, 'share', 'fonts'), path.join(dist, 'share', 'fonts'), { recursive: true });
-// Cloudflare Pages / Workers 静态资源认这个文件（其他托管会忽略它）：缓存规则同 deploy/nginx.conf
+// Cloudflare Workers 静态资源的缓存规则：页面和 config.js 不缓存，其他文件带内容哈希长期缓存
 fs.writeFileSync(path.join(out, '_headers'), [
   pre + '/*.html', '  Cache-Control: no-cache',
   pre + '/', '  Cache-Control: no-cache',

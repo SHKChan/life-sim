@@ -99,6 +99,28 @@ Worker `life-sim` → Domains & Routes → 添加 Route：
 
 ---
 
+## 5.1 各游戏的 config.js
+
+每个游戏目录里有自己的 `config.js`（`1in1.4b/`、`jianghuyimeng/`、`jianghuyimeng/qunxia/`）。它不带版本号、不缓存，改完推送就生效：
+
+| 配置项 | 作用 |
+|---|---|
+| `siteUrl` | 这个游戏的网址，例如 `https://www.vibe-game.com/life-sim/jianghuyimeng/`。分享出去的文字总结会附上这个链接。 |
+| `siteName` | 分享图上的站名，没有网址时显示。 |
+| `fontCss` | 网页字体。国内访问不了 Google 字体，默认留空，只用系统自带的楷体、宋体、苹方、微软雅黑。想要书法标题字，把字体文件放进游戏目录下的 `fonts/`（或共用的 `share/fonts/`），写一个 `fonts.css`，再把这一项改成它的路径。 |
+| `feedbackRepo` / `feedbackApi` | 反馈框提交到哪：GitHub Issues 预填链接；以后有后端时直接 POST。 |
+
+打包时生成的 `dist/_headers` 让 Cloudflare 按规则缓存：页面和 `config.js` 不缓存，其他文件带内容哈希长期缓存。
+
+上线注意：
+
+- 必须用自己的域名，`*.workers.dev` 在国内经常打不开。免费套餐没有国内节点，打开慢一些属于正常。
+- 页面要尽量小，不依赖境外资源（现在打包后约 2.3 MB，默认不加载 Google 字体）。
+- 金庸作品仍受版权保护，保持非商业用途。
+- 分享：手机浏览器调起系统分享面板；不支持的浏览器复制文字总结并提供“保存图片”；微信内置浏览器提示长按图片保存。
+
+---
+
 ## 6. 上线时还要改另一个仓库（vibe-game）
 
 新游戏要出现在顶栏和总页面上，只需要在 **`SHKChan/vibe-game`** 的 `public/nav.js` 里给 `GAMES` 加一项（顶栏、首页游戏卡都从这里生成），再在 README 的表格里加一行。之后发版不用再改 vibe-game：

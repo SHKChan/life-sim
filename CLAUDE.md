@@ -42,10 +42,7 @@
 │   ├── docs/SPEC.md     内容规范：时间线、数据格式、写作要求。写剧情前必读
 │   └── docs/ref/        用户给的设计参考截图（1in8B 的主界面、分享、回顾）
 ├── tools/build.js       Cloudflare 打包入口（和其他游戏统一）
-├── cloudflare-deploy-guide.md  Cloudflare 部署约定（www.vibe-game.com/life-sim/）
-├── docs/DEPLOY.md       其他部署方式（阿里云 OSS / ECS+Nginx / Docker）
-├── deploy/              nginx.conf、deploy-oss.sh
-├── Dockerfile
+├── cloudflare-deploy-guide.md  部署约定（Cloudflare，www.vibe-game.com/life-sim/；含 config.js 各项说明）
 └── dist/                打包产物，不要手改，不进版本库
 ```
 
@@ -55,7 +52,7 @@
 |---|---|---|
 | `<游戏>/data/*.js` | 可以，主要工作区 | 加人物、节点、事件、奇遇、闲笔。按 `docs/SPEC.md` 写，改完跑 simulate。 |
 | `<游戏>/game.js` | 可以 | 只改值，**不要改字段名**。`share/` 按这些字段名读取。 |
-| `<游戏>/config.js` | 可以 | 部署相关，字段见 `docs/DEPLOY.md`。 |
+| `<游戏>/config.js` | 可以 | 部署相关，字段见 `cloudflare-deploy-guide.md`。 |
 | `share/*` | 谨慎 | 每个游戏都在用。改之前对所有游戏跑 simulate 和截图。**不要在 share 里写任何某个游戏专属的文字、人名、书名、颜色**，这些一律放进 `game.js` 或数据文件。 |
 | `share/engine.js` 的 `g` 接口、数据格式 | 只能加，不能改、不能删 | 三部书 400 多个节点都依赖这些名字和语义。要新能力就加新方法或新可选字段。 |
 | 存档结构（`W`、`L`） | 不要随意改 | 存档键是 `<game.id>.save.v2`。改了结构就把版本号升到 v3，旧存档自然作废，不要读到半新半旧的数据。 |
@@ -195,11 +192,9 @@ Deploy command: npx wrangler deploy --name life-sim --assets ./dist --compatibil
 Route:          www.vibe-game.com/life-sim*
 ```
 
-其他方式（阿里云 OSS / ECS+Nginx / Docker）见 `docs/DEPLOY.md`。
+只用 Cloudflare 上线，不再维护其他部署方式。
 
-- 要点：纯静态，`dist/` 整个目录传上去。
-- `config.js` 和 html 不缓存，其他文件带版本号长期缓存。
-- 国内地域绑定域名要 ICP 备案。
+- `config.js` 和 html 不缓存，其他文件带版本号长期缓存（`dist/_headers`）。
 
 ## 用户偏好（已确认，不要再问）
 
@@ -219,7 +214,7 @@ Route:          www.vibe-game.com/life-sim*
 - 1× 一年约 1 分钟；纪年下面的进度条显示今年的进度，纪年后面有一行小字写当前一年多长。
 - 手机上先显示中栏，再左栏，最后右栏。
 - 要分享图，也要带链接的文字总结，方便传播。
-- 要部署到阿里云，要移动端友好。
+- 部署在 Cloudflare（www.vibe-game.com/life-sim/），要移动端友好。
 - 根目录将来放同类型的其他游戏，公共代码放 `share/`，各游戏的差异放各自目录。
 
 ## 已知限制与待办
