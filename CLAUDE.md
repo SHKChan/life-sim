@@ -11,6 +11,37 @@
 - 整个仓库是**纯静态网站**：没有后端、没有构建依赖、没有 npm 包。双击 `index.html` 就能玩。存档在浏览器 `localStorage`。
 - 剧情文字全部**预先写好**，不调用 AI。这是用户定的。
 
+## 系列规范（先读）
+
+本仓库是 Vibe Game 系列的一个游戏。部署、顶栏、版本号、存档键、语言、画风、文风这些跨仓库的规则，只写在 vibe-game 仓库的 `docs/GUIDE.md`，开始工作前先读完：
+
+- 本地：`../vibe-game/docs/GUIDE.md`
+- 线上：https://raw.githubusercontent.com/SHKChan/vibe-game/main/docs/GUIDE.md
+
+两处都读不到时，先停下来问用户要这份规范，不要凭记忆或猜测去改跨仓库的东西。本文件只写本仓库的参数、玩法和例外；和 GUIDE 冲突时以 GUIDE 为准，除非下面明确写了“例外”。设计子代理（game / narrative / economy / level designer）在 vibe-game 的 `.claude/agents/`，需要时按 GUIDE 第十三节去读。
+
+## 本仓库参数
+
+| 项 | 值 |
+|---|---|
+| 网址 | https://www.vibe-game.com/life-sim/（大厅），`1in1.4b/`、`jianghuyimeng/`、`jianghuyimeng/qunxia/` |
+| 路径 / Worker | `life-sim` |
+| 生产分支 | `main`（推送即部署） |
+| 打包 | `node tools/build.js`：固定 `--base=life-sim`，实际在 `share/tools/build.js`（加内容哈希、写 `dist/_headers`、把版本号写进 `vg:version`）。页面引用的本地 js/css、游戏目录下的 `fonts/` `assets/` `lang/` 和带 `index.html` 的子目录会自动打包 |
+| 版本号 | 各游戏 `game.js` 的 `version`；群侠是 `qunxia/ui.js` 的 `VERSION`。打包时写进页面，不用手写 meta |
+| 存档键 | `<game.id>.save.v2`（例如 `1in1.4b.save.v2`） |
+| 问题反馈 | `share/ui.js` 和群侠 `ui.js` 定义了 `window.VG_FEEDBACK`，顶栏的“问题反馈”打开带进度的反馈框 |
+| 语言 | `share/i18n.js` 的 `LANG_OPEN = false`（GUIDE：暂时只开中文） |
+
+各游戏的 `config.js`（不缓存，改完推送就生效）：
+
+| 配置项 | 作用 |
+|---|---|
+| `siteUrl` | 这个游戏的网址。分享出去的文字总结会附上这个链接。 |
+| `siteName` | 分享图上的站名，没有网址时显示。 |
+| `fontCss` | 网页字体。默认留空，只用系统字体。想要书法标题字，把字体文件放进游戏目录的 `fonts/`（或 `share/fonts/`），写一个 `fonts.css`，再填它的路径。 |
+| `feedbackRepo` / `feedbackApi` | 反馈框提交到哪：GitHub Issues 预填链接；以后有后端时直接 POST。 |
+
 ## 目录
 
 ```
@@ -35,14 +66,13 @@
 ├── 1in1.4b/             十四亿分之一（随机人生模式），结构同下；data/ 按人生阶段分文件，另有 scenes.js 画现代场景，economy.js 算钱、房子、和谁住
 ├── jianghuyimeng/       江湖一梦：只放这个游戏独有的东西
 │   ├── index.html       页面，按顺序引用 config → ../share/i18n、lang → game → ../share/engine → data/* → JY.loadLangData() → ../share/pixel、sharecard、ui
-│   ├── config.js        部署配置（网址、站名、字体、导航、反馈），上线后可直接改
+│   ├── config.js        部署配置（网址、站名、字体、反馈），见上面“本仓库参数”
 │   ├── lang/<语言>/     剧情翻译：game.js（界面用词）+ data/ 每个文件的翻译版（同名、同顺序）
 │   ├── game.js          游戏设定 JY.GAME：标题、界面用词、书名颜色、分享文案、存档前缀
 │   ├── data/            故事数据（world.js + 每本书一个文件 + encounters.js 通用奇遇与贵人）
 │   ├── docs/SPEC.md     内容规范：时间线、数据格式、写作要求。写剧情前必读
 │   └── docs/ref/        用户给的设计参考截图（1in8B 的主界面、分享、回顾）
-├── tools/build.js       Cloudflare 打包入口（和其他游戏统一）
-├── cloudflare-deploy-guide.md  部署约定（Cloudflare，www.vibe-game.com/life-sim/；含 config.js 各项说明）
+├── tools/build.js       Cloudflare 打包入口（固定 --base=life-sim）
 └── dist/                打包产物，不要手改，不进版本库
 ```
 
@@ -52,7 +82,7 @@
 |---|---|---|
 | `<游戏>/data/*.js` | 可以，主要工作区 | 加人物、节点、事件、奇遇、闲笔。按 `docs/SPEC.md` 写，改完跑 simulate。 |
 | `<游戏>/game.js` | 可以 | 只改值，**不要改字段名**。`share/` 按这些字段名读取。 |
-| `<游戏>/config.js` | 可以 | 部署相关，字段见 `cloudflare-deploy-guide.md`。 |
+| `<游戏>/config.js` | 可以 | 部署相关，字段见上面“本仓库参数”。 |
 | `share/*` | 谨慎 | 每个游戏都在用。改之前对所有游戏跑 simulate 和截图。**不要在 share 里写任何某个游戏专属的文字、人名、书名、颜色**，这些一律放进 `game.js` 或数据文件。 |
 | `share/engine.js` 的 `g` 接口、数据格式 | 只能加，不能改、不能删 | 三部书 400 多个节点都依赖这些名字和语义。要新能力就加新方法或新可选字段。 |
 | 存档结构（`W`、`L`） | 不要随意改 | 存档键是 `<game.id>.save.v2`。改了结构就把版本号升到 v3，旧存档自然作废，不要读到半新半旧的数据。 |
@@ -60,7 +90,7 @@
 | 十四亿分之一的状态键名（`1in1.4b/docs/SPEC.md` 的表） | 只能加 | 各人生阶段的文件靠这些键名衔接。改一个键名，后面读它的节点全部失效。 |
 | 游戏目录名 | 不要随意改 | 目录名就是网址路径，也写在大厅 `index.html` 里。存档前缀是 `game.js` 的 `id`，改了旧存档会丢。 |
 | 改命标记的名字 | 不能改名 | 跨书、跨世都靠标记名传递。只能新增，新增要 `JY.addFlags` 注册说明。 |
-| `dist/` | 不要手改 | 用 `node share/tools/build.js` 重新生成。 |
+| `dist/` | 不要手改 | 用 `node tools/build.js` 重新生成。 |
 
 ## 架构要点
 
@@ -107,7 +137,7 @@
 
 **江湖一梦 v1.4**：名单人物默认十岁醒来（`game.js` 的 `wakeAge`，首页可勾“从出生开始”），醒来前自己的节点按原著结算并在醒来页列出；练功分稳扎稳打、闭关（苦练）、冒进求成，有内伤和走火入魔；内功深的人老得慢；45 岁后有传艺、长老、论剑、闭关、著书、归隐、传人等后半生事件。细节见 `jianghuyimeng/docs/SPEC.md` 的 v1.4 一节。群侠模式（文字武侠 RPG）在 `jianghuyimeng/qunxia/`，有自己的引擎和存档，见那里的 README。
 
-**导航和反馈**：页面最上面是全站顶栏（vibe-game 的 `/nav.js`：游戏列表、版本号、问题反馈、定时提醒），本仓库**不做底栏、不放语言下拉**。顶栏的“问题反馈”调用 `window.VG_FEEDBACK`（`share/ui.js` 和群侠 `ui.js` 里定义），打开带进度的反馈框；游戏顶栏里的“反馈”按钮也是同一个框。地址在各游戏 `config.js`：`feedbackRepo`（GitHub Issues 预填链接）`feedbackApi`（以后有后端时直接 POST）。
+**导航和反馈**：页面最上面是全站顶栏（GUIDE 第四节），本仓库不做底栏、不放语言下拉。游戏里的“反馈”按钮和顶栏的“问题反馈”打开同一个带进度的反馈框。
 
 ## 内容规范速查
 
@@ -123,7 +153,7 @@
 - 世界事件写 `who`：玩家正是这个人时事件跳过，避免和玩家自己的节点重复。
 - 别人的改命可能让某人不存在（例如郭靖黄蓉没在一起，郭芙郭襄就不会出生），用 `exists`。
 - **人物关系以原著关系网为准**（`jianghuyimeng/data/relations.js`，用户特别强调）：每条写明两人什么关系、从哪年起相识、什么改命条件下不成立。剧情里提到别人，先 `g.knows('id')` 看此刻是什么关系，按关系写称呼和熟悉程度：亲人、师徒、旧识不能写成陌生人；还没相识的年份不能写成熟人；改命让两人没认识时要有变体。奇遇里出现 NPC，要么用 `g.knows` 写熟人版本，要么在 `cond` 里 `!g.knows('id')` 排除熟人。simulate 会报“熟人写成陌生人”。改关系表的年份前先对照 SPEC 的纪年表和原著。
-- 文风：中文、第二人称“你”、短句白描、每段 1–4 句。不用“——”插入语，不用“不是……而是……”，不用表情符号。不照抄原著原文。性暴力不写，死亡一句带过。
+- 文风按 GUIDE 第十节；另外：不照抄原著原文，性暴力不写。
 - 人名、地名、武功、关系要贴原著。
 
 ## 界面约定
@@ -176,34 +206,15 @@ node share/tools/consequence.js jianghuyimeng guojing --list   # 看某个人物
 node share/tools/shot.js jianghuyimeng guojing-4-dark /tmp/a.png 1440,1000
 node share/tools/shot.js jianghuyimeng yangkang-80-dark-share /tmp/b.png 390,844
 SHOT_WAIT=20000 node share/tools/shot.js jianghuyimeng huangrong-0-dark-run /tmp/c.png   # 16× 空跑 20 秒，应走过约 5 年
-node share/tools/build.js                          # 打包
+node tools/build.js                                # 打包（同 Cloudflare）
 ```
 
 - simulate 报“从未触发”的节点：如果它只能靠前一世留下的标记触发（例如杨过从小由郭靖带大），随机测试碰不到是正常的。新写的这类节点要单独设标记测一次。
 - shot.js 需要本机装有 Chrome 或 Edge，找不到时设环境变量 `CHROME`。
 
-## 部署
-
-线上是 Cloudflare：见 `cloudflare-deploy-guide.md`。推送到 `main` 自动部署：
-
-```
-Build command:  node tools/build.js
-Deploy command: npx wrangler deploy --name life-sim --assets ./dist --compatibility-date=2025-06-01
-Route:          www.vibe-game.com/life-sim*
-```
-
-只用 Cloudflare 上线，不再维护其他部署方式。
-
-- `config.js` 和 html 不缓存，其他文件带版本号长期缓存（`dist/_headers`）。
-
 ## 用户偏好（已确认，不要再问）
 
-- 整个 Vibe Game 系列的共同约定（网站结构、命名、版本号、主题、语言、画风、经验）在总页面仓库 `vibe-game` 的 `docs/GUIDE.md`。全站顶栏是那边的 `public/nav.js`，本仓库页面只引用 `/nav.js`。
-- 仓库名、目录名：只有古风项目用拼音（`jianghuyimeng`），其他用英文。
-- 每个游戏的版本号显示在全站顶栏（`game.js` 的 `version`，打包时写进页面的 `vg:version`），发布新内容时改。
-- 主题三种：暗、灰、白。语言暂时只开中文；以后开放时剧情不预先翻译，其他语言用谷歌网页翻译，界面文字用 `share/lang.js` 词表。
-
-- 用中文交流，文案用简体中文。
+- 文案用简体中文。
 - 项目名“浮生录”，大厅里选不同背景的人生模拟器。游戏目录用英文名（如 `1in1.4b`）。
 - 十四亿分之一：都从 2026 年出生，完全按人口比例随机投胎；只写民生（升学、打工、房子、成家、养老），避开政治运动和敏感事件，不写真实品牌和名人。
 - 江湖一梦的人物关系必须贴原著：亲人、师徒、旧识之间不能写成陌生人，除非前面的选择让他们真的没认识。
@@ -214,7 +225,7 @@ Route:          www.vibe-game.com/life-sim*
 - 1× 一年约 1 分钟；纪年下面的进度条显示今年的进度，纪年后面有一行小字写当前一年多长。
 - 手机上先显示中栏，再左栏，最后右栏。
 - 要分享图，也要带链接的文字总结，方便传播。
-- 部署在 Cloudflare（www.vibe-game.com/life-sim/），要移动端友好。
+- 要移动端友好。
 - 根目录将来放同类型的其他游戏，公共代码放 `share/`，各游戏的差异放各自目录。
 
 ## 已知限制与待办
@@ -231,4 +242,4 @@ Route:          www.vibe-game.com/life-sim*
   - 最简单的做法是拼一个 `https://github.com/<owner>/<repo>/issues/new?title=…&body=…` 链接，正文预填人物、纪年、版本号。缺点是玩家要有 GitHub 账号，而且国内打开 GitHub 不稳定。
   - 不要账号的做法要一个后端。部署在 Cloudflare 时，用同一个 Worker 加一个 `/api/feedback` 接口，用只给这个仓库 Issues 写权限的细粒度令牌，通过 GitHub API 建 issue。令牌只放在 Worker 的密钥里，绝不写进前端。要加频率限制，防止刷屏。
   - 仓库地址放进 `config.js`（例如 `feedbackRepo`），没填就不显示反馈按钮。
-- **多语言**：机制已做好（见“架构要点”）。简体中文、English、日本語、Español 四种，语言存在 `localStorage` 的 `vibe.lang`，首次按浏览器语言选。剧情翻译按游戏、按语言逐步补齐，`game.js` 的 `langs` 记录已经翻译完的语言。
+- **多语言**：机制已做好（见“架构要点”），现在锁定中文。开放后剧情翻译按游戏、按语言逐步补齐，`game.js` 的 `langs` 记录已经翻译完的语言。

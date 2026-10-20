@@ -13,7 +13,7 @@
 - 语言：暂时只开中文（`share/i18n.js` 的 `LANG_OPEN`）。英日西的界面词表和剧情翻译都还在，以后再开放。
 - 主题：暗、灰、白三种。手机、电脑都能玩。
 - 试玩（本地）：用浏览器打开根目录的 `index.html`（大厅），或者直接打开某个游戏目录里的 `index.html`。不需要服务器，存档在浏览器里。
-- 部署：纯静态网站，推送到 `main` 后 Cloudflare 自动部署（Build command `node tools/build.js`，见 `cloudflare-deploy-guide.md`）。
+- 部署：纯静态网站，推送到 `main` 后 Cloudflare 自动部署（Build command `node tools/build.js`，部署规则见 [vibe-game 的 GUIDE.md](https://github.com/SHKChan/vibe-game/blob/main/docs/GUIDE.md)）。
 - 版本：每个游戏的版本号显示在全站顶栏（`game.js` 的 `version`，打包时写进页面）；发布时打 Git 标签（例如 `1in1.4b-v1.5.0`、`jianghuyimeng-v1.3.0`），要回滚就回到对应标签。
 - 开发：先读 `CLAUDE.md`（给开发者和 AI 助手的说明），写剧情前读各游戏的 `docs/SPEC.md`。全系列的约定在 [vibe-game 仓库的 docs/GUIDE.md](https://github.com/SHKChan/vibe-game/blob/main/docs/GUIDE.md)。
 - 改完数据在根目录跑 `node share/tools/simulate.js <游戏目录> 40`，必须输出“没有发现问题”。
