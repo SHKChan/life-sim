@@ -5,7 +5,7 @@
   'use strict';
   const JY = (window.JY = window.JY || {});
   const CFG = window.JY_CONFIG || {};
-  const t = JY.t || ((x, v) => (v ? x.replace(/{(w+)}/g, (m, k) => v[k]) : x));
+  const t = JY.t || ((x, v) => (v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k]) : x));
   // 游戏用词按当前语言覆盖（JY.GAME.i18n.<语言>），同 ui.js
   const GAME = Object.assign({}, JY.GAME || {}, (JY.GAME && JY.GAME.i18n && JY.GAME.i18n[JY.LANG]) || {});
   // 分享卡和文字总结的用词、字段可以由 GAME.share 覆盖：sub(life) 姓名上方的小字，fields(life) 四个字段，summary(life) 文字总结（不含链接）
@@ -28,6 +28,23 @@
   const MARK = { p: '#c3cbc4', j: '#c9a24a', q: '#2a8a90', b: '#e3a796', d: '#b0472f', '': '#e3e5de' };
 
   JY.siteUrl = () => CFG.siteUrl || (/^https?:$/.test(location.protocol) ? location.origin + location.pathname : '');
+  // 二维码和网址里显示的地址：去掉协议、www 和结尾的斜杠
+  JY.siteShort = () => String(JY.siteUrl() || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+  // 在画布上画一个二维码（share/vendor/qrcode.js）；没有这个库就不画，返回 false
+  JY.drawQR = (c, text, x, y, size) => {
+    if (!text || typeof window.qrcode !== 'function') return false;
+    try {
+      const q = window.qrcode(0, 'M');
+      q.addData(text);
+      q.make();
+      const n = q.getModuleCount(), quiet = 2, cell = size / (n + quiet * 2);
+      c.fillStyle = '#ffffff';
+      c.fillRect(x, y, size, size);
+      c.fillStyle = '#111111';
+      for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) c.fillRect(x + (k + quiet) * cell, y + (r + quiet) * cell, Math.ceil(cell), Math.ceil(cell));
+      return true;
+    } catch (e) { return false; }
+  };
   JY.siteLabel = () => {
     const u = JY.siteUrl();
     if (!u) return CFG.siteName || TITLE;
@@ -38,7 +55,7 @@
   function wrap(c, text, x, y, maxW, lh, maxLines) {
     let line = '';
     let lines = [];
-    const parts = String(text || '').match(/[　-鿿＀-￯]|[^s　-鿿＀-￯]+s*|s+/g) || [];
+    const parts = String(text || '').match(/[　-鿿＀-￯]|[^\s　-鿿＀-￯]+\s*|\s+/g) || [];
     for (const ch of parts) {
       const next = line + ch;
       if (c.measureText(next).width > maxW && line) { lines.push(line.trimEnd()); line = ch.trimStart(); } else line = next;
@@ -55,7 +72,7 @@
   /* life：E.finish 返回的记录；line：玩家写的一句话 */
   JY.drawShareCard = (target, life, line) => {
     const S = 2, Wd = 600;
-    let Ht = 1200;
+    let Ht = 1500; // 先按最长的画，最后按内容裁到实际高度
     const canvas = document.createElement('canvas');
     canvas.width = Wd * S;
     canvas.height = Ht * S;
@@ -164,7 +181,7 @@
     c.fillText(DEV, 304, y + 120);
     c.font = '12.5px ' + F_BODY;
     c.fillStyle = MUTED;
-    c.fillText(t('做过 {n} 个抉择', { n: life.picks.length }), 304, y + 142);
+    c.fillText(t('做过 {n} 个抉择', { n: life.picks.filter((p) => !p.auto).length }), 304, y + 142);
     c.fillText(FATE + t('：'), 304, y + 166);
     const fateH = wrap(c, life.fateText, 304, y + 186, 266, 18, 5);
     const mapBottom = y + 12 + Math.ceil(span / cols) * (cell + gap);
@@ -179,22 +196,51 @@
       c.fillStyle = '#2a7d84';
       y += 22 + wrap(c, life.changes.slice(0, 4).map((k) => JY.FLAGS[k] || k).join(t('；')), 30, y + 22, 540, 20, 3);
     }
-    Ht = y + 76;
-
-    // 页脚
+    // 游戏自己加的几行（例如十四亿分之一的稀有度、成就）：share.badges(life) 返回文字数组
+    const badges = SH.badges ? SH.badges(life) : [];
+    if (badges.length) {
+      c.fillStyle = accent;
+      c.fillRect(30, y - 4, 3, badges.length * 22 + 2);
+      c.font = '700 13.5px ' + F_BODY;
+      c.fillStyle = INK;
+      badges.slice(0, 4).forEach((b) => { y += wrap(c, b, 42, y + 12, 528, 20, 1) + 2; });
+      y += 18;
+    }
+    // 页脚：左边一句话和网址，右边二维码（扫码直接打开游戏页，分享截图到任何平台都能导流）
+    const url = JY.siteUrl();
+    const QR = 96;
+    Ht = y + (url ? QR + 44 : 76);
     c.fillStyle = 'rgba(0,0,0,0.12)';
-    c.fillRect(30, Ht - 62, Wd - 60, 1);
+    c.fillRect(30, Ht - (url ? QR + 26 : 62), Wd - 60, 1);
     c.fillStyle = INK;
-    c.font = '700 15px ' + F_BODY;
-    c.fillText(GAME.cardFooter || '', 30, Ht - 30);
-    c.fillStyle = accent;
-    c.font = '700 13px ' + F_MONO;
-    c.textAlign = 'right';
-    c.fillText(JY.siteLabel(), Wd - 30, Ht - 30);
-    c.textAlign = 'left';
+    c.font = '700 16px ' + F_BODY;
+    if (url) {
+      const top = Ht - QR - 12;
+      c.fillText(GAME.cardFooter || '', 30, top + 30);
+      c.font = '13px ' + F_BODY;
+      c.fillStyle = MUTED;
+      c.fillText(GAME.qrCaption || t('扫码或打开网址，投一次你的胎'), 30, top + 56);
+      c.fillStyle = accent;
+      c.font = '700 14px ' + F_MONO;
+      wrap(c, JY.siteShort(), 30, top + 82, Wd - 60 - QR - 30, 18, 2);
+    } else {
+      c.fillText(GAME.cardFooter || '', 30, Ht - 30);
+      c.fillStyle = accent;
+      c.font = '700 13px ' + F_MONO;
+      c.textAlign = 'right';
+      c.fillText(JY.siteLabel(), Wd - 30, Ht - 30);
+      c.textAlign = 'left';
+    }
+    // 画布高度定了才能画二维码：先画到临时画布，最后再拼
     target.width = Wd * S;
     target.height = Ht * S;
-    target.getContext('2d').drawImage(canvas, 0, 0);
+    const tc = target.getContext('2d');
+    tc.drawImage(canvas, 0, 0);
+    if (url) {
+      tc.setTransform(S, 0, 0, S, 0, 0);
+      JY.drawQR(tc, url, Wd - 30 - QR, Ht - QR - 12, QR);
+      tc.setTransform(1, 0, 0, 1, 0, 0);
+    }
     return target;
   };
 
@@ -214,7 +260,7 @@
     lines.push(t('{year} {from}—{to}，享年 {age}，{cause}。', { year: YEAR, from: life.born, to: life.to, age, cause: life.cause }));
     lines.push(t('{canon}里的{name}：', { canon: CANON, name: life.name }) + life.fateText);
     lines.push(ch.length ? t('这一世我改了命：{x}。', { x: ch.slice(0, 3).join(t('；')) }) : t('这一世，我照着{canon}走完了。', { canon: CANON }));
-    lines.push(t('改命度 {dev}%，做过 {n} 个抉择。临终一句：“{words}”', { dev: life.dev, n: life.picks.length, words: life.words }));
+    lines.push(t('改命度 {dev}%，做过 {n} 个抉择。临终一句：“{words}”', { dev: life.dev, n: life.picks.filter((p) => !p.auto).length, words: life.words }));
     const url = JY.siteUrl();
     lines.push((GAME.shareLead || '') + (withUrl !== false && url ? url : ''));
     return lines.join('\n');

@@ -44,7 +44,7 @@
   const STUDY = ['uni', 'college', 'repeat', 'grad', 'phd', 'abroad'];
   // 理财：期望年收益、波动
   const RISK = { safe: [0.025, 0], fund: [0.05, 0.15], stock: [0.06, 0.3], gold: [0.04, 0.12] };
-  const RISK_T = { safe: '存定期和国债', fund: '买基金', stock: '炒股', gold: '买黄金' };
+  const RISK_T = { safe: '存定期和国债', fund: '买基金', stock: '炒股', gold: '买黄金', hy: '买高息理财' };
   // 成年时手里的钱：按家境
   const START = { rich: 300000, civil: 50000, white: 40000, smallbiz: 30000, worker: 12000, farmer: 6000, migrant: 6000 };
 
@@ -71,7 +71,7 @@
     const n = Math.round(Number(yuan) || 0);
     const neg = n < 0 ? '-' : '';
     const a = Math.abs(n);
-    if ((JY.LANG || 'zh') !== 'zh') {
+    if (!/^zh/.test(JY.LANG || 'zh')) {
       const d = a / USD;
       if (d >= 1e6) return neg + '$' + (d / 1e6).toFixed(d >= 1e7 ? 0 : 1) + 'M';
       if (d >= 1e4) return neg + '$' + Math.round(d / 1e3) + 'K';
@@ -102,7 +102,11 @@
   CN.income = (g) => {
     const age = g.age, job = g.recall('job') || 'none';
     let mine = 0;
-    if (g.recall('retired') || job === 'retired') mine = PENSION[g.recall('pension')] || (g.recall('hukou') === 'rural' ? PENSION.low : PENSION.mid);
+    if (g.recall('retired') || job === 'retired') {
+      mine = PENSION[g.recall('pension')] || (g.recall('hukou') === 'rural' ? PENSION.low : PENSION.mid);
+      // 个人养老金账户、养老年金（finance.js）：退休后按年领
+      mine += (Number(g.recall('paAcct')) || 0) / 20 + (Number(g.recall('annuity')) || 0);
+    }
     else if (!(STUDY.includes(g.recall('lifePath')) && job === 'none')) {
       const base = INCOME[job] != null ? INCOME[job] : 60000;
       const career = 0.6 + g.s('事业') / 100 * 1.4;
@@ -206,6 +210,8 @@
   };
   CN.who = (g, id, age) => g.who(id, age);
   const relOf = (g, id) => g.knows(id) || (JY.byId[id] ? JY.byId[id].name : '');
+  // “你和谁住”整句的开头：中文“你和妻子住在一起”，英文 “You were living with your wife”
+  CN.youHh = (g) => (/^zh/.test(JY.LANG || 'zh') ? '你' + CN.hhText(g) : 'You were ' + CN.hhText(g));
   CN.hhText = (g) => {
     const place = g.recall('hhPlace');
     if (place === 'nursing') return '住在养老院';
@@ -350,7 +356,9 @@
     // 存款利息、理财涨跌
     if (cash > 0) cash *= 1.015;
     const inv = V.invest(g), style = g.recall('investStyle');
-    if (inv > 0 && RISK[style]) {
+    // 有行情和分仓（finance.js）就按分仓和这一年的行情算；没有就按老办法
+    if (CN.pfYear) { setCash(g, cash); CN.pfYear(g, age).forEach((t) => out.push(t)); cash = CN.cash(g); }
+    else if (inv > 0 && RISK[style]) {
       const r = RISK[style][0] + RISK[style][1] * gauss();
       const delta = inv * r;
       g.remember('invest', Math.max(0, Math.round(inv + delta)));
@@ -497,7 +505,7 @@
   /* ---------- 场景框画什么 ----------
    * 这一年剧情把你带去了别处（医院、写字楼、工厂、路上、海边、学校），就画那里和陪着你的人；
    * 否则画你的家（村子、县城、城里的小区、宿舍、养老院），和住在一起的人、宠物。 */
-  const AWAY = ['hospital', 'office', 'factory', 'road', 'coast', 'school', 'campus'];
+  const AWAY = ['hospital', 'office', 'factory', 'road', 'coast', 'school', 'campus', 'hsr', 'smart'];
   function homeLoc(g) {
     const place = g.recall('hhPlace');
     if (place === 'dorm') return g.age < 16 ? 'school' : STUDY.includes(g.recall('lifePath')) ? 'campus' : 'factory';
@@ -558,7 +566,7 @@
       if (!c) return '';
       const age = g.Y - c.born;
       const rel = g.knows(id);
-      if (rel) return '你的' + rel + c.name + cause + '，享年 ' + age + ' 岁。';
+      if (rel) return '你的' + rel + (/^zh/.test(JY.LANG || 'zh') ? '' : ' ') + c.name + cause + '，享年 ' + age + ' 岁。';
       const L = L_();
       if (L && L.peers.includes(id)) return '和你同一年出生的' + c.name + '（' + c.origin + '）' + cause + '。';
       return '';

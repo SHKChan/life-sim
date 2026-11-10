@@ -6,6 +6,16 @@ JY.GAME = {
   titleHtml: '十四亿<i>分之</i>一',
   brand: '#d0473a',
   random: true,                     // 每一世随机投胎，不从名单里挑
+  // 1× 时一年 12 秒（浮生录默认一分钟）：一生八十多年，1× 约二十分钟，2× 十分钟。大事停下来问，小事顺其自然（data/spine.js）
+  yearMs: 12000,
+  // 有剧情翻译的语言（lang/<语言>/）。网站上只开中文（share/i18n.js），itch 版打开语言切换。
+  // langFiles：已经翻好的数据文件，没列出的照旧载入中文原文（翻译一个文件，加一个）
+  langs: ['en', 'zh-TW'],
+  langFiles: {
+    en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'spine.js', 'legacy.js'],
+    // 繁体：share/tools/tw.py 从简体自动生成，全部文件都有
+    'zh-TW': ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'spine.js', 'legacy.js', 'rarity.js'],
+  },
   intro: '今年，中国大约有九百万个孩子出生。你是其中一个。省份、城乡、家境都是随机的，按真实的人口比例来。剩下的一生，由你来过。',
   freshLine: '还没有投过胎。',
   year: '公元',
@@ -52,7 +62,7 @@ JY.GAME = {
     deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
     flavorRepeat: true,
   },
-  version: '1.5.0',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.0.0',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人
@@ -80,6 +90,8 @@ JY.GAME = {
       { k: '财富', label: '年收入', show: (L, g) => JY.ECON.incomeText(L, g), hideEmpty: true, bar: false },
       { k: '财富', label: '年支出', show: (L, g) => JY.ECON.expenseText(L, g), hideEmpty: true, bar: false },
       { k: '财富', label: '房产', show: (L, g) => JY.ECON.houseText(L, g), hideEmpty: true, bar: false },
+      { k: '财富', label: '理财', show: (L, g) => (JY.CN.pfText ? JY.CN.pfText(g) : ''), hideEmpty: true, bar: false },
+      { k: '财富', label: '行情', show: (L, g) => (g.recall('money0') && JY.CN.marketMood ? JY.CN.moodName(JY.CN.marketMood(g)) : ''), hideEmpty: true, bar: false },
       { k: '财富', label: '欠款', show: (L, g) => JY.ECON.debtText(L, g), hideEmpty: true, bar: false },
       { k: '事业', tip: '工作上走到了哪一步', tier: [[10, '起步'], [30, '普通'], [55, '骨干'], [80, '出色'], [1e9, '顶尖']] },
     ],
@@ -87,9 +99,10 @@ JY.GAME = {
   },
   howto: [
     ['随机投胎', '省份、城乡、家境按真实比例随机。投到哪里，就从哪里开始。'],
-    ['一年一年过', '1× 时一年约一分钟，嫌慢就开 2×–16×。每年选一个重心：读书、工作、陪家人、锻炼……'],
-    ['遇到人生大事就停下', '弹出抉择。金色是大多数人的选择，青色是少有人走的路。属性高，成功率就高。'],
-    ['选过的事会回来', '读什么书、去哪座城、和谁过日子，后面的路都跟着变。'],
+    ['一年一年过', '1× 时一年约 12 秒，一生二十来分钟；嫌慢就开 2×–16×。每年选一个重心：读书、工作、陪家人、锻炼……重心攒下的属性，会决定大事的成败。'],
+    ['只在大事上停下', '升学、工作、结婚、买房、孩子、钱、养老：弹出抉择，写明这一步赌的是什么。小事顺着你的性子自己过去。金色是大多数人的选择，青色是少有人走的路。'],
+    ['选过的事会回来', '读什么书、去哪座城、和谁过日子，后面的路都跟着变。几年后的“回响”会提醒你当年选了什么。'],
+    ['收集人生', '每一世都记进人生图鉴：去过的省份、走过的路、解锁的稀有人生。看看你这一生，在十四亿人里有多少见。'],
     ['快捷键', '空格暂停，数字键 1–4 直接选，Esc 收起抉择先看看局面。'],
   ],
   lastWords: {
@@ -118,7 +131,7 @@ JY.GAME = {
     fields: (l) => [
       ['出生于', l.birthplace || ''],
       ['学历', (l.info && l.info['学历']) || '无'],
-      ['职业', (l.info && l.info['职业']) || '无'],
+      ['职业', (l.info && l.info['职业'] === '退休' && l.snap && JY.JOB_T && JY.JOB_T[l.snap.lastJob] ? '退休前：' + JY.JOB_T[l.snap.lastJob] : (l.info && l.info['职业']) || '无')],
       ['结局', l.cause, true],
     ],
     summary: (l) => {
@@ -130,7 +143,9 @@ JY.GAME = {
       const bits = [info['学历'], info['职业'], info['婚姻'], info['住处']].filter(Boolean);
       if (bits.length) out.push('这一生：' + bits.join('，') + '。');
       out.push('和我一样出身的大多数人：' + l.fateText);
-      out.push('与众不同 ' + l.dev + '%，做过 ' + l.picks.length + ' 个选择。临终一句：“' + l.words + '”');
+      out.push('与众不同 ' + l.dev + '%，亲手做过 ' + l.picks.filter((p) => !p.auto).length + ' 个大抉择。临终一句：“' + l.words + '”');
+      // 稀有度、成就、志向（data/legacy.js 的 share.badges）
+      if (JY.GAME.share.badges) out.push(...JY.GAME.share.badges(l));
       return out;
     },
   },

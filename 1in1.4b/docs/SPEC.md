@@ -240,3 +240,36 @@ node share/tools/shot.js 1in1.4b random-20-dark out.png     # 投一次胎，跳
 ```
 
 simulate 会打印投胎后各项的分布（学历、职业、婚姻、住处、死因、寿命）。分布要像真实的中国：大约一半上大学，多数人结婚，平均寿命 80 左右。
+
+## v2.0：节奏、掌控感、理财、新东西、复玩
+
+新加的文件（`index.html` 里排在 events.js 之后，顺序不能乱）：
+
+| 文件 | 内容 |
+|---|---|
+| `data/finance.js` | 行情链、分仓、定投、个人养老金、高息理财、四个理财抉择（31、39、45、62 岁）和回响 |
+| `data/tech.js` | 高铁、扫码支付、数字人民币、无人店、无人窗口、电车换电、无人机、无人驾驶、磁悬浮……一世各一次的亲历、新闻、闲笔 |
+| `data/spine.js` | 人生主干：哪些抉择停下来问（`MAJOR`），给大事加 `stake` 和选项 `hint`，回响节点的 `echoOf` |
+| `data/rarity.js` | 稀有度、成就的统计表，由 `tools/rarity.js` 生成，不要手改 |
+| `data/legacy.js` | 稀有度、成就、人生图鉴（localStorage `1in1.4b.album.v1`）、志向达成度、转折线；墓志页和首页的卡片 |
+
+节奏：
+- `game.js` 的 `yearMs: 12000`：1× 一年 12 秒，一生 1× 约二十分钟（浮生录默认一年一分钟，只有这个游戏改了）。
+- 只有 `major: true` 的抉择、人生关口、带判定或会出人命的意外（隔十二年以上）停下来问；其余“顺其自然”，引擎按这一生的性子自动选，生平里写“（顺其自然）”，不算玩家做过的抉择、不算与众不同度。一世约 30–36 个抉择。
+- 新写的大事节点：写 `major: true`（或加进 spine.js 的 `MAJOR`），写 `stake`（这一步赌的是什么），选项写 `hint`（代价和好处，一句话）。
+- 回响节点写 `echoOf: '当年的节点 id'`（可以是数组），弹框和生平里会提一句“你 xx 岁时选了……”。
+
+新的状态键名：
+
+| 键 | 值 | 谁设 | 说明 |
+|---|---|---|---|
+| `mktSeed` | 数字 | 生成器 | 这一世的行情种子。`CN.marketMood(g)` 今年的行情（boom/bull/calm/bear/crash），`CN.marketRet(g)` 大盘涨跌 |
+| `pf` | `{ safe, fund, stock, gold, hy }` 元 | finance.js | 分仓。`invest`、`investStyle` 照旧同步。读用 `CN.pf(g)`、`CN.pfText(g)`，买卖用 `CN.invest(g, 元, 仓)`、`CN.withdraw(g, 仓?)` |
+| `finGain` | 元 | finance.js | 一辈子理财赚（亏）了多少 |
+| `dca` `dcaTotal` | 收入的几成；元 | f_review45 | 定投 |
+| `paYear` `paAcct` | 布尔；元 | f_pension | 个人养老金：每年存一万二，退休后每年领账户的 1/20 |
+| `hy` `hyBlown` | `'half'` `'some'` `'no'`；元 | f_hy | 高息理财；暴雷亏掉的钱 |
+| `review45` | `'keep'` `'safe'` `'dca'` `'stock'` | f_review45 | 四十五岁怎么调整 |
+| `retire62` `annuity` | `'safe'` `'annuity'` `'kid'` `'fund'`；元/年 | f_retire62 | 退休前的钱；养老年金每年领多少 |
+
+改了剧情、经济或成就规则以后，重跑 `node 1in1.4b/tools/rarity.js 2500`，更新稀有度和成就比例。

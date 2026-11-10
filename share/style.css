@@ -192,6 +192,9 @@ details.what p { margin-top: 6px; }
 .choice { text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 6px 14px; }
 .choice:hover { border-color: var(--soft); }
 .choice span.t { font-size: 15px; }
+.choice span.t small.hint-l { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.decide-b p.stake { margin-top: 8px; padding: 7px 10px; border-left: 3px solid var(--brand); background: color-mix(in srgb, var(--brand) 9%, transparent); font-size: 13.5px; color: var(--soft); }
+.decide-b p.echo { margin: 2px 0 6px; font-size: 12.5px; color: var(--mod); }
 .choice span.m { display: flex; gap: 8px; align-items: baseline; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .tag { display: inline-block; font-size: 11.5px; padding: 0 6px; border-radius: 3px; border: 1px solid currentColor; line-height: 1.6; white-space: nowrap; }
 .tag.canon { color: var(--canon); } .tag.mod { color: var(--mod); } .tag.bad { color: var(--bad); } .tag.book { color: var(--soft); }
@@ -251,6 +254,8 @@ details.what p { margin-top: 6px; }
 .log li.k-death .t::before { content: "讣闻 · "; color: var(--muted); font-size: 12.5px; }
 .log li.k-mod .t { color: var(--mod); } .log li.k-fail .t { color: var(--bad); } .log li.k-pick .t { color: var(--canon); }
 .log li.k-flavor .t { color: var(--soft); }
+.log li.k-autopick .t { color: var(--soft); }
+.log li.k-echo .t { color: var(--mod); }
 .log li.k-intro .t { font-weight: 700; }
 .log-more { margin-top: 10px; }
 
@@ -431,3 +436,32 @@ details.what p { margin-top: 6px; }
   .review-t { font-size: 19px; }
   .share-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- 游戏自己加的卡片（game.js 的 endCards / homeCards，例如十四亿分之一的稀有度、成就、转折线、人生图鉴） ---------- */
+.card .note { color: var(--soft); font-size: 13.5px; margin-top: 10px; line-height: 1.6; }
+.rare-card .big-num span { display: block; }
+.aim-bar { height: 10px; border-radius: 6px; background: var(--panel-2); overflow: hidden; margin-top: 12px; }
+.aim-bar i { display: block; height: 100%; background: var(--brand); border-radius: 6px; }
+.ach-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.ach-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel-2); }
+.ach-list li b { color: var(--brand); }
+.ach-list li span { color: var(--soft); font-size: 13px; }
+.ach-list li em { font-style: normal; font-size: 11.5px; color: var(--bg); background: var(--mod); border-radius: 4px; padding: 0 5px; margin-left: auto; }
+.turns { list-style: none; margin: 12px 0 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 9px; }
+.turns li { position: relative; font-size: 14px; color: var(--soft); }
+.turns li::before { content: ""; position: absolute; left: -20px; top: 7px; width: 10px; height: 10px; border-radius: 50%; background: var(--canon); }
+.turns li.mod::before { background: var(--mod); } .turns li.fail::before { background: var(--bad); } .turns li.fin::before { background: var(--fg); }
+.turns li span { color: var(--muted); font-size: 12.5px; margin-right: 8px; }
+.turns li b { color: var(--fg); margin-right: 6px; }
+.album .card { padding: 14px 16px; }
+.alb-row { display: grid; grid-template-columns: 7.5em 1fr auto; align-items: center; gap: 10px; font-size: 14px; margin: 6px 0; }
+.alb-row .bar { height: 8px; border-radius: 5px; background: var(--panel-2); overflow: hidden; }
+.alb-row .bar i { display: block; height: 100%; background: var(--brand); }
+.alb-row b { font-variant-numeric: tabular-nums; color: var(--soft); font-weight: 500; font-size: 13px; }
+.ach-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.ach-grid span { font-size: 12.5px; padding: 3px 8px; border-radius: 999px; border: 1px dashed var(--line); color: var(--muted); }
+.ach-grid span.on { border-style: solid; border-color: var(--brand); color: var(--fg); }
+
+/* 语言切换（单独打包的版本才有）：简 / 繁 / EN */
+.langs { display: inline-flex; gap: 4px; margin-left: 6px; }
+.langs .b[aria-pressed="true"] { border-color: var(--brand); color: var(--fg); }

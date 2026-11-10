@@ -49,6 +49,8 @@
     // deathLine(g, id, cause)：别人去世时生平里那一行的写法（例如带上“你的爷爷”和岁数）
     // flavorRepeat：闲笔都用过一遍以后，允许再用（长寿的人晚年不会一行字都没有）
     // hookDeathFirst：yearEnd 钩子里 g.die 的死法优先，不再被“伤病”“寿终”覆盖
+    // minor(n, g)：返回 true 的抉择节点不停下来问玩家，按“这一生的性子”自动选（见 E.autoIndex），生平里记一行“顺其自然”
+    // onFinish(g, life)：命终、清空这一世之前调用，可以往 life 上加字段（成就、稀有度……）
   }, (JY.GAME && JY.GAME.engine) || {});
   JY.STATS = CONF().stats;
   const KEY = () => ((JY.GAME && JY.GAME.id) || 'game') + '.save.v2';
@@ -59,6 +61,9 @@
 
   const val = (x) => (typeof x === 'function' ? x(G) : x);
   const tt = (s, v) => (JY.t ? JY.t(s, v) : s); // 界面用语的翻译（share/i18n.js），剧情文字不走这里
+  // 引擎拼句子用的标点：中文以外按词表换成西文标点（'【' → '['，'。' → '. '……）
+  const P = (c) => tt(c);
+  const head = (t) => P('【') + t + P('】');
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const nodeYear = (c, n) => (n.y != null ? n.y : c.born + n.age);
@@ -98,7 +103,7 @@
       if (L && L.cid === id) { L.death = cause; return; }
       if (W.dead[id] || !JY.byId[id]) return;
       W.dead[id] = { y: G.Y, cause };
-      G.chron(JY.byId[id].name + '，' + cause + '。', !canon);
+      G.chron(JY.byId[id].name + P('，') + cause + P('。'), !canon);
       if (L) G.log(deathText(id, cause), canon ? 'death' : 'wmod');
     },
     die(cause) { if (L) L.death = cause; },
@@ -123,7 +128,7 @@
       const a = age && c.born <= G.Y ? tt('（{n} 岁）', { n: G.Y - c.born }) : '';
       return (r ? tt('你的{r}', { r: tt(r) }) : '') + c.name + a;
     },
-    log(t, kind) { if (L && t) L.log.push({ y: L.year, a: G.age, t, k: kind || '', loc: L.loc }); },
+    log(t, kind) { if (L && t) L.log.push({ y: L.year, a: G.age, t: JY.polish ? JY.polish(t) : t, k: kind || '', loc: L.loc }); },
     chron(t, mod) { if (t) W.chron.push({ y: G.Y, t, mod: !!mod }); },
     name(id) { return JY.byId[id] ? JY.byId[id].name : id; },
     slot(n) { return JY.SLOTS[n] ? JY.SLOTS[n](G) : n; },
@@ -182,7 +187,7 @@
   function deathText(id, cause) {
     const h = CONF().deathLine;
     const t = h ? h(G, id, cause) : '';
-    return t || JY.byId[id].name + '，' + cause + '。';
+    return t || JY.byId[id].name + P('，') + cause + P('。');
   }
 
   function worldYear(Y) {
@@ -211,7 +216,7 @@
       if (c.exists && !c.exists(G)) return;
       const d = fate(c);
       if (d && d.y <= Y) {
-        const t = c.name + '，' + d.cause + '。';
+        const t = c.name + P('，') + d.cause + P('。');
         const line = L ? deathText(c.id, d.cause) : t; // 先写这一行再记死亡，钩子里还能算出岁数和关系
         W.dead[c.id] = { y: Y, cause: d.cause };
         if (c.minor !== true) G.chron(t, !!d.mod);
@@ -332,8 +337,10 @@
     L.peers = c.peers ? c.peers.slice() : peers.sort((a, b) => Math.abs(a.born - c.born) - Math.abs(b.born - c.born)).slice(0, 4).map((x) => x.id);
     L.intro = val(c.arc.intro);
     L.startLoc = L.loc;
-    G.log(L.intro, 'intro');
-    if (opts && opts.fromAge && start > c.born) G.log(tt('这些年照{c}过去了。你醒来时，已经 {n} 岁。', { c: tt((JY.GAME && JY.GAME.canon) || '原著'), n: start - c.born }), 'intro');
+    // 开头的几行记在醒来的那一年（不是前一年），否则显示成“-1 岁”
+    const intro = (t) => { if (t) L.log.push({ y: start, a: start - c.born, t, k: 'intro', loc: L.loc }); };
+    intro(L.intro);
+    if (opts && opts.fromAge && start > c.born) intro(tt('这些年照{c}过去了。你醒来时，已经 {n} 岁。', { c: tt((JY.GAME && JY.GAME.canon) || '原著'), n: start - c.born }));
     E.save();
     return { before, start, mine };
   };
@@ -357,10 +364,35 @@
     if (L.death) return { type: 'death' };
     while (L.queue.length) {
       const n = E.node(L.queue[0]);
-      if (n && !n.auto && (!n.cond || n.cond(G))) return { type: 'node', node: n };
+      if (n && !n.auto && (!n.cond || n.cond(G)) && !E.isMinor(n)) return { type: 'node', node: n };
       return E.flush();
     }
     return { type: 'idle' };
+  };
+  // 回响节点（echoOf：当年那个节点的 id）在生平里补半句“因为你 xx 岁时选了……”
+  E.echoTail = (n) => {
+    if (!n.echoOf || !L || !L.pickBy) return '';
+    const src = [].concat(n.echoOf).map((id) => L.pickBy[id]).filter(Boolean)[0];
+    return src ? tt('（回响 · 你 {a} 岁时：{c}）', { a: src.a, c: src.c }) : '';
+  };
+  // 不用停下来问的小事（游戏的 engine.minor 钩子决定）。人生关口总是要问
+  E.isMinor = (n) => {
+    const h = CONF().minor;
+    if (!h || !L || n.auto || !n.choices) return false;
+    const c = JY.byId[L.cid];
+    if (JY.PAUSES.includes(n) || (c && c.arc && (c.arc.pauses || []).includes(n))) return false;
+    return !!h(n, G);
+  };
+  // 自动选哪一个：照“这一生的性子”——玩家自己选的里有几成和大多数人不一样，自动选时就有几成偏向少有人走的路
+  E.autoIndex = (n) => {
+    let opts = E.choices(n);
+    const safe = opts.filter((o) => !o.ch.fatal);
+    if (safe.length) opts = safe;
+    const mine = L.picks.filter((p) => !p.auto);
+    const odd = mine.length ? mine.filter((p) => !p.canon).length / mine.length : 0.2;
+    const canon = opts.filter((o) => o.ch.canon), other = opts.filter((o) => !o.ch.canon);
+    const pool = canon.length && (!other.length || Math.random() < 0.85 - odd * 0.6) ? canon : other.length ? other : opts;
+    return pick(pool).i;
   };
 
   E.nextYear = () => {
@@ -400,8 +432,13 @@
         L.done[n.id] = 1;
         if (n.once) W.flags['enc:' + n.id] = true;
         if (n.fx) n.fx(G);
-        G.log('【' + n.t + '】' + val(n.text), n.kind || 'auto');
+        G.log(head(n.t) + val(n.text) + E.echoTail(n), n.echoOf ? 'echo' : n.kind || 'auto');
         if (L.death) { L.marks[L.year] = 'd'; return { type: 'death' }; }
+        continue;
+      }
+      if (E.isMinor(n)) {
+        E.choose(E.autoIndex(n), true);
+        if (L.death) return { type: 'death' };
         continue;
       }
       return { type: 'node', node: n };
@@ -420,7 +457,8 @@
     return clamp(50 + diff * 3, 5, 95);
   };
 
-  E.choose = (i) => {
+  // auto 为真：小事自动选（E.isMinor），不算玩家做过的抉择，不算进与众不同度
+  E.choose = (i, auto) => {
     const n = E.node(L.queue[0]);
     const ch = n.choices[i];
     const c = JY.byId[L.cid];
@@ -433,19 +471,24 @@
     const br = ok ? ch : (ch.fail || {});
     if (br.fx) br.fx(G);
     let d = 0;
-    if (!ch.canon) d = ok ? (ch.dev != null ? ch.dev : 15) : (ch.fail && ch.fail.dev != null ? ch.fail.dev : 3);
+    if (!ch.canon && !auto) d = ok ? (ch.dev != null ? ch.dev : 15) : (ch.fail && ch.fail.dev != null ? ch.fail.dev : 3);
     L.dev += d;
     const isPause = JY.PAUSES.includes(n) || (c.arc.pauses || []).includes(n);
     if (isPause) L.answers.push({ age: G.age, q: val(n.ask || n.text), a: label });
-    else L.marks[L.year] = L.death ? 'd' : !ok ? 'b' : (ch.canon || d === 0) ? 'j' : 'q';
+    else if (!auto || !L.marks[L.year]) L.marks[L.year] = L.death ? 'd' : !ok ? 'b' : (ch.canon || d === 0) ? 'j' : 'q';
     if (L.death) L.marks[L.year] = 'd';
-    const res = val(br.res) || (ok ? '' : tt('没有成功。'));
-    if (!isPause) L.picks.push({ y: L.year, age: G.age, t: n.t, c: label, canon: !!ch.canon, ok, check: !!ch.check, dev: d, res, loc: L.loc, party: L.party.slice(), enc: JY.ENCOUNTERS.includes(n) });
+    const res = (JY.polish || String)(val(br.res) || (ok ? '' : tt('没有成功。')));
+    const pk = { y: L.year, age: G.age, t: n.t, c: label, canon: !!ch.canon, ok, check: !!ch.check, dev: d, res, loc: L.loc, party: L.party.slice(), enc: JY.ENCOUNTERS.includes(n), id: n.id };
+    if (auto) pk.auto = true;
+    if (n.major) pk.major = true;
+    if (!isPause) L.picks.push(pk);
+    // 每个节点当年选了什么：回响节点（echoOf）据此写“你 37 岁时选了……”
+    (L.pickBy = L.pickBy || {})[n.id] = { a: G.age, c: label, ok, auto: !!auto };
     const tail = ch.check ? (ok ? tt('（成功）') : tt('（失败）')) : '';
-    G.log('【' + n.t + '】' + label + tail + (res ? '。' + res : ''), isPause ? 'pause' : ch.canon ? 'pick' : ok ? 'mod' : 'fail');
-    if (!isPause && !ch.canon && ok && d > 0) G.chron(val(ch.chron) || (c.name + '：' + label + '。'), true);
+    G.log(head(n.t) + (auto ? tt('（顺其自然）') : '') + label + tail + (res ? P('。') + res : ''), isPause ? 'pause' : auto ? 'autopick' : ch.canon ? 'pick' : ok ? 'mod' : 'fail');
+    if (!isPause && !auto && !ch.canon && ok && d > 0) G.chron(val(ch.chron) || (c.name + P('：') + label + P('。')), true);
     E.save();
-    return { ok, p, res, check: ch.check, canon: !!ch.canon, dev: d, pause: isPause };
+    return { ok, p, res, check: ch.check, canon: !!ch.canon, dev: d, pause: isPause, auto: !!auto };
   };
 
   function flavorLine(c, age) {
@@ -499,7 +542,7 @@
   /* ---------- 命终 ---------- */
   E.finish = (words) => {
     const c = JY.byId[L.cid], Y = L.year;
-    G.chron(c.name + '，' + L.death + '。', L.dev > 0);
+    G.chron(c.name + P('，') + L.death + P('。'), L.dev > 0);
     const peers = L.peers.map((p) => ({ id: p, name: JY.byId[p].name }));
     const moments = E.moments(c);
     W.dead[c.id] = { y: Y, cause: L.death };
@@ -510,6 +553,7 @@
       marks: L.marks, answers: L.answers.slice(), peers, fateText: c.fateText, info: L.info,
       moments, birthplace: c.birthplace, deathLoc: L.locCap, wakeAge: L.wakeAge,
     };
+    if (CONF().onFinish) { try { CONF().onFinish(G, life); } catch (e) { console.warn(e); } }
     W.lives.push(life);
     W.year = Y;
     L = null;
@@ -521,17 +565,17 @@
   /* 终局回顾：出生（或醒来）、关键抉择、加星的生平、命终 */
   E.moments = (c) => {
     const ms = [{ y: L.start, age: L.wakeAge, loc: L.startLoc || c.home, party: [], t: L.wakeAge > 0 ? tt('醒来') : tt('出生'), text: L.intro, k: 'intro' }];
-    const picks = L.picks.filter((p) => !p.enc || (!p.canon && p.ok && p.dev > 0));
+    const picks = L.picks.filter((p) => !p.auto && (!p.enc || (!p.canon && p.ok && p.dev > 0)));
     const key = picks.filter((p) => !p.canon && p.ok && p.dev > 0);
     let chosen = key.slice();
     const rest = picks.filter((p) => !chosen.includes(p));
     const room = Math.max(0, 14 - chosen.length);
     for (let i = 0; i < room && rest.length; i++) chosen.push(rest.splice(Math.floor(rest.length * i / room) % rest.length, 1)[0]);
     chosen = chosen.slice(0, 18).sort((a, b) => a.y - b.y);
-    chosen.forEach((p) => ms.push({ y: p.y, age: p.age, loc: p.loc, party: p.party || [], t: p.t, text: p.c + '。' + (p.res || ''), k: !p.ok ? 'fail' : p.canon ? 'canon' : 'mod' }));
+    chosen.forEach((p) => ms.push({ y: p.y, age: p.age, loc: p.loc, party: p.party || [], t: p.t, text: p.c + P('。') + (p.res || ''), k: !p.ok ? 'fail' : p.canon ? 'canon' : 'mod' }));
     L.log.filter((e) => e.star).forEach((e) => ms.push({ y: e.y, age: e.a, loc: e.loc || L.loc, party: [], t: tt('你记下的一刻'), text: e.t, k: 'star' }));
     ms.sort((a, b) => a.y - b.y);
-    ms.push({ y: L.year, age: L.year - c.born, loc: L.loc, party: L.party.slice(), t: CONF().endTitle, text: c.name + '，' + L.death + '。', k: 'death' });
+    ms.push({ y: L.year, age: L.year - c.born, loc: L.loc, party: L.party.slice(), t: CONF().endTitle, text: c.name + P('，') + L.death + P('。'), k: 'death' });
     return ms;
   };
 
@@ -551,7 +595,7 @@
   E.devOf = (l) => {
     if (!l) return 0;
     if (CONF().devMode !== 'ratio') return Math.min(100, l.dev);
-    const ps = l.picks || [];
+    const ps = (l.picks || []).filter((p) => !p.auto);
     return ps.length ? Math.round(100 * ps.filter((p) => !p.canon && p.ok && p.dev > 0).length / ps.length) : 0;
   };
   E.tier = (v) => (v < 15 ? '不入流' : v < 35 ? '三流' : v < 55 ? '二流' : v < 75 ? '一流' : v < 90 ? '宗师' : '绝顶');
