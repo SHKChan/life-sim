@@ -45,7 +45,9 @@ if (SIM_LANG && SIM_LANG !== 'zh') {
   const files = ['game.js', '!reset'].concat(scripts.filter((s) => /^data\//.test(s) && s !== 'data/scenes.js').map((s) => s.replace(/^data\//, '')));
   for (const f of files) {
     if (f === '!reset') { ctx.JY.resetData(); for (const k of Object.keys(dataSrc)) delete dataSrc[k]; continue; }
-    const p = path.join(dir, f);
+    // GAME.langFiles.<语言> 列出已经翻好的文件；没列出的照旧用中文原文（和浏览器里的 JY.loadLangData 一样）
+    const doneFiles = ctx.JY.GAME.langFiles && ctx.JY.GAME.langFiles[SIM_LANG];
+    const p = f !== 'game.js' && doneFiles && !doneFiles.includes(f) ? path.join(gameDir, 'data', f) : path.join(dir, f);
     if (!fs.existsSync(p)) { console.error('缺少翻译文件：' + p); process.exit(1); }
     const code = fs.readFileSync(p, 'utf8');
     if (f !== 'game.js') dataSrc['data/' + f] = code;
@@ -119,6 +121,17 @@ if ((JY.RELATIONS || []).length) {
 // 后果检查（同 consequence.js）：每个抉择至少两个选项会影响后面的剧情；设了的标记要有人读
 const conseq = analyze(JY, dataSrc);
 
+// 顺其自然的小事（engine.minor）不会停下来，在自动选的那一刻也做同样的检查：记作触发过、记下可见的选项数
+if (E.autoIndex) {
+  const autoIndex = E.autoIndex;
+  E.autoIndex = (n) => {
+    seenNodes[n.id] = (seenNodes[n.id] || 0) + 1;
+    const k = E.choices(n).length;
+    minVisible[n.id] = Math.min(minVisible[n.id] == null ? 99 : minVisible[n.id], k);
+    maxVisible[n.id] = Math.max(maxVisible[n.id] || 0, k);
+    return autoIndex(n);
+  };
+}
 function runLife(id, mode) {
   // id 为 null：随机人生模式，投一次胎
   if (id == null) { E.startRandom(); id = E.get().L.cid; }

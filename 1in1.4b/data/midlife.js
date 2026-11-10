@@ -550,7 +550,7 @@
       fx: (g) => { if (g.recall('ai47') === 'learn') g.stat('事业', 3); if (g.recall('land') === 'big') g.stat('事业', 4); },
       text: (g) => {
         const a = g.recall('ai47');
-        if (a === 'learn') return '学的那些新东西用上了。年轻人遇到难题，会说“问问老' + JY.byId[g.me].name[0] + '”。';
+        if (a === 'learn') return '学的那些新东西用上了。年轻人遇到难题，会说“问问老' + CN.surOf(JY.byId[g.me].name) + '”。';
         if (a === 'out') return '提前退下来以后，你学会了做饭，学会了午睡，也学会了在别人上班的时候不心慌。';
         if (a === 'hold') return '你还在原来的岗位上。和你同期进来的人，只剩下两个。';
         const l = g.recall('land');
@@ -913,8 +913,8 @@
         { t: '搬回去住', dev: 15, cond: (g) => atHome(g) && ['none', 'rent'].includes(house(g)),
           fx: (g) => { settleOld(g, oldVal(g)); g.remember('house', 'hometown'); g.remember('oldHouse', 'live'); }, res: '你退了租的房子，搬回了老屋。不用再交房租，墙上还有你小时候贴的画。' },
       ] },
-    { id: 'e_m_crash', y: [2026, 2200], minAge: 38, maxAge: 62, t: '行情', always: true,
-      ok: (g) => g.age >= 38 && g.age <= 62 && invested(g) >= 50000 && ['fund', 'stock'].includes(g.recall('investStyle')) && !g.recall('crash') && yearRoll(g, 11) < 0.1,
+    { id: 'e_m_crash', y: [2026, 2200], minAge: 28, maxAge: 72, t: '行情', always: true,
+      ok: (g) => g.age >= 28 && g.age <= 72 && invested(g) >= 50000 && ['fund', 'stock'].includes(g.recall('investStyle')) && !g.recall('crash') && (CN.marketMood ? CN.marketMood(g) === 'crash' : yearRoll(g, 11) < 0.1),
       text: (g) => '这一年行情急转直下。你' + CN.riskName(g.recall('investStyle')) + '的 ' + fmt(invested(g)) + '，一个月里跌掉了三成多。群里有人在骂，有人在抄底。',
       choices: [
         { t: '拿着不动', canon: true, fx: (g) => { A = -gain(g, -0.35); g.remember('crash', 'hold'); }, res: () => '账面上少了 ' + fmt(A) + '。你卸载了软件，眼不见心不烦。' },
@@ -922,8 +922,8 @@
         { t: '跌了再买一点', dev: 20, cond: (g) => cash(g) >= 50000,
           fx: (g) => { gain(g, -0.35); A = CN.invest(g, w1(cash(g) * 0.3), g.recall('investStyle') || 'fund'); g.remember('crash', 'add'); }, res: () => '你又投进去 ' + fmt(A) + '。' + '买完那天晚上，你没怎么睡着。' },
       ] },
-    { id: 'e_m_boom', y: [2026, 2200], minAge: 38, maxAge: 62, t: '好行情', always: true,
-      ok: (g) => g.age >= 38 && g.age <= 62 && invested(g) >= 50000 && ['fund', 'stock', 'gold'].includes(g.recall('investStyle')) && !g.recall('boom') && yearRoll(g, 13) < 0.07,
+    { id: 'e_m_boom', y: [2026, 2200], minAge: 28, maxAge: 72, t: '好行情', always: true,
+      ok: (g) => g.age >= 28 && g.age <= 72 && invested(g) >= 50000 && ['fund', 'stock', 'gold'].includes(g.recall('investStyle')) && !g.recall('boom') && (CN.marketMood ? CN.marketMood(g) === 'boom' : yearRoll(g, 13) < 0.07),
       text: (g) => '这一年行情好得出奇。你' + CN.riskName(g.recall('investStyle')) + '的钱，半年涨了四成，现在是 ' + fmt(invested(g) * 1.4) + '。',
       choices: [
         { t: '拿着再看看', canon: true, fx: (g) => { A = gain(g, 0.4); g.remember('boom', 'hold'); }, res: () => '你多赚了 ' + fmt(A) + '，没舍得卖。' },
@@ -1104,7 +1104,7 @@
         if (b === 'split') return paWord(g) + '恢复得不错。那次一起凑钱以后，兄弟姐妹的群里热闹了很多。';
         return paWord(g) + '的病控制住了，就是走路要拄拐了。你在楼道里装了一排扶手。';
       } },
-    { id: 'e_m_crash_echo', y: [2026, 2200], minAge: 40, maxAge: 64, t: '回过头看', auto: true, always: true,
+    { id: 'e_m_crash_echo', y: [2026, 2200], minAge: 30, maxAge: 74, t: '回过头看', auto: true, always: true,
       cond: (g) => !!g.recall('crash') && g.since('crash') >= 2,
       fx: (g) => { const c = g.recall('crash'); A = 0; if (c === 'hold') A = gain(g, 0.3); if (c === 'add') A = gain(g, 0.45); },
       text: (g) => {
@@ -1113,7 +1113,7 @@
         if (!invested(g)) return '那次大跌以后，你再没碰过这些。';
         return (c === 'add' ? '当年跌的时候买的那笔，涨了不少。' : '两年后，行情慢慢回来了。') + '你打开软件，账户里是 ' + fmt(invested(g)) + '。';
       } },
-    { id: 'e_m_boom_echo', y: [2026, 2200], minAge: 40, maxAge: 64, t: '涨过之后', auto: true, always: true,
+    { id: 'e_m_boom_echo', y: [2026, 2200], minAge: 30, maxAge: 74, t: '涨过之后', auto: true, always: true,
       cond: (g) => !!g.recall('boom') && g.since('boom') >= 2,
       fx: (g) => { if (g.recall('boom') === 'hold') gain(g, -0.15); },
       text: (g) => ({

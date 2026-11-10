@@ -125,6 +125,10 @@
 
 **改命度**：每个非原著选项带 `dev`，成功时累加。墓志页、分享卡片显示。
 
+**顺其自然、回响、游戏自己的卡片**（引擎和界面的可选钩子，江湖一梦没用）：`GAME.engine.minor(n, g)` 返回真的抉择自动选（`E.autoIndex` 按这一生的性子），不算玩家的抉择；`GAME.engine.onFinish(g, life)` 命终时往 life 上加字段；节点的 `stake`、选项的 `hint`、回响节点的 `echoOf` 会显示在弹框里；`GAME.endCards(life, u)`、`GAME.homeCards(W, u)` 加墓志页、首页的卡片；`GAME.share.badges(life)` 往分享卡上加几行；`GAME.yearMs` 改 1× 一年多长。
+
+**分享卡的二维码**：`share/vendor/qrcode.js`（MIT，Kazuhiko Arase）在分享图右下角画 `config.js` 的 `siteUrl` 的二维码，左边印网址；分享框里能复制图片、保存图片、复制文字。发到哪个平台，就在那个平台的打包里把 `siteUrl` 换成那个平台的地址（itch 版见 `1in1.4b/tools/build-itch.js`）。
+
 **两种记忆**：
 - 改命标记 `g.set / g.f`：存在世界 `W` 里，跨世、跨人物。
 - 这一世的记忆 `g.remember / g.recall / g.since`：存在 `L.mem`，这一世结束就没了。通用奇遇的“回响”靠它。
@@ -134,6 +138,8 @@
 **逻辑检查**：`GAME.lint(g, 文字, 种类)` 按此刻的状态检查每一行生平和抉择正文（已婚写成单身、有人同住写成独居、一岁吃牛肉面、九十岁领舞……），`simulate.js` 报“前后矛盾、不合年龄的文字”，必须清零。
 
 **多语言**（暂时锁定中文：`share/i18n.js` 的 `LANG_OPEN = false`，下面的机制都保留，以后开放时和 vibe-game 的 `nav.js` 一起改）：界面文字以中文为准，写成 `t('中文')`，英日西词表在 `share/lang.js`；游戏用词和剧情的翻译在 `<游戏>/lang/<语言>/`：`game.js` 覆盖 `JY.GAME` 的用词并用 `JY.addI18n` 加属性名、重心名等的翻译，其余是 `data/` 每个文件的完整翻译版（代码、id、标记名、记忆键、属性名、重心名、地点 id 一律不改，只翻译给玩家看的字）。`game.js` 的 `langs` 列出有剧情翻译的语言；没列出的语言只翻译界面、剧情用中文。改了中文剧情，翻译版要跟着改（或重新翻译那个文件）。`SIM_LANG=en node share/tools/simulate.js <游戏> 10` 测翻译版，会报“没翻译的中文”。
+
+**翻译流水线（十四亿分之一 v2.0 起）**：中文数据文件是唯一的源头，翻译写成字符串对照表 `<游戏>/lang/<语言>/tr/<文件>.json`（`{ "中文原样": "译文", "__keep": [不翻的内部键] }`），`node share/tools/tr.js <游戏> <语言> --all` 生成 `lang/<语言>/<文件>.js`（代码一字不改，只换字符串；`--fill` 把新出现的中文追加进对照表）。中文改了剧情就重跑一次。翻好一个文件，就加进 `game.js` 的 `langFiles.<语言>`；没列出的文件照旧载入中文原文。网站上语言仍锁中文；单独打包的版本在 `config.js` 写 `langOpen: true`、`defaultLang`，页面上出现“EN / 中文”按钮。所有文件共用的词（城市、省份、专业、亲属称呼、要保持一致的比较值）在 `lang/<语言>/tr/_common.json`，给译者的说明在 `1in1.4b/lang/en/tr/TRANSLATORS.md`。英文界面里剧情是片段拼出来的，`JY.polish` 负责句首大写、去多余空格；名字在英文下由 `world.js` 转成拼音（取姓用 `CN.surOf`，不要写 `name[0]`）。**繁体中文**（`zh-TW`）由 `python3 share/tools/tw.py 1in1.4b` 用 OpenCC（s2twp）从简体自动生成 `lang/zh-TW/*.js` 和界面词表 `share/lang.zh-TW.js`（需要 `pip install opencc-python-reimplemented`），简体改了就重跑。钱在中文（简、繁）下显示人民币，其他语言显示美元。itch.io 版：`node 1in1.4b/tools/build-itch.js [--url=itch 页面地址]`，输出 `dist/itch-1in1.4b/` 和 `dist/1in1.4b-itch.zip`。
 
 **江湖一梦 v1.4**：名单人物默认十岁醒来（`game.js` 的 `wakeAge`，首页可勾“从出生开始”），醒来前自己的节点按原著结算并在醒来页列出；练功分稳扎稳打、闭关（苦练）、冒进求成，有内伤和走火入魔；内功深的人老得慢；45 岁后有传艺、长老、论剑、闭关、著书、归隐、传人等后半生事件。细节见 `jianghuyimeng/docs/SPEC.md` 的 v1.4 一节。群侠模式（文字武侠 RPG）在 `jianghuyimeng/qunxia/`，有自己的引擎和存档，见那里的 README。
 
@@ -222,7 +228,7 @@ node tools/build.js                                # 打包（同 Cloudflare）
 - 剧情文字预先写好、尽量多写，不接 AI 旁白。
 - 抉择选项 2–4 个，按情节定；每个选择都要在一定程度上影响后面的剧情。
 - 抉择用弹框，选完不用确认。
-- 1× 一年约 1 分钟；纪年下面的进度条显示今年的进度，纪年后面有一行小字写当前一年多长。
+- 1× 一年约 1 分钟；纪年下面的进度条显示今年的进度，纪年后面有一行小字写当前一年多长。**例外**：十四亿分之一 v2.0 起 `game.js` 的 `yearMs: 12000`（一年 12 秒，一生约二十分钟），小事顺其自然、只在大事上停下（见 `1in1.4b/docs/SPEC.md` 的 v2.0 一节）。
 - 手机上先显示中栏，再左栏，最后右栏。
 - 要分享图，也要带链接的文字总结，方便传播。
 - 要移动端友好。

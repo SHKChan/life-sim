@@ -1,0 +1,612 @@
+/* 由 share/tools/tw.py 从简体版生成（OpenCC s2twp），不要手改。 */
+/* 十四亿分之一 · 钱、房子、和谁住在一起
+ * 这一份不写剧情，只放每一世都要算的账和工具函数（都挂在 JY.CN 上，剧情文件直接用）。
+ *
+ * 钱（成年以后）：
+ *   存款 cash（元）、理财 invest（元）、房子 houseVal（万）、欠款 debt（万，房贷、借的钱都算）。
+ *   每年末按职业、城市、事业算收入，按家里几口人、住哪儿算开销，房贷按年还。
+ *   属性“财富”从净资产换算出来（0–100），旧剧情里的 g.stat('财富', ±n) 会换算成一笔钱。
+ *   未成年时“财富”表示家境，界面显示“家境 小康”这样的分档；十八岁（或开始工作）起才有自己的钱。
+ *   钱都按 2026 年的物价算，不算通胀，读起来直观。
+ *
+ * 和谁住（household，记忆键 hh）：
+ *   一个 id 列表。出生时是爸妈（留守儿童是爷爷奶奶）和哥哥姐姐；离家上学、工作、结婚、生孩子、
+ *   接爸妈同住、孩子离家、住养老院，都会改它。场景画的人、场景下面那行字、家人卡里的“同住”都读它。
+ *   剧情要写“一个人”“家里几口人”“要不要把爸妈接来”之前，先读 CN.livesWith / CN.alone / CN.hhCount。
+ *
+ * 剧情里常用的：
+ *   CN.fmt(元)                     '¥3,200' / '¥12.5 万'，按界面语言换成美元
+ *   CN.pay(g, 元) / CN.earn(g, 元)  花钱、进账（直接改存款）
+ *   CN.cash(g) / CN.net(g)         存款、净资产（元）
+ *   CN.income(g)                   今年全家的年收入（元）
+ *   CN.price(g, tier)              一套普通住房的价格（万），tier 默认是现在住的城市
+ *   CN.buyHouse(g, { tier, city, down })   买房：down 是首付比例（默认 0.3，1 表示全款）
+ *   CN.sellHouse(g)                卖房，钱进存款，房贷还清
+ *   CN.invest(g, 元, 'safe'|'fund'|'stock'|'gold') / CN.withdraw(g)   理财，每年按风险涨跌
+ *   CN.liveWith(g, ['fa', 'mo'])   这些人搬来和你住；CN.moveOut(g, ['fa'])  搬走
+ *   CN.livesWith(g, id)            是否同住；CN.alone(g) 一个人住；CN.hhCount(g) 家里几口人（含自己）
+ *   CN.hhText(g)                   '和妻子、女儿住在一起' / '一个人住' / '住在学校宿舍'
+ *   CN.who(g, id, age)             '你的爷爷王建国'，age 为真时加“（81 岁）”
+ */
+(function () {
+  'use strict';
+  const JY = window.JY;
+  const CN = JY.CN;
+
+  /* ---------- 数字 ---------- */
+  // 年收入基数（元，按省会城市、事业 50 估）
+  const INCOME = { none: 0, farmer: 30000, worker: 70000, rider: 80000, driver: 80000, shop: 70000, office: 100000, tech: 200000, civil: 110000, teacher: 100000, doctor: 160000, nurse: 90000, sales: 100000, boss: 180000, creator: 70000, soldier: 80000, freelance: 80000, retired: 0 };
+  const TIER_INC = { 1: 1.5, 2: 1, 3: 0.8, 4: 0.65, 5: 0.5 };
+  // 一个成年人一年的日常开销、一年房租（元），一套普通住房（万）
+  const LIVE = { 1: 60000, 2: 45000, 3: 36000, 4: 28000, 5: 18000 };
+  const RENT = { 1: 60000, 2: 30000, 3: 18000, 4: 12000, 5: 6000 };
+  const PRICE = { 1: 600, 2: 200, 3: 90, 4: 55, 5: 25 };
+  const PENSION = { high: 60000, mid: 40000, low: 3600, savings: 12000 };
+  const STUDY = ['uni', 'college', 'repeat', 'grad', 'phd', 'abroad'];
+  // 理财：期望年收益、波动
+  const RISK = { safe: [0.025, 0], fund: [0.05, 0.15], stock: [0.06, 0.3], gold: [0.04, 0.12] };
+  const RISK_T = { safe: '存定期和國債', fund: '買基金', stock: '炒股', gold: '買黃金', hy: '買高息理財' };
+  // 成年时手里的钱：按家境
+  const START = { rich: 300000, civil: 50000, white: 40000, smallbiz: 30000, worker: 12000, farmer: 6000, migrant: 6000 };
+
+  const L_ = () => JY.engine.get().L;
+  // 账上的数字（读记忆要写成字面的 g.recall('键')，后果检查才认得）
+  const V = {
+    cash: (g) => Number(g.recall('cash')) || 0,
+    invest: (g) => Number(g.recall('invest')) || 0,
+    houseVal: (g) => Number(g.recall('houseVal')) || 0,
+    debt: (g) => Number(g.recall('debt')) || 0,
+    loanBase: (g) => Number(g.recall('loanBase')) || 0,
+    lastDebt: (g) => Number(g.recall('lastDebt')) || 0,
+    lastBand: (g) => Number(g.recall('lastBand')) || 0,
+    income: (g) => Number(g.recall('income')) || 0,
+    expense: (g) => Number(g.recall('expense')) || 0,
+  };
+  const tierOf = (g) => g.recall('tier') || 5;
+  const rnd = () => Math.random();
+  const gauss = () => { let s = 0; for (let i = 0; i < 6; i++) s += rnd(); return (s - 3) / Math.sqrt(0.5); };
+
+  /* ---------- 钱的显示 ---------- */
+  const USD = 7; // 其他语言按美元显示，一美元约七元
+  CN.fmt = (yuan) => {
+    const n = Math.round(Number(yuan) || 0);
+    const neg = n < 0 ? '-' : '';
+    const a = Math.abs(n);
+    if (!/^zh/.test(JY.LANG || 'zh')) {
+      const d = a / USD;
+      if (d >= 1e6) return neg + '$' + (d / 1e6).toFixed(d >= 1e7 ? 0 : 1) + 'M';
+      if (d >= 1e4) return neg + '$' + Math.round(d / 1e3) + 'K';
+      return neg + '$' + Math.round(d).toLocaleString('en-US');
+    }
+    if (a >= 1e8) return neg + '¥' + (a / 1e8).toFixed(a >= 1e9 ? 0 : 1) + ' 億';
+    if (a >= 1e4) return neg + '¥' + (a >= 1e6 ? Math.round(a / 1e4) : (a / 1e4).toFixed(1).replace(/\.0$/, '')) + ' 萬';
+    return neg + '¥' + a.toLocaleString('en-US');
+  };
+
+  /* ---------- 账户 ---------- */
+  const on = (g) => !!g.recall('money0');
+  CN.cash = (g) => V.cash(g);
+  CN.net = (g) => V.cash(g) + V.invest(g) + (V.houseVal(g) - V.debt(g)) * 1e4;
+  const setCash = (g, v) => g.remember('cash', Math.round(v));
+  CN.pay = (g, yuan) => { if (on(g)) { setCash(g, CN.cash(g) - Math.max(0, yuan)); syncWealth(g); } };
+  CN.earn = (g, yuan) => { if (on(g)) { setCash(g, CN.cash(g) + Math.max(0, yuan)); syncWealth(g); } };
+  CN.price = (g, tier) => PRICE[tier || tierOf(g)] || PRICE[3];
+
+  // 净资产（万）换成 0–100 的“财富”：没钱 20 左右，十万 33，五十万 49，一百万 56，三百万 69，一千万 84
+  const wealthOf = (net) => {
+    const w = net / 1e4;
+    return w < 0 ? Math.max(0, 20 + w / 3) : Math.min(100, 20 + 12 * Math.log(1 + w / 5));
+  };
+  function syncWealth(g) { if (on(g)) g.setStat('财富', wealthOf(CN.net(g))); }
+
+  /* 今年的收入（元）：自己 + 配偶。学生、未成年、没工作的没有 */
+  CN.income = (g) => {
+    const age = g.age, job = g.recall('job') || 'none';
+    let mine = 0;
+    if (g.recall('retired') || job === 'retired') {
+      mine = PENSION[g.recall('pension')] || (g.recall('hukou') === 'rural' ? PENSION.low : PENSION.mid);
+      // 个人养老金账户、养老年金（finance.js）：退休后按年领
+      mine += (Number(g.recall('paAcct')) || 0) / 20 + (Number(g.recall('annuity')) || 0);
+    }
+    else if (!(STUDY.includes(g.recall('lifePath')) && job === 'none')) {
+      const base = INCOME[job] != null ? INCOME[job] : 60000;
+      const career = 0.6 + g.s('事业') / 100 * 1.4;
+      // 老板、博主看运气
+      const luck = job === 'boss' || job === 'creator' ? 0.4 + rnd() * 1.4 : 1;
+      mine = base * (TIER_INC[tierOf(g)] || 0.8) * career * luck;
+      if (g.recall('side')) mine += 10000;
+      mine += Number(g.recall('rental')) || 0; // 第二套房的租金
+    }
+    let sp = 0;
+    if (g.recall('love') === 'married' && JY.byId.sp && g.alive('sp')) {
+      const spAge = g.ageOf('sp');
+      if (spAge >= 65) sp = PENSION.mid * 0.8;
+      else if (g.recall('spWork') !== 'home') sp = (g.recall('hukou') === 'rural' && tierOf(g) >= 4 ? INCOME.worker : INCOME.office) * (TIER_INC[tierOf(g)] || 0.8) * 0.9;
+    }
+    return Math.round(mine + sp);
+  };
+
+  /* 今年的开销（元）：日常、孩子、房租、养老院 */
+  function costs(g) {
+    const t = tierOf(g), base = LIVE[t] || LIVE[3];
+    const hh = CN.household(g);
+    let c = base;
+    if (g.recall('hhPlace') === 'nursing') return 60000;
+    hh.forEach((id) => {
+      if (/^k\d$/.test(id)) { const a = g.ageOf(id); c += a < 3 ? base * 0.6 : a < 18 ? base * 0.8 : base * 0.5; }
+      else if (/^gk\d$/.test(id)) c += base * 0.3;
+      else c += base * 0.6;
+    });
+    // 在外地读大学的孩子
+    ['k1', 'k2', 'k3'].forEach((id) => { if (JY.byId[id] && g.alive(id) && !hh.includes(id)) { const a = g.ageOf(id); if (a >= 18 && a <= 21) c += 30000; } });
+    const house = g.recall('house');
+    const atParents = ['fa', 'mo'].some((id) => hh.includes(id)) && !g.recall('parentsIn');
+    // 晚年住到孩子家，不交房租
+    if (g.recall('liveWith') === 'kids') return Math.round(Math.max(c * 0.5, Math.min(c, CN.income(g) * 0.7)) * 0.6);
+    if (!atParents && (house === 'rent' || ((house === 'none' || !house) && g.recall('hhPlace') !== 'dorm'))) c += RENT[t] || RENT[3];
+    // 钱少就省着花（最低省到一半），钱多就多花一点（人情、车、看病、旅行）
+    const inc = CN.income(g);
+    const spend = Math.max(c * 0.5, Math.min(c, inc * 0.7)) + Math.max(0, inc - c) * 0.45;
+    return Math.round(spend);
+  }
+
+  CN.buyHouse = (g, o) => {
+    o = o || {};
+    const tier = o.tier || tierOf(g);
+    const price = o.price || CN.price(g, tier);
+    const down = o.down == null ? 0.3 : o.down;
+    const pay = price * down * 1e4;
+    const loan = Math.round(price * (1 - down));
+    setCash(g, CN.cash(g) - pay);
+    // second: 第二套房（出租或投资），房子的价值加上去，不改住处
+    g.remember('houseVal', (o.second ? V.houseVal(g) : 0) + price);
+    // 记下这笔贷款，并同步 lastDebt，免得年末记账再把它当成新借的钱算一次
+    if (loan > 0) { g.remember('debt', V.debt(g) + loan); g.remember('loanBase', V.loanBase(g) + loan); g.remember('lastDebt', V.debt(g)); }
+    if (!o.second || g.recall('house') !== 'own') g.remember('house', loan > 0 ? 'mortgage' : 'own');
+    if (o.city && !o.second) { g.info('住处', o.city); g.move('home', o.city + ' · 新家'); }
+    syncWealth(g);
+  };
+  CN.sellHouse = (g) => {
+    const v = V.houseVal(g), d = V.debt(g);
+    setCash(g, CN.cash(g) + (v - d) * 1e4);
+    g.remember('houseVal', 0); g.remember('debt', 0); g.remember('loanBase', 0);
+    g.remember('house', 'rent');
+    syncWealth(g);
+  };
+  CN.invest = (g, yuan, style) => {
+    const amt = Math.max(0, Math.min(yuan, Math.max(0, CN.cash(g))));
+    setCash(g, CN.cash(g) - amt);
+    g.remember('invest', V.invest(g) + amt);
+    g.remember('investStyle', style || 'fund');
+    syncWealth(g);
+    return amt;
+  };
+  CN.withdraw = (g) => {
+    setCash(g, CN.cash(g) + V.invest(g));
+    g.remember('invest', 0);
+    g.remember('investStyle', '');
+    syncWealth(g);
+  };
+  CN.riskName = (style) => RISK_T[style] || '';
+
+  /* ---------- 和谁住 ---------- */
+  const ORDER = ['sp', 'sp2', 'k1', 'k2', 'k3', 'fa', 'mo', 'gp', 'gm', 'sib0', 'sib1', 'gk1', 'gk2', 'gk3'];
+  const hhRaw = (g) => (g.recall('hh') || []).slice();
+  CN.household = (g) => hhRaw(g).filter((id) => JY.byId[id] && g.alive(id))
+    .sort((a, b) => (ORDER.indexOf(a) + 99) % 99 - (ORDER.indexOf(b) + 99) % 99);
+  CN.livesWith = (g, id) => CN.household(g).includes(id);
+  CN.hhCount = (g) => CN.household(g).length + 1;
+  CN.alone = (g) => !CN.household(g).length && g.recall('hhPlace') !== 'dorm' && g.recall('hhPlace') !== 'nursing';
+  CN.liveWith = (g, ids) => {
+    const hh = hhRaw(g);
+    [].concat(ids).forEach((id) => { if (JY.byId[id] && g.alive(id) && !hh.includes(id)) hh.push(id); });
+    g.remember('hh', hh);
+    if ([].concat(ids).some((id) => id === 'fa' || id === 'mo') && g.age >= 18) g.remember('parentsIn', true);
+    if (g.recall('hhPlace') === 'dorm') g.remember('hhPlace', '');
+  };
+  CN.moveOut = (g, ids) => {
+    const out = [].concat(ids);
+    g.remember('hh', hhRaw(g).filter((id) => !out.includes(id)));
+    if (out.includes('fa') && out.includes('mo')) g.remember('parentsIn', false);
+  };
+  CN.who = (g, id, age) => g.who(id, age);
+  const relOf = (g, id) => g.knows(id) || (JY.byId[id] ? JY.byId[id].name : '');
+  // “你和谁住”整句的开头：中文“你和妻子住在一起”，英文 “You were living with your wife”
+  CN.youHh = (g) => (/^zh/.test(JY.LANG || 'zh') ? '你' + CN.hhText(g) : 'You were ' + CN.hhText(g));
+  CN.hhText = (g) => {
+    const place = g.recall('hhPlace');
+    if (place === 'nursing') return '住在養老院';
+    if (place === 'dorm') return '住在宿舍';
+    const hh = CN.household(g);
+    if (!hh.length) return '一個人住';
+    const names = hh.map((id) => relOf(g, id));
+    return '和' + (names.length > 3 ? names.slice(0, 3).join('、') + '等 ' + names.length + ' 人' : names.join('、')) + '住在一起';
+  };
+
+  /* 每年对一遍：谁出生了、谁离家了、谁搬进来了 */
+  function reconcile(g, age) {
+    let hh = hhRaw(g).filter((id) => JY.byId[id] && g.alive(id));
+    const has = (id) => hh.includes(id);
+    const add = (id) => { if (JY.byId[id] && g.alive(id) && !has(id)) hh.push(id); };
+    const del = (ids) => { hh = hh.filter((id) => !ids.includes(id)); };
+    const PARENTS = ['fa', 'mo', 'gp', 'gm', 'sib0', 'sib1'];
+    const notes = [];
+    // 弟弟妹妹出生
+    ['sib0', 'sib1'].forEach((id) => { const s = JY.byId[id]; if (s && s.born === g.Y && (has('fa') || has('mo') || has('gp'))) add(id); });
+    // 留守儿童跟爸妈进城
+    if (age < 18 && g.recall('migrated') && !g.recall('hhMigrated')) { add('fa'); add('mo'); g.remember('hhMigrated', true); }
+    // 成年后离家：上大学、当兵、去外地工作
+    const away = STUDY.includes(g.recall('lifePath')) || g.recall('lifePath') === 'army'
+      || (age >= 16 && g.recall('workCity') && g.recall('workCity') !== g.recall('city') && g.recall('workCity') !== g.recall('homeCap'));
+    if (age >= 16 && away && !g.recall('leftHome') && !g.recall('parentsIn')) {
+      del(PARENTS);
+      g.remember('leftHome', true);
+      const study = STUDY.includes(g.recall('lifePath')) || g.recall('lifePath') === 'army';
+      // 进厂、学徒多半住厂里的宿舍
+      const plant = !study && (g.recall('job') === 'worker' || age < 18);
+      const married = g.recall('love') === 'married' && has('sp');
+      g.remember('hhPlace', study || (plant && !married) ? 'dorm' : '');
+      const city = g.recall('workCity') || '外地';
+      notes.push(study ? '你收拾行李離開了家，住進了集體宿舍。'
+        : married ? '你們離開老家，在' + city + '安了家。'
+          : plant ? '你離開家，住進了' + city + '一家廠裡的宿舍。上下鋪，八個人一間。'
+            : '你離開家，在' + city + '租了一間房，開始一個人過。');
+    }
+    // 读完书，从宿舍搬出来
+    if (g.recall('hhPlace') === 'dorm' && !STUDY.includes(g.recall('lifePath')) && g.recall('lifePath') !== 'army') g.remember('hhPlace', '');
+    // 回老家：没自己的房子就住回爸妈家
+    if (g.recall('leftHome') && !away && g.recall('love') !== 'married' && !['mortgage', 'own'].includes(g.recall('house')) && !has('fa') && !has('mo') && (g.alive('fa') || g.alive('mo'))) {
+      add('fa'); add('mo');
+      g.remember('leftHome', false);
+      notes.push('你搬回了爸媽家，住回小時候那間屋子。');
+    }
+    // 结婚：配偶住进来；有了自己的房子，就和爸妈分开住
+    if (g.recall('love') === 'married' && JY.byId.sp && g.alive('sp')) {
+      if (!has('sp')) add('sp');
+      if (['mortgage', 'own'].includes(g.recall('house')) && !g.recall('parentsIn') && (has('fa') || has('mo'))) { del(PARENTS); notes.push('你們搬進了自己的家，從爸媽那裡分了出來。'); }
+    } else if (has('sp')) del(['sp']);
+    // 接爸妈来住（剧情里选了“接来同住”）
+    const care = g.recall('parentsCare');
+    if ((care === 'self' || (g.recall('parentsNear') === 'with' && !['nursing', 'sibling', 'far'].includes(care))) && !g.recall('parentsIn') && (g.alive('fa') || g.alive('mo'))) {
+      add('fa'); add('mo');
+      g.remember('parentsIn', true);
+    }
+    // 孩子：未成年就跟你住。离婚后跟了对方、留在老家给老人带的不算
+    const kidAway = g.recall('custody') === 'ex';
+    ['k1', 'k2', 'k3'].forEach((id) => {
+      if (!JY.byId[id] || !g.alive(id)) return;
+      const a = g.ageOf(id);
+      const left = g.recall('kidSchool') === 'left' && a >= 6 && a < 16;
+      if (kidAway || left) del([id]);
+      else if (a < 18 && !has(id)) add(id);
+    });
+    // 孩子长大离家（十八岁去读书或工作），晚年和孩子住的不算
+    ['k1', 'k2', 'k3'].forEach((id) => {
+      if (has(id) && g.ageOf(id) >= 18 && g.recall('liveWith') !== 'kids') {
+        del([id]);
+        notes.push(CN.who(g, id) + '十八歲，離開家去' + (g.rnd() < 0.7 ? '外地讀書' : '外面闖') + '了。家裡一下子空了一塊。');
+      }
+    });
+    // 晚年住哪儿
+    const lw = g.recall('liveWith');
+    if (lw === 'nursing') { hh = hh.filter((id) => id === 'sp' || id === 'sp2'); g.remember('hhPlace', 'nursing'); }
+    else if (g.recall('hhPlace') === 'nursing') g.remember('hhPlace', '');
+    // 和孩子住：住进谁家由剧情的 CN.liveWith 定；只补上后来出生的孙辈
+    if (lw === 'kids' && ['k1', 'k2', 'k3'].some(has)) ['gk1', 'gk2', 'gk3'].forEach((id) => { const k = JY.byId[id]; if (k && k.born === g.Y) add(id); });
+    g.remember('hh', hh);
+    return notes;
+  }
+
+  /* 第一次有自己的钱（十八岁，或者更早开始工作） */
+  function startMoney(g, age) {
+    const job = g.recall('job');
+    if (on(g) || (age < 18 && (!job || job === 'none'))) return '';
+    const fam = g.recall('family') || 'worker';
+    const gift = (START[fam] || 10000) * (0.5 + g.s('财富') / 100);
+    g.remember('money0', true);
+    setCash(g, gift);
+    g.remember('lastBand', band(gift));
+    syncWealth(g);
+    const working = job && job !== 'none';
+    return (working ? '你開始自己掙錢了。' : '你成年了，開始自己管錢。') + '手裡有 ' + CN.fmt(gift) + '，' + (fam === 'rich' ? '大半是家裡給的。' : '是這些年攢的壓歲錢和家裡給的。');
+  }
+  // 存款档位：用来报“第一次过了十万”
+  const BANDS = [1e5, 5e5, 1e6, 5e6, 1e7];
+  const band = (v) => BANDS.filter((b) => v >= b).length;
+
+  /* 年末记账 */
+  function ledger(g, age) {
+    if (!on(g)) return [];
+    const out = [];
+    const inc = CN.income(g), cost = costs(g);
+    const newLoan = Math.max(0, V.debt(g) - V.lastDebt(g)); // 今年剧情里新借的钱（房贷、彩礼……）
+    let cash = CN.cash(g);
+    // 读书期间家里给生活费，打点零工
+    let spent = 0; // 这一年花出去的（日常开销加还款），名帖上显示
+    if (STUDY.includes(g.recall('lifePath')) && (g.recall('job') || 'none') === 'none') cash += 3000;
+    else { cash += inc - cost; spent = cost; }
+    // 欠款（房贷、借款）：每年还本金基数的 6.5%，利息按 3.5% 算
+    let debt = V.debt(g);
+    if (newLoan) g.remember('loanBase', V.loanBase(g) + newLoan);
+    if (debt > 0) {
+      const base = Math.max(V.loanBase(g), debt);
+      const payW = Math.min(debt * 1.035, base * 0.065);
+      cash -= payW * 1e4;
+      spent += payW * 1e4;
+      debt = Math.max(0, debt * 1.035 - payW);
+      if (debt < 0.5) {
+        debt = 0;
+        g.remember('loanBase', 0);
+        if (g.recall('house') === 'mortgage') { g.remember('house', 'own'); out.push('最後一筆房貸還完了。房子從今天起，徹底是你的了。'); }
+        else out.push('欠的錢終於還清了。');
+      }
+      g.remember('debt', Math.round(debt * 10) / 10);
+    }
+    g.remember('lastDebt', V.debt(g));
+    // 房子：剧情里改成“背房贷”“全款”却没走 CN.buyHouse 的，按城市补上房价
+    // 首付：今年新增的欠款就是贷款，房价减贷款是首付；存款不够的部分算家里凑的
+    const house = g.recall('house');
+    if (['mortgage', 'own', 'hometown'].includes(house) && !V.houseVal(g)) {
+      const price = house === 'hometown' ? PRICE[4] : CN.price(g);
+      const down = Math.max(0, price - newLoan) * 1e4;
+      const mine = Math.min(down, Math.max(0, cash) * 0.8);
+      cash -= mine;
+      g.remember('houseVal', price);
+      out.push('買房的首付 ' + CN.fmt(down) + (mine >= down ? '，全是你們自己攢的。' : '，你們出了 ' + CN.fmt(mine) + '，剩下的是家裡湊的。'));
+    }
+    // 存款利息、理财涨跌
+    if (cash > 0) cash *= 1.015;
+    const inv = V.invest(g), style = g.recall('investStyle');
+    // 有行情和分仓（finance.js）就按分仓和这一年的行情算；没有就按老办法
+    if (CN.pfYear) { setCash(g, cash); CN.pfYear(g, age).forEach((t) => out.push(t)); cash = CN.cash(g); }
+    else if (inv > 0 && RISK[style]) {
+      const r = RISK[style][0] + RISK[style][1] * gauss();
+      const delta = inv * r;
+      g.remember('invest', Math.max(0, Math.round(inv + delta)));
+      if (Math.abs(r) >= 0.2 && Math.abs(delta) >= 20000) out.push((r > 0 ? '這一年行情好，你' + RISK_T[style] + '的錢漲了 ' : '這一年行情不好，你' + RISK_T[style] + '的錢跌了 ') + CN.fmt(Math.abs(delta)) + '。');
+    }
+    // 晚年钱不够，孩子接济
+    if (cash < 0 && age >= 65 && ['k1', 'k2', 'k3'].some((id) => JY.byId[id] && g.alive(id))) {
+      const help = Math.min(-cash + 20000, 60000);
+      cash += help;
+      if (!g.recall('kidHelp')) { g.remember('kidHelp', true); out.push('退休金不太夠花。孩子每個月往你卡里打一筆錢，嘴上說是給你買水果的。'); }
+    }
+    if (cash < 0 && CN.cash(g) >= 0 && age < 65) out.push('這一年入不敷出，存款見底了。');
+    // 透支不能一直挂着：亏空记成欠款（找家里、亲戚借的，或者信用卡），以后按年还
+    if (cash < -20000) {
+      const owe = Math.round(-cash / 1e3) / 10;
+      g.remember('debt', V.debt(g) + owe);
+      g.remember('loanBase', V.loanBase(g) + owe);
+      g.remember('lastDebt', V.debt(g));
+      cash = 0;
+      out.push('錢不夠花，你借了 ' + CN.fmt(owe * 1e4) + '，記在欠款裡慢慢還。');
+    }
+    setCash(g, cash);
+    g.remember('income', inc);
+    g.remember('expense', Math.round(spent));
+    // 存款第一次过了一个整数关口
+    const liquid = cash + V.invest(g);
+    const b = band(liquid), lb = V.lastBand(g);
+    if (b > lb) out.push('存款第一次過了 ' + CN.fmt(BANDS[b - 1]) + '。');
+    g.remember('lastBand', Math.max(b, lb));
+    syncWealth(g);
+    return out;
+  }
+
+  /* 年度小结：这一年要是没什么事，写一行“家里怎么样” */
+  function summary(g, age) {
+    const L = L_();
+    const lines = L.log.filter((e) => e.y === L.year && !/^(world|wmod)$/.test(e.k)).length;
+    const decade = age >= 20 && age % 10 === 0 && on(g);
+    if (!decade && (lines > 0 || g.rnd() < 0.5)) return '';
+    const place = g.recall('hhPlace') ? '' : (g.recall('liveWith') === 'kids' ? g.recall('kidCity') || '' : g.recall('workCity') || g.recall('homeCap') || '').replace(/ · .*$/, '');
+    const head = age < 3 ? '這一年，你還在襁褓裡，' : '這一年，你' + (place ? '在' + place + '，' : '');
+    let t = head + CN.hhText(g) + '。';
+    if (on(g)) {
+      const inc = V.income(g);
+      t += (inc > 0 ? '家裡一年進賬 ' + CN.fmt(inc) + '，花出去 ' + CN.fmt(V.expense(g)) + '，' : '') + '存款 ' + CN.fmt(CN.cash(g) + V.invest(g));
+      if (V.houseVal(g)) t += '，房子值 ' + CN.fmt(V.houseVal(g) * 1e4);
+      if (V.debt(g)) t += '，還欠 ' + CN.fmt(V.debt(g) * 1e4);
+      t += '。';
+    }
+    return t;
+  }
+
+  /* ---------- 宠物 ----------
+   * 记忆键 petNow = { kind: 'dog' | 'cat' | 'bird' | 'fish' | 'rabbit', name, y: 来的那一年, life: 能活几年 }。在家时场景里画它。
+   * 剧情里用 CN.adoptPet(g, 'cat', '名字')；旧剧情的 kidPet/evDog/evCat/pet 选了收养，也会自动补上。 */
+  const PET_NAMES = { dog: ['小黃', '旺財', '豆豆', '黑子', '球球'], cat: ['咪咪', '橘子', '花花', '煤球', '年糕'], bird: ['小翠', '嘰嘰'], fish: ['金金', '泡泡'], rabbit: ['糰子', '雪球'] };
+  const PET_LIFE = { dog: 13, cat: 15, bird: 8, fish: 4, rabbit: 9 };
+  const PET_T = { dog: '小狗', cat: '小貓', bird: '鳥', fish: '魚', rabbit: '兔子' };
+  CN.pet = (g) => g.recall('petNow') || null;
+  CN.adoptPet = (g, kind, name) => {
+    const p = { kind: kind || 'cat', name: name || CN.pick(PET_NAMES[kind] || PET_NAMES.cat), y: g.Y, life: (PET_LIFE[kind] || 12) + CN.ri(-3, 3) };
+    g.remember('petNow', p);
+    return p;
+  };
+  // 童年收养的那只：名字和童年剧情里的一样（childhood.js 的 CN.kidPetName）；农村多是狗，城里多是猫
+  function adoptKidPet(g) { CN.adoptPet(g, g.recall('hukou') === 'rural' ? 'dog' : 'cat', CN.kidPetName ? CN.kidPetName(g) : undefined); return []; }
+  function pets(g) {
+    const out = [];
+    let p = CN.pet(g);
+    // 旧剧情里刚选了收养
+    if (!p) {
+      const kid = g.since('kidPet') === 0 && g.recall('kidPet') === 'kept';
+      if (kid) return out.concat(adoptKidPet(g));
+      const k = g.since('evDog') === 0 && g.recall('evDog') === 'kept' ? 'dog'
+        : g.since('evCat') === 0 && g.recall('evCat') === 'adopted' ? 'cat' : g.since('pet') === 0 && g.recall('pet') === 'dog' ? 'dog'
+          : g.since('kidPlan') === 0 && g.recall('kidPlan') === 'dink' ? 'cat' : '';
+      if (k) p = CN.adoptPet(g, k);
+    }
+    if (p && g.Y - p.y >= p.life) {
+      out.push('陪了你 ' + (g.Y - p.y) + ' 年的' + p.name + '老了，在一個安靜的早上走了。你在樓下的樹邊給它挖了個小坑。');
+      g.remember('petNow', null);
+    }
+    return out;
+  }
+
+  /* ---------- 身体和心里 ----------
+   * 生病不全靠剧情：每年按年纪、健康、心情算一次生病的可能。小病花点钱，大病花大钱、伤身体，身体本来就差的少数会走。
+   * 心情连着两年很低会拖垮身体，也会让大病更容易找上门。两次病之间至少隔三年。 */
+  function body(g, age) {
+    if (age < 18) return [];
+    const out = [];
+    const H = g.s('健康'), M = g.s('心情');
+    const low = M < 25 ? (Number(g.recall('lowMood')) || 0) + 1 : 0;
+    g.remember('lowMood', low);
+    if (low === 2) {
+      const fee = on(g) ? Math.round(Math.max(3000, CN.income(g) * 0.03)) : 0;
+      if (fee) CN.pay(g, fee);
+      g.stat('健康', -4);
+      g.stat('心情', 8);
+      out.push('那段時間你整夜睡不著，胸口發悶。家裡人陪你去看了醫生，說是心裡累出來的病。吃了半年藥，' + (fee ? '花了 ' + CN.fmt(fee) + '，' : '') + '慢慢緩過來了。');
+    }
+    // 养生：五十五岁以后，心情好、常锻炼、家里宽裕（看得起病、吃得好）的人，身体老得慢一些，能活到九十以上
+    if (age >= 55) {
+      let keep = (M >= 60 ? 0.5 : 0) + (g.focus === '锻炼身体' ? 1 : 0) + (g.s('财富') >= 60 ? 0.4 : 0) + (g.s('人缘') >= 60 ? 0.3 : 0);
+      if (M < 30) keep -= 0.5;
+      const whole = Math.floor(keep) + (g.rnd() < keep - Math.floor(keep) ? 1 : 0);
+      if (whole) g.stat('健康', whole);
+    }
+    if (g.since('illY') >= 0 && g.since('illY') < 4) return out;
+    const base = age < 40 ? 0.015 : age < 60 ? 0.035 : age < 75 ? 0.07 : 0.11;
+    const p = base * (1.7 - H / 100) * (M < 30 ? 1.5 : 1);
+    if (g.rnd() >= p) return out;
+    g.remember('illY', true);
+    const serious = g.rnd() < (age < 50 ? 0.25 : 0.4);
+    const inc = on(g) ? CN.income(g) : 0;
+    const insured = !!g.recall('evIns') && g.recall('evIns') !== 'no';
+    if (!serious) {
+      const fee = Math.round(Math.max(2000, inc * 0.04));
+      if (on(g)) CN.pay(g, fee);
+      g.stat('健康', -2);
+      out.push(CN.pick(['你住了幾天院，是急性腸胃炎。', '體檢查出一個結節，做了個小手術。', '腰椎間盤突出，躺了一個月。', '一場重感冒拖成了肺炎，吊了一週的水。']) + (on(g) ? '花了 ' + CN.fmt(fee) + '。' : ''));
+      return out;
+    }
+    const fee = Math.round(Math.max(30000, inc * 0.6) * (insured ? 0.4 : 1));
+    const have = on(g) ? Math.max(0, CN.cash(g)) : 0;
+    g.stat('健康', -7);
+    const what = CN.pick(age < 55 ? ['查出了早期的腫瘤', '突發心梗，送進了搶救室', '出了一場車禍，斷了兩根肋骨'] : ['查出了腫瘤', '突發腦梗', '心臟搭了橋', '摔了一跤，髖骨骨折']);
+    const who = ['sp', 'k1', 'mo', 'fa'].find((id) => JY.byId[id] && g.alive(id) && id !== g.me);
+    let t = '這一年你' + what + '。' + (who ? CN.who(g, who) + '在醫院守了好些天。' : '');
+    if (on(g)) {
+      if (fee > have) {
+        const owe = Math.round((fee - have) / 1e3) / 10;
+        CN.pay(g, have);
+        g.remember('debt', V.debt(g) + owe);
+        t += '治病花了 ' + CN.fmt(fee) + (insured ? '（保險報了一大半）' : '') + '，存款不夠，還借了 ' + CN.fmt(owe * 1e4) + '。';
+      } else { CN.pay(g, fee); t += '治病花了 ' + CN.fmt(fee) + (insured ? '，保險報了一大半' : '') + '。'; }
+    }
+    // 身体本来就差的，少数人没能挺过来
+    if (H < 30 && g.rnd() < (age < 60 ? 0.1 : 0.22)) { g.die(age < 60 ? '因病去世，走得太早' : '病重不治'); return out.concat([t + '這一次，你沒能挺過來。']); }
+    out.push(t + (g.rnd() < 0.5 ? '出院那天，天很好。' : '慢慢地，你又能下樓走走了。'));
+    return out;
+  }
+
+  /* ---------- 场景框画什么 ----------
+   * 这一年剧情把你带去了别处（医院、写字楼、工厂、路上、海边、学校），就画那里和陪着你的人；
+   * 否则画你的家（村子、县城、城里的小区、宿舍、养老院），和住在一起的人、宠物。 */
+  const AWAY = ['hospital', 'office', 'factory', 'road', 'coast', 'school', 'campus', 'hsr', 'smart'];
+  function homeLoc(g) {
+    const place = g.recall('hhPlace');
+    if (place === 'dorm') return g.age < 16 ? 'school' : STUDY.includes(g.recall('lifePath')) ? 'campus' : 'factory';
+    if (place === 'nursing') return 'home';
+    const t = g.recall('tier') || 5;
+    if (g.recall('liveWith') === 'hometown' || t >= 5) return g.recall('homeLoc') || 'home';
+    return t === 4 ? 'county' : 'home';
+  }
+  function homeCap(g) {
+    if (g.recall('hhPlace') === 'nursing') return '養老院';
+    if (g.recall('hhPlace') === 'dorm') return ((g.recall('workCity') || g.recall('homeCap') || '') + ' · 宿舍').replace(/^ · /, '');
+    const city = g.recall('liveWith') === 'kids' ? (g.recall('kidCity') || '孩子家') : (g.recall('workCity') || g.recall('homeCap') || '家');
+    return city.replace(/ · .*$/, '') + ' · ' + (g.recall('house') === 'rent' ? '租的房子' : '家');
+  }
+  function companions(g, loc) {
+    const L = L_();
+    if (L.partyY === L.year && L.party.length) return L.party.filter((id) => g.alive(id));
+    const alive = (ids) => ids.filter((id) => JY.byId[id] && g.alive(id) && id !== g.me);
+    if (loc === 'hospital') return alive(g.age < 18 ? ['mo', 'fa', 'gm'] : ['sp', 'k1', 'mo']).slice(0, 1);
+    if (loc === 'coast' || loc === 'road') return g.age < 18 ? alive(['fa', 'mo']) : alive(['sp']).concat(alive(['k1', 'k2']).filter((id) => g.ageOf(id) < 18));
+    if (loc === 'school' && g.age < 8) return alive(['mo', 'gm']).slice(0, 1);
+    return [];
+  }
+  function scene(g) {
+    const L = L_();
+    if (L.locY === L.year && AWAY.includes(L.loc)) {
+      const comp = companions(g, L.loc);
+      const desc = (JY.LOCS[L.loc] || {}).name || '';
+      return { loc: L.loc, cap: (L.locCap || desc) + ' · ' + (comp.length ? comp.map((id) => g.knows(id) || g.name(id)).join('、') + '陪著你' : '你一個人'), party: comp };
+    }
+    const p = CN.pet(g);
+    const who = g.age < 3 ? '你還在襁褓裡，' + CN.hhText(g) : CN.hhText(g);
+    return { loc: homeLoc(g), cap: homeCap(g) + ' · ' + who + (p ? '，還有' + (PET_T[p.kind] || '') + p.name : ''), party: CN.household(g).slice(0, 6), pets: p ? [{ kind: p.kind }] : [] };
+  }
+
+  /* ---------- 挂到引擎上（game.js 的 engine 钩子调用这些） ---------- */
+  JY.ECON = {
+    // 旧剧情的 g.stat('财富', n)：成年后换算成一笔钱。一点“财富”按全家年收入的 6% 算，最少五千
+    onStat: (g, k, d) => {
+      if (k !== '财富' || !on(g)) return true;
+      const unit = Math.max(5000, CN.income(g) * 0.06);
+      if (d < 0) CN.pay(g, -d * unit); else CN.earn(g, d * unit);
+      return false;
+    },
+    yearEnd: (g, age) => {
+      reconcile(g, age).forEach((t) => g.log(t, 'auto'));
+      pets(g).forEach((t) => g.log(t, 'auto'));
+      body(g, age).forEach((t) => g.log(t, 'auto'));
+      if (L_().death) return;
+      const first = startMoney(g, age);
+      if (first) g.log(first, 'auto');
+      ledger(g, age).forEach((t) => g.log(t, 'auto'));
+      const s = summary(g, age);
+      if (s) g.log(s, 'flavor');
+    },
+    deathLine: (g, id, cause) => {
+      const c = JY.byId[id];
+      if (!c) return '';
+      const age = g.Y - c.born;
+      const rel = g.knows(id);
+      if (rel) return '你的' + rel + (/^zh/.test(JY.LANG || 'zh') ? '' : ' ') + c.name + cause + '，享年 ' + age + ' 歲。';
+      const L = L_();
+      if (L && L.peers.includes(id)) return '和你同一年出生的' + c.name + '（' + c.origin + '）' + cause + '。';
+      return '';
+    },
+    // 给 simulate.js 用的逻辑检查：t 是一行生平或抉择的正文，按此刻的状态看有没有矛盾。返回问题说明，没问题返回 ''
+    lint: (g, t, kind) => {
+      const age = g.age;
+      const married = g.recall('love') === 'married' && !!JY.byId.sp && g.alive('sp');
+      if (married && /孤身|孑然|一个人过|还是一个人|没有对象|没对象|找个伴|介绍(个|一个)?(对象|老伴)|给你介绍.{0,3}(对象|个人|一个人)|(去|再去|安排|劝你|催你)相亲/.test(t) && !/领了证|结婚了|婚礼/.test(t)) return '已婚卻寫成單身';
+      if (kind === 'node' && (CN.livesWith(g, 'fa') || CN.livesWith(g, 'mo')) && /(爸|妈|父母|父亲|母亲|老人)/.test(t) && /接(过来|来|到身边)|搬来.{0,4}住|接.{0,4}同住/.test(t)) return '已經和爸媽同住，還問要不要接來';
+      if (!CN.alone(g) && /一个人住(?!进)|(?<!的)独居(?!老人)|一个人吃饭|空荡荡的家|家里只有你一个/.test(t)) return '有人同住卻寫成獨居';
+      if (age < 1 && /^(【[^】]*】)?你.{0,12}(说|开口|走|跑|追|学会)/.test(t)) return '還不滿一歲';
+      if (age < 3 && /吃了一碗|一碗.{0,4}面|牛肉面|热干面|臊子面|拉面|火锅|烧烤|撸串|泡馍|凉皮|冷面|小龙虾|臭豆腐|喝酒|抽烟|奶茶|咖啡|生煎|肉夹馍/.test(t)) return '三歲前吃喝大人的東西';
+      if (age < 16 && /(你|自己).{0,6}(抽烟|喝醉|喝多了|去酒吧|结婚|还房贷|领工资|升职)/.test(t)) return '未成年做大人的事';
+      if (age >= 85 && /广场舞|领舞|跑步|爬山|马拉松|骑车|打篮球|游泳|健身房/.test(t)) return '八十五歲以後還做劇烈運動';
+      if (age >= 75 && /(你|你们).{0,6}(加班|上班|升职|跳槽|找工作|面试)/.test(t) && !/退休|以前|当年|那时|年轻/.test(t)) return '七十五歲以後還上班';
+      return '';
+    },
+    party: (g) => CN.household(g).slice(0, 6),
+    sceneCap: (g) => CN.hhText(g),
+    wealthText: (L, g) => (on(g) ? CN.fmt(CN.cash(g) + V.invest(g)) : ''),
+    // 名帖“状态”卡里的年收入、年支出、房子、欠款（没有就不显示那一行）
+    incomeText: (L, g) => (on(g) ? CN.fmt(V.income(g)) : ''),
+    expenseText: (L, g) => (on(g) && V.expense(g) ? CN.fmt(V.expense(g)) : ''),
+    debtText: (L, g) => (on(g) && V.debt(g) ? CN.fmt(V.debt(g) * 1e4) : ''),
+    houseText: (L, g) => (on(g) && V.houseVal(g) ? CN.fmt(V.houseVal(g) * 1e4) : ''),
+    scene,
+  };
+
+  /* 投胎时定下一开始和谁住：爸妈、哥哥姐姐；留守儿童跟爷爷奶奶；农村一半人家三代同堂 */
+  const gen = JY.GENERATE;
+  JY.GENERATE = () => {
+    const r = gen();
+    const m = r.me.mem;
+    const others = r.others;
+    const older = others.filter((o) => /^sib\d$/.test(o.id) && o.born <= CN.NOW).map((o) => o.id);
+    let hh = m.leftBehind ? ['gp', 'gm'] : ['fa', 'mo'];
+    if (!m.leftBehind && m.hukou !== 'city' && Math.random() < (m.hukou === 'rural' ? 0.5 : 0.25)) hh = hh.concat(['gp', 'gm']);
+    m.hh = hh.concat(older);
+    return r;
+  };
+})();

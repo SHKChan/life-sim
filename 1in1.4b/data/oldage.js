@@ -90,7 +90,7 @@
     if (!kid) return null;
     const n = (g.recall('grandkids') || 0) + 1;
     const fromSon = kid.sex === '男';
-    const gk = CN.person({ id: 'gk' + n, born: g.Y, surname: fromSon ? kid.name[0] : undefined, origin: kid.name + '的孩子' });
+    const gk = CN.person({ id: 'gk' + n, born: g.Y, surname: fromSon ? CN.surOf(kid.name) : undefined, origin: kid.name + '的孩子' });
     g.spawn(gk);
     const label = fromSon ? (gk.sex === '男' ? '孙子' : '孙女') : (gk.sex === '男' ? '外孙' : '外孙女');
     g.rel(n === 1 ? label : '小' + label, gk.id, kid.name + '的孩子');
@@ -102,7 +102,7 @@
   const company = (g) => {
     if (lw(g) === 'nursing') return hasSp(g) ? '你和' + spName(g) + '住在养老院的同一间屋里' : '你住在养老院，护工每天来几趟';
     if (CN.alone(g)) return '你一个人住，社区的人每天来敲一次门';
-    return '你' + CN.hhText(g);
+    return CN.youHh(g);
   };
 
   JY.addFlags({
@@ -220,7 +220,7 @@
       text: (g) => {
         if (hasSp(g)) return '没有孩子在身边，你和' + spName(g) + '商量往后怎么过。';
         if (CN.alone(g)) return '你一个人住了好些年。社区来登记独居老人，问你往后有什么打算。';
-        return '你' + CN.hhText(g) + '。社区来登记老人的情况，问你往后有什么打算。';
+        return CN.youHh(g) + '。社区来登记老人的情况，问你往后有什么打算。';
       },
       choices: [
         { t: '就在这儿，照常过', canon: true, fx: (g) => { g.remember('liveWith', 'alone'); g.stat('心情', 1); stayHome(g); }, res: '你在门口装了一个能报警的门铃，别的照旧。' },
@@ -540,7 +540,7 @@
         if (g.recall('robot') === 'home') return '家里那台陪护机器人跟了你三年，它记得你所有的习惯，比你自己记得还清楚。';
         if (hasSp(g)) return '你和' + spName(g) + '守着老房子。一个耳朵背，一个眼睛花，凑在一起刚好过日子。';
         if (CN.alone(g)) return '一个人住，你给自己定了规矩：每天出门一次，跟一个人说话。';
-        return '你' + CN.hhText(g) + '。每天早上谁先起床，谁就烧一壶水。';
+        return CN.youHh(g) + '。每天早上谁先起床，谁就烧一壶水。';
       } },
 
     /* ================= 80 岁：老家 ================= */

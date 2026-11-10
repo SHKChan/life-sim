@@ -607,7 +607,7 @@
   const petName = (g) => (pet(g) ? pet(g).name : '它');
   const PET_W = { dog: '狗', cat: '猫', bird: '鸟', fish: '鱼', rabbit: '兔子' };
   // 宠物店里的品种：[种类, 价格]
-  const BREED = { 布偶猫: ['cat', 8000], 英短: ['cat', 3000], 暹罗猫: ['cat', 4000], 柯基: ['dog', 6000], 柴犬: ['dog', 7000], 比熊: ['dog', 3000], 金毛: ['dog', 4000] };
+  const BREED = { '布偶猫': ['cat', 8000], '英短': ['cat', 3000], '暹罗猫': ['cat', 4000], '柯基': ['dog', 6000], '柴犬': ['dog', 7000], '比熊': ['dog', 3000], '金毛': ['dog', 4000] };
   const breed = (g) => pk(g, Object.keys(BREED), 41);
   const petYear = (g, kind) => round((kind === 'dog' ? 6000 : 4000) * (tier(g) <= 1 ? 1.3 : 1), 500);
   const crop = (g) => pk(g, { 西南: ['猕猴桃', '茶叶', '花椒'], 华南: ['荔枝', '百香果', '茶叶'], 华东: ['草莓', '茶叶', '蓝莓'], 华中: ['小龙虾', '脐橙', '莲藕'], 华北: ['苹果', '小米', '大棚蔬菜'], 东北: ['大米', '木耳', '蓝莓'], 西北: ['苹果', '枸杞', '牛羊肉'] }[g.recall('region')] || ['大棚蔬菜', '水果'], 42);
@@ -660,6 +660,8 @@
       choices: [
         { t: (g) => '治，先交 ' + fmt(vetBill(g)), canon: true, cond: (g) => cash(g) >= vetBill(g), fx: (g) => { CN.pay(g, vetBill(g)); g.remember('evVet', 'cure'); g.stat('心情', -1); },
           res: (g) => '你交了 ' + fmt(vetBill(g)) + '。医生说来得及时。' + petName(g) + '戴着伊丽莎白圈回了家，委屈了好几天。' },
+        { t: (g) => '刷信用卡也要治（' + fmt(vetBill(g)) + '）', dev: 15, cond: (g) => cash(g) < vetBill(g), fx: (g) => { CN.pay(g, vetBill(g)); g.remember('evVet', 'cure'); g.stat('心情', -2); },
+          res: (g) => '你刷了卡。' + petName(g) + '住了几天院，回家那天一直蹭你的手。这笔钱，你分了好几个月才还上。' },
         { t: (g) => '先开点药回家养（约 ' + fmt(round(vetBill(g) * 0.2, 100)) + '）', dev: 10, fx: (g) => { CN.pay(g, round(vetBill(g) * 0.2, 100)); g.remember('evVet', 'basic'); g.stat('心情', -2); },
           res: '你拿了药，每天掰开它的嘴喂。它不肯吃，你就把药裹在肉里。' },
       ] },

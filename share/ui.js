@@ -10,9 +10,11 @@
   const app = document.getElementById('app');
   const val = JY.val;
   const t = JY.t || ((s, v) => (v ? s.replace(/\{(\w+)\}/g, (m, k) => v[k]) : s));
+  const pol = (s) => (JY.polish ? JY.polish(s) : s); // 西文：句首大写、去多余空格
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const SPEEDS = [1, 2, 4, 8, 16];
-  const YEAR_MS = 60000; // 1× 时一年约一分钟，速度翻倍时间减半
+  // 1× 时一年多长（毫秒），速度翻倍时间减半。默认一分钟；游戏可在 game.js 里用 yearMs 改（十四亿分之一一局要短）
+  const YEAR_MS = (JY.GAME && JY.GAME.yearMs) || 60000;
   const STEP = 100;
   // 游戏用词：默认值是江湖一梦的；游戏的 game.js 覆盖；当前语言再用 JY.GAME.i18n.<语言> 覆盖
   const LOC = (JY.GAME && JY.GAME.i18n && JY.GAME.i18n[JY.LANG]) || {};
@@ -135,6 +137,12 @@
   // 三种主题：暗、灰、白，点一下换下一种
   const THEMES = [['dark', '暗'], ['gray', '灰'], ['light', '白']];
   const themeNow = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  // 语言按钮：只在单独打包、打开了语言切换的版本里出现（config.js 的 langOpen，例如 itch 版）；网站上由全站顶栏切换
+  function langBtn(id) {
+    if (!JY.LANG_OPEN) return '';
+    const opts = [['zh', '简'], ['zh-TW', '繁'], ['en', 'EN']].filter((o) => !JY.GAME || !JY.GAME.langs || o[0] === 'zh' || JY.GAME.langs.includes(o[0]));
+    return '<span class="langs" role="group" aria-label="Language">' + opts.map((o) => '<button class="b" id="' + id + '-' + o[0] + '" data-act="lang" data-v="' + o[0] + '" aria-pressed="' + (JY.LANG === o[0]) + '">' + o[1] + '</button>').join('') + '</span>';
+  }
   function themeBtn(id, withText) {
     const cur = THEMES.find((x) => x[0] === themeNow()) || THEMES[0];
     return '<button class="b icon-b" id="' + id + '" data-act="theme" title="' + esc(t('主题：{x}（点一下换）', { x: t(cur[1]) })) + '">' + ICON.theme + '<span>' + esc(t(cur[1])) + (withText ? ' · ' + t('主题') : '') + '</span></button>';
@@ -380,7 +388,7 @@
     const fresh = T.random ? !W.lives.length : W.year < 0 && !W.lives.length;
     let h = '<div class="home"><div class="home-hero"><div><h1>' + T.titleHtml + '</h1>'
       + '<p>' + esc(T.intro) + '</p></div>'
-      + '<div>' + themeBtn('h-theme', true) + '</div></div>';
+      + '<div>' + themeBtn('h-theme', true) + langBtn('h-lang') + '</div></div>';
     h += '<div class="world-line">';
     if (fresh) h += '<span>' + T.freshLine + '</span>'; // 游戏自己写的用词，可以带 <b>
     else if (T.random) h += '<span>' + t('已经活过 <b>{n}</b> 世', { n: W.lives.length }) + '</span>';
@@ -421,6 +429,8 @@
       }
       h += '</section>';
     }
+    // 游戏自己加的首页卡片（例如十四亿分之一的人生图鉴）
+    if (T.homeCards) h += T.homeCards(W, { esc, t, card });
     h += '<section><div class="section-h"><h2>' + esc(T.livesTitle) + '</h2><span>' + esc(T.random ? t('你活过的每一世') : t('这个{w}里你活过的每一世', { w: T.world })) + '</span></div>';
     h += W.lives.length ? '<div class="lives">' + W.lives.slice().reverse().map((l) => '<div class="life-row"><b>' + esc(l.name) + '</b><span>' + esc(T.year + ' ' + l.from + '–' + l.to + ' · ' + t('享年 {n}', { n: l.to - l.born }) + ' · ' + l.cause) + ' · “' + esc(l.words) + '”</span><span class="d">' + esc(T.devShort) + ' ' + l.dev + '%</span></div>').join('') + '</div>'
       : '<p class="empty">' + t('还没有。') + '</p>';
@@ -465,7 +475,8 @@
   function lifeView() {
     const { W, L } = E.get();
     const c = JY.byId[L.cid];
-    const Y = L.year, age = Math.max(0, Y - c.born), b = bookOf(c.book);
+    // 第一年还没开始时（L.year 是出生前一年），显示醒来的那一年
+    const Y = Math.max(L.year, L.start), age = Math.max(0, Y - c.born), b = bookOf(c.book);
     const showDecision = ui.pending && ui.shown >= L.log.length;
     // 暂停时整段换成“已暂停”，宽度不变，顶栏不会挤成两行
     const pace = ui.paused ? ui.speed + '× · ' + t('已暂停') : ui.speed + '× · ' + paceText();
@@ -479,7 +490,7 @@
       + '<span class="speeds" role="group" aria-label="' + esc(t('速度')) + '">' + SPEEDS.map((s) => '<button class="b" id="c-s' + s + '" data-act="speed" data-v="' + s + '" aria-pressed="' + (ui.speed === s) + '">' + s + '×</button>').join('') + '</span>'
       + '<button class="b" id="c-next" data-act="next"' + (showDecision ? ' disabled' : '') + '>' + t('下一抉择') + ' »</button>'
       + '<button class="b" id="c-auto" data-act="auto" aria-pressed="' + ui.auto + '">' + t('自动') + '</button>'
-      + themeBtn('c-theme')
+      + themeBtn('c-theme') + langBtn('c-lang')
       + feedbackBtn('c-feedback', t('反馈'))
       + '<button class="b" id="c-chron" data-act="drawer">' + esc(T.chronicle) + '</button>'
       + '<button class="b" id="c-exit" data-act="home">' + t('离开') + '</button>'
@@ -544,15 +555,24 @@
     return '<div class="overlay center decide-wrap" data-act="decide-bg"><div class="modal decide' + (isEnc || isPause ? ' enc' : '') + '" role="dialog" aria-modal="true" aria-labelledby="decide-t">'
       + '<div class="decide-meta">' + tag + '<span>' + esc(yearText(G.Y) + ' · ' + ageText(G.age) + ' · ' + G.name(c.id)) + '</span>'
       + '<button class="b decide-peek" id="d-peek" data-act="peek" title="' + esc(t('先看看局面，再回来选')) + '">' + t('收起') + '</button></div>'
-      + '<div class="decide-b"><h3 id="decide-t">' + esc(n.t) + '</h3><p>' + esc(val(n.text)) + '</p><div class="choices">'
+      + '<div class="decide-b"><h3 id="decide-t">' + esc(n.t) + '</h3>' + echoLine(n) + '<p>' + esc(pol(val(n.text))) + '</p>'
+      + (n.stake ? '<p class="stake">' + esc(val(n.stake)) + '</p>' : '') + '<div class="choices">'
       + opts.map((o, k) => {
         const ch = o.ch;
         let meta = '';
         if (ch.check) meta += '<span>' + esc(statName(ch.check[0]) + ' ' + G.s(ch.check[0]) + ' · ' + t('成功率 {p}%', { p: E.odds(ch.check) })) + '</span>';
         if (!isPause) meta += ch.canon ? '<span class="tag canon">' + esc(T.canon) + '</span>' : (ch.dev === 0 ? '' : '<span class="tag mod">' + esc(T.modTag) + '</span>');
         if (ch.fatal) meta += '<span class="tag bad">' + t('命终') + '</span>';
-        return '<button class="choice" id="ch-' + k + '" data-act="choose" data-i="' + o.i + '"><span class="t">' + (k + 1) + '. ' + esc(val(ch.t)) + '</span><span class="m">' + meta + '</span></button>';
+        const hint = ch.hint ? val(ch.hint) : '';
+        return '<button class="choice" id="ch-' + k + '" data-act="choose" data-i="' + o.i + '"><span class="t">' + (k + 1) + '. ' + esc(pol(val(ch.t))) + (hint ? '<small class="hint-l">' + esc(hint) + '</small>' : '') + '</span><span class="m">' + meta + '</span></button>';
       }).join('') + '</div></div></div></div>';
+  }
+  // 回响：节点写了 echoOf（当年的节点 id），弹框里提一句“你当年选了什么”
+  function echoLine(n) {
+    if (!n.echoOf) return '';
+    const L = E.get().L, by = (L && L.pickBy) || {};
+    const src = [].concat(n.echoOf).map((id) => by[id]).filter(Boolean)[0];
+    return src ? '<p class="echo">' + esc(t('回响 · 你 {a} 岁时：{c}', { a: src.a, c: src.c })) + '</p>' : '';
   }
   function decisionPill(n) {
     return '<button class="decide-pill" id="d-open" data-act="peek-off"><span>' + t('待抉择') + '</span><b>' + esc(n.t) + '</b><span>' + t('点开') + ' ›</span></button>';
@@ -666,16 +686,19 @@
   function endView() {
     const l = ui.life;
     const age = l.to - l.born;
+    const mine = l.picks.filter((p) => !p.auto); // 顺其自然的小事不算玩家做过的抉择
     let h = '<div class="end"><div class="stele"><canvas class="px" data-portrait="' + l.id + '" data-age="' + age + '" style="width:80px;height:96px"></canvas>'
       + '<div class="vname">' + esc(l.name) + '</div><div class="yrs">' + esc(T.year + ' ' + l.born + ' — ' + l.to) + '</div>'
       + '<div class="cause">' + esc(t('享年 {n}', { n: age }) + ' · ' + l.cause) + '</div><div class="words">“' + esc(l.words) + '”</div></div>';
     h += '<div class="end-main">';
-    h += '<div class="card"><div class="big-num"><div><span>' + t('享年') + '</span><b>' + age + '</b></div><div><span>' + esc(T.devName) + '</span><b>' + l.dev + '%</b></div><div><span>' + t('做过的抉择') + '</span><b>' + l.picks.length + '</b></div></div></div>';
+    h += '<div class="card"><div class="big-num"><div><span>' + t('享年') + '</span><b>' + age + '</b></div><div><span>' + esc(T.devName) + '</span><b>' + l.dev + '%</b></div><div><span>' + t('做过的抉择') + '</span><b>' + mine.length + '</b></div></div></div>';
+    // 游戏自己加的卡片（例如十四亿分之一的稀有度、成就、转折线）：endCards(life) 返回 HTML 片段
+    if (T.endCards) h += T.endCards(l, { esc, t, card });
     h += '<div class="card"><h3>' + esc(T.compareTitle) + '</h3><div class="compare" style="margin-top:12px"><div><b>' + esc(T.fateLabel) + '</b>' + esc(l.fateText) + '</div><div><b>' + esc(T.yourEnd) + '</b>' + esc(l.name + t('，') + l.cause + t('。')) + '</div></div></div>';
     h += '<div class="card"><h3>' + esc(T.changed) + '</h3><div style="margin-top:10px">' + (l.changes.length
       ? '<ul class="ulist">' + l.changes.map((k) => '<li class="mod">' + esc(JY.FLAGS[k] || k) + '</li>').join('') + '</ul><p style="color:var(--muted);font-size:13.5px;margin-top:10px">' + esc(t('这些改变会留在这个{w}里。下一世重生到后面的年代，还会碰到它们的后果。', { w: T.world })) + '</p>'
       : '<p style="color:var(--soft)">' + esc(T.noChange) + '</p>') + '</div></div>';
-    h += '<div class="card"><h3>' + t('你做过的选择') + '</h3><ul class="ulist" style="margin-top:10px">' + (l.picks.map((p) => '<li class="' + (!p.canon && p.ok && p.dev > 0 ? 'mod' : '') + '">' + esc(ageText(p.age) + ' · ' + p.t + t('：') + p.c + (p.check ? (p.ok ? t('（成功）') : t('（失败）')) : '')) + '</li>').join('') || '<li>' + t('一次也没有。') + '</li>') + '</ul></div>';
+    h += '<div class="card"><h3>' + t('你做过的选择') + '</h3><ul class="ulist" style="margin-top:10px">' + (mine.map((p) => '<li class="' + (!p.canon && p.ok && p.dev > 0 ? 'mod' : '') + '">' + esc(ageText(p.age) + ' · ' + p.t + t('：') + p.c + (p.check ? (p.ok ? t('（成功）') : t('（失败）')) : '')) + '</li>').join('') || '<li>' + t('一次也没有。') + '</li>') + '</ul></div>';
     if (l.answers.length) h += '<div class="card"><h3>' + esc(T.pauseTag) + '</h3><ul class="ulist" style="margin-top:10px">' + l.answers.map((a) => '<li>' + esc(ageText(a.age) + ' · ' + a.q + ' ' + a.a) + '</li>').join('') + '</ul></div>';
     h += '<div class="card"><h3>' + esc(T.peersTitle) + '</h3><div class="rows" style="margin-top:10px">' + l.peers.map((p) => '<div class="row"><span class="nm">' + esc(p.name) + '</span><span class="v"></span><span class="n' + (p.st.dead ? ' dead' : '') + '">' + esc(p.st.t) + '</span></div>').join('') + '</div></div>';
     h += card(t('人生图'), t('一格一年'), lifeMap(l.born, l.from, l.to, -9999, l.marks));
@@ -719,7 +742,7 @@
     const l = ui.life, line = ui.share.line;
     const links = shareLinks(l, line);
     const text = JY.shareText(l, line);
-    const zh = (JY.LANG || 'zh') === 'zh';
+    const zh = /^zh/.test(JY.LANG || 'zh');
     return '<div class="overlay center" data-act="share-bg"><div class="modal" role="dialog" aria-label="' + esc(t('分享这一生')) + '">'
       + '<div class="modal-h"><span>' + t('分享这一生') + '</span><button class="b" id="sh-close" data-act="share-close">' + t('关闭') + '</button></div>'
       + '<div class="modal-b">'
@@ -728,6 +751,7 @@
       + '<p class="hint">' + t('写了会放在文字总结的开头，也会印在图片上。') + '</p>'
       + '<button class="share-main" id="sh-native" data-act="share-native">' + t('分享') + '<small>' + t('图片和文字一起发给微信、QQ 等应用') + '</small></button>'
       + '<div class="share-grid">'
+      + '<button class="b" id="sh-copyimg" data-act="share-copyimg">' + t('复制图片') + '</button>'
       + '<button class="b" id="sh-copy" data-act="share-copy">' + t('复制文字总结和链接') + '</button>'
       + '<a class="b" id="sh-save" href="' + ui.share.png + '" download="' + esc(T.title + '-' + l.name) + '.png">' + t('保存图片') + '</a>'
       + (zh ? '<a class="b" id="sh-weibo" href="' + esc(links.weibo) + '" target="_blank" rel="noopener">' + t('发到微博') + '</a>'
@@ -759,6 +783,15 @@
     const done = () => shareMsg(t('文字总结和链接已复制，可以直接粘贴到微信、微博或朋友圈。'));
     const fallback = () => { ta.focus(); ta.select(); shareMsg(t('已选中文字，请按 Ctrl+C 或长按复制。')); };
     try { navigator.clipboard.writeText(ta.value).then(done, fallback); } catch (e) { fallback(); }
+  }
+  // 复制图片到剪贴板（图片上带二维码和网址，贴到任何平台都能导流）。不支持的浏览器提示用“保存图片”
+  function copyShareImage() {
+    const fail = () => shareMsg(t('这个浏览器不能复制图片，请点“保存图片”，或长按图片保存。'));
+    if (!ui.share.canvas || !ui.share.canvas.toBlob || !navigator.clipboard || !navigator.clipboard.write || typeof window.ClipboardItem === 'undefined') { fail(); return; }
+    ui.share.canvas.toBlob((blob) => {
+      if (!blob) { fail(); return; }
+      navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]).then(() => shareMsg(t('图片已复制，可以直接粘贴到聊天或帖子里。')), fail);
+    }, 'image/png');
   }
   function nativeShare() {
     const text = JY.shareText(ui.life, ui.share.line, false);
@@ -863,6 +896,8 @@
       case 'share': ui.share = { line: '' }; shareImage(); render(); if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (ui.share) refreshShare(); }); break;
       case 'share-close': ui.share = null; render(); break;
       case 'share-copy': copyShareText(); break;
+      case 'share-copyimg': copyShareImage(); break;
+      case 'lang': if (JY.setLang && d.v !== JY.LANG) JY.setLang(d.v); break;
       case 'share-native': nativeShare(); break;
       case 'drawer': ui.drawer = true; render(); break;
       case 'drawer-close': ui.drawer = false; render(); break;

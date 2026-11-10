@@ -467,7 +467,7 @@
     dec({ id: 'y_college_out', age: 21, t: '大专毕业', loc: 'campus', cond: (g) => g.recall('lifePath') === 'college',
       text: (g) => '三年过得快。' + (g.recall('major') || '你的专业') + '的同学，大半已经签了工作。',
       choices: [
-        { t: (g) => { const m = g.recall('major'); const j = { 护理: 'nurse', 学前教育: 'teacher', 机器人维修: 'worker', 电商: 'sales' }[m] || 'worker'; return '按专业找工作（' + CN.jobLine(g, j, ['机器人维修', '电商'].includes(m) ? 2 : 3) + '）'; }, canon: true,
+        { t: (g) => { const m = g.recall('major'); const j = { '护理': 'nurse', '学前教育': 'teacher', '机器人维修': 'worker', '电商': 'sales' }[m] || 'worker'; return '按专业找工作（' + CN.jobLine(g, j, ['机器人维修', '电商'].includes(m) ? 2 : 3) + '）'; }, canon: true,
           fx: (g) => {
             CN.setEdu(g, 'college', '大专'); g.remember('lifePath', 'work');
             const m = g.recall('major');
@@ -517,7 +517,7 @@
           fx: (g) => { CN.setJob(g, g.recall('major') === '计算机' ? 'tech' : 'office', g.recall('major') === '计算机' ? '程序员' : '大厂职员'); CN.goCity(g, 1); g.move('office', g.recall('workCity') + ' · 写字楼'); g.remember('lifePath', 'work'); g.remember('offer22', 'big'); g.stat('健康', -3); },
           res: (g) => '你进了' + g.recall('workCity') + '的一家大厂，' + payWord(g) + '。工牌挂在脖子上，晚上十点地铁还很挤。',
           fail: { fx: (g) => { CN.setJob(g, 'office', '公司职员'); CN.goCity(g, 2, capital(g)); g.remember('lifePath', 'work'); }, res: (g) => '大厂没要你。你回了' + g.recall('workCity') + '，在一家小公司上班，' + payWord(g) + '。' } },
-        { t: (g) => '回省城，找份稳定的工作（' + CN.jobLine(g, { 医学: 'doctor', 师范: 'teacher' }[g.recall('major')] || 'office', 2) + '）', canon: true,
+        { t: (g) => '回省城，找份稳定的工作（' + CN.jobLine(g, { '医学': 'doctor', '师范': 'teacher' }[g.recall('major')] || 'office', 2) + '）', canon: true,
           fx: (g) => {
             const m = g.recall('major');
             g.remember('offer22', 'stable');
@@ -829,7 +829,7 @@
       text: (g) => (loveIs(g, 'divorced') ? '离婚一年了。' : '')
         + (CN.alone(g) ? '你一个人住。周末去菜市场，摊主已经认识你了，会给你多抓一把葱。'
           : withParents(g) ? '你还和' + parentWord(g) + '住在一起。晚饭桌上，' + parentWord(g) + '又提起了谁家的孩子结婚了。'
-          : '你' + CN.hhText(g) + '。周末去菜市场，摊主已经认识你了。'),
+          : CN.youHh(g) + '。周末去菜市场，摊主已经认识你了。'),
       choices: [
         { t: '有人介绍，就见见', canon: true, check: ['人缘', 45], fx: (g) => { CN.marry(g, { origin: '朋友介绍' }); g.remember('lateMarry', 'match'); CN.pay(g, 30000); g.stat('心情', 6); }, res: (g) => '你和' + g.recall('spouse') + '处了半年就结了婚，请两家人吃了几桌，花了 ¥3 万。两个人都不年轻了，没那么多讲究。', fail: { fx: (g) => { g.remember('singleWay', 'blind'); g.stat('心情', -2); }, res: '没成。你也没太难过，回家给自己炒了两个菜。' } },
         { t: '就这样过，挺自在', dev: 15, fx: (g) => { g.remember('singleWay', 'self'); CN.pay(g, 3000); g.stat('心情', 4); }, res: '你花 ¥3,000 给自己买了一套好点的锅。' },

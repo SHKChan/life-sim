@@ -27,6 +27,8 @@
     home: { name: '家', scene: 'cn_home', desc: '小区楼下' },
     coast: { name: '海边', scene: 'cn_coast', desc: '海边' },
     road: { name: '路上', scene: 'cn_road', desc: '高速公路' },
+    hsr: { name: '高铁站', scene: 'cn_hsr', desc: '站台' },
+    smart: { name: '街口', scene: 'cn_smart', desc: '无人车和无人机' },
   });
 
   /* ---------- 省份 ----------
@@ -83,9 +85,18 @@
   let seq = 0;
   const uid = (p) => p + Date.now().toString(36) + (seq++).toString(36);
 
+  // 英文等外文界面：名字写成拼音（“Wang Jianguo”），姓和名之间空一格；姓用 CN.surOf(名字) 取，不要写 name[0]
+  const PY_C = '一丁万东严丹丽书于亦付任伟佑何余佳依侯俊兰军冯凡凯刘刚勇华博卢卫可史叶向吕吴周哲唐嘉国墨夏天奕姚姜娟婉子孔孙孟宇安宋家宸小尹崔廖建张强彭徐志念思怡恒悦戴承敏文斌方昊明星春晓晨景曹曾朱李杜杨杰林树桂桐梁梅梓梦欢欣武段毛永汐江汤汪沈沐河泽洁浩海涛涵清源满潘然熊熙燕王玲琪琳琴瑶甜田白皓睿知石磊秀秦程红罗肖胡致航艳芳芷苏若英范莫萌萱董蒋蔡薛行袁覃许诗语诺谢谭豪贺贾赵轩辰远逸邓邱邵邹郑郝郭金钟钱铭闫阳陆陈陶雨雪雯雷霞静韦韩顾颖馨马高魏鸣鹏黄黎龙龚';
+  const PY_P = 'yi ding wan dong yan dan li shu yu yi fu ren wei you he yu jia yi hou jun lan jun feng fan kai liu gang yong hua bo lu wei ke shi ye xiang lü wu zhou zhe tang jia guo mo xia tian yi yao jiang juan wan zi kong sun meng yu an song jia chen xiao yin cui liao jian zhang qiang peng xu zhi nian si yi heng yue dai cheng min wen bin fang hao ming xing chun xiao chen jing cao zeng zhu li du yang jie lin shu gui tong liang mei zi meng huan xin wu duan mao yong xi jiang tang wang shen mu he ze jie hao hai tao han qing yuan man pan ran xiong xi yan wang ling qi lin qin yao tian tian bai hao rui zhi shi lei xiu qin cheng hong luo xiao hu zhi hang yan fang zhi su ruo ying fan mo meng xuan dong jiang cai xue xing yuan qin xu shi yu nuo xie tan hao he jia zhao xuan chen yuan yi deng qiu shao zou zheng hao guo jin zhong qian ming yan yang lu chen tao yu xue wen lei xia jing wei han gu ying xin ma gao wei ming peng huang li long gong'.split(' ');
+  const PY = {};
+  [...PY_C].forEach((c, i) => { PY[c] = PY_P[i]; });
+  const latin = () => !/^zh/.test(JY.LANG || 'zh');
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+  const roman = (t) => cap([...t].map((c) => PY[c] || c).join(''));
   function nameOf(sex, surname, old) {
     const pool = old ? (sex === '男' ? OLD_M : OLD_F) : (sex === '男' ? GIVEN_M : GIVEN_F);
-    return (surname || pick(SURNAMES)) + pick(pool);
+    const sur = surname || pick(SURNAMES), given = pick(pool);
+    return latin() ? roman(sur) + ' ' + roman(given) : sur + given;
   }
   const HAIR_COLORS = ['#1f1a17', '#241a14', '#2b211b', '#1a1714'];
   function lookOf(sex, age) {
@@ -150,10 +161,10 @@
     const sibs = R() < sibP ? (R() < 0.25 ? 2 : 1) : 0;
     const order = sibs ? ri(0, sibs) : 0; // 前面有几个
     const leftBehind = fam.key === 'migrant';
-    const cityName = /[州区市]$/.test(city[0]) ? city[0] : city[0] + '市'; // 自治州、地区不加“市”
+    const cityName = /[州区區市]$/.test(city[0]) || !/^zh/.test(JY.LANG || 'zh') ? city[0] : city[0] + '市'; // 自治州、地区不加“市”
     const muni = prov === city[0]; // 直辖市：郊区的镇子和村子
     const place = hukou === 'city' ? cityName : hukou === 'county' ? (muni ? cityName + '郊区的一个镇上' : cityName + '下面的一个县城') : (muni ? cityName + '郊区的一个村子' : cityName + '下面的一个村子');
-    const provName = prov === city[0] ? prov + '市' : /^(内蒙古|广西|西藏|宁夏|新疆)$/.test(prov) ? prov + ' ' : prov + '省 ';
+    const provName = prov === city[0] ? prov + '市' : ['内蒙古', '广西', '西藏', '宁夏', '新疆'].includes(prov) ? prov + ' ' : prov + '省 ';
     const birthplace = muni ? place : provName + place;
     const homeLoc = hukou === 'city' ? (tier <= 2 ? 'metro' : 'city') : hukou === 'county' ? 'county' : 'village_' + rtype;
     // 父母
@@ -185,7 +196,7 @@
       const ph = R() * 100 < pp[4] ? '城里' : '农村';
       const ps = R() < 0.51 ? '男' : '女';
       const path = peerPath(ph);
-      const peer = person({ id: 'peer' + i, sex: ps, book: pp[2], origin: '生在' + pp[0] + pc[0] + (ph === '农村' ? '的农村' : ''), ms: path.ms, death: path.death });
+      const peer = person({ id: 'peer' + i, sex: ps, book: pp[2], origin: '生在' + pp[0] + (latin() ? ', ' : '') + pc[0] + (ph === '农村' ? '的农村' : ''), ms: path.ms, death: path.death });
       peers.push(peer.id);
       others.push(peer);
     }
@@ -208,7 +219,7 @@
         ['家庭', fam.t],
         ['父亲', dad.name + '，' + dadAge + ' 岁，' + fam.dad],
         ['母亲', mom.name + '，' + momAge + ' 岁，' + fam.mom],
-        ['兄弟姐妹', sibs ? family.filter((f) => /哥|姐|弟|妹/.test(f.rel)).map((f) => f.rel).join('、') : '独生子女'],
+        ['兄弟姐妹', sibs ? family.filter((f) => /^sib/.test(f.id || '')).map((f) => f.rel).join('、') : '独生子女'],
       ],
       odds: '今年全国出生的孩子里，约 ' + (birthW / TOTAL_W * 100).toFixed(1) + '% 生在' + prov + '；其中' + (hukou === 'rural' ? '生在农村的约占 ' + Math.max(5, 100 - urban - 8) : hukou === 'county' ? '生在县城的约占 20' : '生在城区的约占 ' + Math.max(10, urban - 12)) + '%。你是十四亿分之一。',
     });
@@ -239,16 +250,16 @@
   /* ---------- 年度重心 ---------- */
   JY.FOCUS = [
     { name: '懵懂', minAge: 0, maxAge: 5, d: '还小，由大人照看。', fx: (g) => { g.stat('心情', 1); if (g.rnd() < 0.3) g.stat('健康', 1); } },
-    { name: '用功读书', minAge: 6, maxAge: 22, d: '学识涨，心情会闷。', fx: (g) => { g.stat('学识', 2); if (g.rnd() < 0.3) g.stat('心情', -1); } },
-    { name: '贪玩', minAge: 6, maxAge: 17, d: '心情好，人缘好，学识涨得慢。', fx: (g) => { g.stat('心情', 2); g.stat('人缘', 1); } },
+    { name: '用功读书', minAge: 6, maxAge: 22, d: '学识 +2～3，心情会闷。中考、高考、考研都看学识。', fx: (g) => { g.stat('学识', g.rnd() < 0.5 ? 3 : 2); if (g.rnd() < 0.35) g.stat('心情', -1); } },
+    { name: '贪玩', minAge: 6, maxAge: 17, d: '心情 +2、人缘 +1，学识会往下掉。', fx: (g) => { g.stat('心情', 2); g.stat('人缘', 1); if (g.rnd() < 0.5) g.stat('学识', -1); } },
     { name: '帮家里干活', minAge: 8, maxAge: 17, d: '人缘、健康；人会早熟一些。', fx: (g) => { g.stat('人缘', 1); g.stat('健康', 1); if (g.rnd() < 0.3) g.stat('财富', 1); } },
     { name: '学个特长', minAge: 6, maxAge: 17, d: '学识，偶尔有意外收获；家里要花钱。', fx: (g) => { g.stat('学识', 1); if (g.rnd() < 0.4) g.stat('事业', 1); if (g.rnd() < 0.3) g.stat('财富', -1); } },
-    { name: '埋头工作', minAge: 16, d: '事业、财富涨，健康和心情慢慢掉。', fx: (g) => { g.stat('事业', 2); g.stat('财富', 1); if (g.rnd() < 0.35) g.stat('健康', -1); if (g.rnd() < 0.3) g.stat('心情', -1); } },
+    { name: '埋头工作', minAge: 16, d: '事业 +3，年终多拿一笔；健康和心情慢慢掉。事业高，工资高、升职和创业更容易成。', fx: (g) => { g.stat('事业', 3); g.stat('财富', 1); if (g.rnd() < 0.35) g.stat('健康', -1); if (g.rnd() < 0.3) g.stat('心情', -1); } },
     { name: '学习充电', minAge: 18, d: '学识；学识高时事业也会涨。', fx: (g) => { g.stat('学识', 2); if (g.rnd() < g.s('学识') / 150) g.stat('事业', 1); } },
     { name: '搞副业', minAge: 18, d: '财富，看运气；累。', fx: (g) => { if (g.rnd() < 0.6) g.stat('财富', 2); else g.stat('财富', -1); if (g.rnd() < 0.3) g.stat('健康', -1); } },
-    { name: '陪伴家人', minAge: 18, d: '人缘、心情。', fx: (g) => { g.stat('人缘', 2); g.stat('心情', 1); } },
+    { name: '陪伴家人', minAge: 18, d: '人缘 +2、心情 +1；工作上顾不过来，事业偶尔往下掉。', fx: (g) => { g.stat('人缘', 2); g.stat('心情', 1); if (g.rnd() < 0.3) g.stat('事业', -1); } },
     { name: '锻炼身体', minAge: 16, d: '健康回升。', fx: (g) => { g.stat('健康', 2); if (g.rnd() < 0.3) g.stat('心情', 1); } },
-    { name: '躺平休息', minAge: 18, d: '心情回升，财富和事业停滞。', fx: (g) => { g.stat('心情', 2); if (g.rnd() < 0.3) g.stat('健康', 1); if (g.rnd() < 0.3) g.stat('财富', -1); } },
+    { name: '躺平休息', minAge: 18, d: '心情 +2；事业往下掉，钱只出不进。', fx: (g) => { g.stat('心情', 2); if (g.rnd() < 0.15) g.stat('健康', 1); g.stat('事业', -1); if (g.rnd() < 0.5) g.stat('财富', -1); } },
     { name: '出去走走', minAge: 18, d: '心情、见识；意外多，花钱。', fx: (g) => { g.stat('心情', 1); g.stat('学识', 1); if (g.rnd() < 0.4) g.stat('财富', -1); } },
     { name: '含饴弄孙', minAge: 55, d: '人缘、心情；累一点。', fx: (g) => { g.stat('人缘', 2); g.stat('心情', 1); if (g.rnd() < 0.2) g.stat('健康', -1); } },
   ];
@@ -306,6 +317,8 @@
   const CN = (JY.CN = {
     NOW, PROVS, person, pick, ri, R,
     sexOf: (g) => (JY.byId[g.me] ? JY.byId[g.me].sex : '男'),
+    // 名字里的姓：中文取第一个字，拼音取空格前那一段
+    surOf: (name) => (/ /.test(name || '') ? name.split(' ')[0] : String(name || '').charAt(0)),
     he: (g, id) => (JY.byId[id] && JY.byId[id].sex === '女' ? '她' : '他'),
     // 回到老家
     goHome: (g, cap) => g.move(g.recall('homeLoc'), cap || g.recall('homeCap')),
@@ -345,7 +358,7 @@
     haveKid: (g, o) => {
       o = o || {};
       const n = (g.recall('kids') || 0) + 1;
-      const surname = CN.sexOf(g) === '男' ? JY.byId[g.me].name[0] : (JY.byId.sp ? JY.byId.sp.name[0] : JY.byId[g.me].name[0]);
+      const surname = CN.sexOf(g) === '男' ? CN.surOf(JY.byId[g.me].name) : (JY.byId.sp ? CN.surOf(JY.byId.sp.name) : CN.surOf(JY.byId[g.me].name));
       const k = person(Object.assign({ id: 'k' + n, born: g.Y, surname, origin: '你的孩子' }, o));
       g.spawn(k);
       g.rel(['', '', '二', '三', '四', '五'][n] + (k.sex === '男' ? '儿子' : '女儿'), k.id); // 关系名不能重复，第二个起加“二”“三”

@@ -220,6 +220,12 @@
   });
 
   // 主题、版本、机器翻译提示
+  // v2.0 新加的界面文字（顺其自然、回响、复制图片、二维码）
+  JY.addI18n('en', {
+    '（顺其自然）': '(went with the flow) ', '【': '[', '】': '] ', '。': '. ', '，': ', ', '：': ': ', '（成功）': ' (succeeded)', '（失败）': ' (failed)', '（回响 · 你 {a} 岁时：{c}）': ' (Echo · at {a} you chose: {c})', '回响 · 你 {a} 岁时：{c}': 'Echo · at {a} you chose: {c}',
+    '复制图片': 'Copy image', '这个浏览器不能复制图片，请点“保存图片”，或长按图片保存。': 'This browser cannot copy images. Use “Save image”, or long-press the picture.',
+    '图片已复制，可以直接粘贴到聊天或帖子里。': 'Image copied. Paste it into a chat or a post.', '扫码或打开网址，投一次你的胎': 'Scan or open the link to be born again',
+  });
   JY.addI18n('en', { '主题：{x}（点一下换）': 'Theme: {x} (click to switch)', '暗': 'Dark', '灰': 'Gray', '白': 'Light', '主题': 'theme', '版本': 'Version', '剧情由谷歌网页翻译自动翻译，可能不够准确。': 'Story text is machine-translated by Google and may be imperfect.' });
   JY.addI18n('ja', { '主题：{x}（点一下换）': 'テーマ：{x}（クリックで切替）', '暗': 'ダーク', '灰': 'グレー', '白': 'ライト', '主题': 'テーマ', '版本': 'バージョン', '剧情由谷歌网页翻译自动翻译，可能不够准确。': 'ストーリーは Google 翻訳による機械翻訳です。不正確な場合があります。' });
   JY.addI18n('es', { '主题：{x}（点一下换）': 'Tema: {x} (clic para cambiar)', '暗': 'Oscuro', '灰': 'Gris', '白': 'Claro', '主题': 'tema', '版本': 'Versión', '剧情由谷歌网页翻译自动翻译，可能不够准确。': 'La historia está traducida automáticamente por Google y puede tener errores.' });
