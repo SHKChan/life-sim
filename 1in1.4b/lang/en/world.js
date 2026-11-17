@@ -78,7 +78,7 @@
   const OLD_F = ['秀英', '桂兰', '丽娟', '晓燕', '春梅', '红霞', '丽', '芳', '静', '燕', '娟', '敏', '霞', '艳', '玲', '琴'];
 
   /* ---------- 随机工具 ---------- */
-  const R = Math.random;
+  const R = () => Math.random(); // 每次现取 Math.random：同命挑战（fate.js）投胎时会临时换成带种子的随机数
   const pick = (a) => a[Math.floor(R() * a.length)];
   const wpick = (list, w) => { let t = list.reduce((s, x) => s + w(x), 0) * R(); for (const x of list) { t -= w(x); if (t <= 0) return x; } return list[list.length - 1]; };
   const ri = (a, b) => a + Math.floor(R() * (b - a + 1));

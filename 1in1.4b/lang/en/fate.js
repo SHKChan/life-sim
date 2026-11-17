@@ -7,6 +7,9 @@
  *      墓志页显示做到了几件（取代原来按公式算的“志向达成度”）。
  *   3. 结局（life.end）：命终时按这一生的样子给一个名字，一共 33 种，收进人生图鉴。
  *      另外按 data/rarity.js 的统计，写一句“家底超过了百分之几同样出身的人”。
+ *   4. 天赋专属的路：八个大事里各有一个选项，只有带着对应天赋的人看得到。
+ *   5. 同命挑战：每一世的出身由一个种子定下（记忆键 seed）。分享出去的链接、二维码带着 ?s=种子，
+ *      朋友点开后第一次投胎会生在同一个地方、同一个家里。
  * 排在 tech.js 之后、spine.js 之前载入；墓志页、首页、分享卡由 legacy.js 调用 JY.FATE。
  */
 (function () {
@@ -46,14 +49,40 @@
   const laidOut = (g) => {
     const saved = g.recall('zzOpts');
     if (saved) return saved;
-    const r = prng(seedOf(g)), pool = unlocked().map((x) => x.k);
+    // 朋友分享来的出身：只摆一开始就有的五样，免得各人解锁的不一样
+    const r = prng(seedOf(g)), pool = (g.recall('seedFrom') ? GIFTS.filter((x) => !x.need) : unlocked()).map((x) => x.k);
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
     const opts = pool.slice(0, 3);
     g.remember('zzOpts', opts);
     return opts;
   };
+  /* 投胎：整个生成过程用一个种子（同一个种子生出同一个人、同一家人、同一条行情链） */
+  const readSeed = () => {
+    try {
+      const m = /[?&]s=([0-9a-z]{1,8})(?:&|$)/.exec(location.search || '');
+      const v = m ? parseInt(m[1], 36) : NaN;
+      return Number.isFinite(v) && v >= 0 ? v : null;
+    } catch (e) { return null; }
+  };
+  let pending = readSeed();
   const gen = JY.GENERATE;
-  JY.GENERATE = () => { const r = gen(); r.me.mem.zzSeed = Math.floor(Math.random() * 1e9); return r; };
+  JY.GENERATE = () => {
+    const friend = pending != null;
+    const seed = friend ? pending : Math.floor(Math.random() * 2e9);
+    const real = Math.random;
+    let r;
+    Math.random = prng(seed);
+    try { r = gen(); r.me.mem.zzSeed = Math.floor(Math.random() * 1e9); } finally { Math.random = real; }
+    r.me.mem.seed = seed;
+    if (friend) {
+      r.me.mem.seedFrom = true;
+      pending = null;
+      // 用过就把网址里的种子去掉，刷新页面不会再投到同一个出身
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* 忽略 */ }
+    }
+    return r;
+  };
+  JY.GAME.share.url = (l) => { const u = JY.siteUrl ? JY.siteUrl() : ''; return u && l && l.seed != null ? u + (u.includes('?') ? '&' : '?') + 's=' + Number(l.seed).toString(36) : ''; };
 
   // 判定：天赋对口的那一类容易 12%
   CN.giftOdds = (g, chk) => { const x = giftOf(g); return x && chk && chk[0] === x.stat ? 12 : 0; };
@@ -97,6 +126,33 @@
     { id: 'm_gift38', age: 38, t: 'A born talent', auto: true, echoOf: 'c_zhuazhou', cond: (g) => !!GIFT38[g.recall('gift')],
       text: (g) => GIFT38[g.recall('gift')], fx: (g) => g.stat('心情', 2) },
   ]);
+
+  /* 天赋专属的路：加到已有的大事里，只有带着这样天赋的人看得到（每个节点原来最多三个选项，加上以后最多四个） */
+  const only = (id, k, ch) => {
+    const n = JY.LIFE_NODES.find((x) => x.id === id);
+    if (!n || !n.choices) return;
+    const x = GIFTS.find((y) => y.k === k);
+    ch.cond = (g) => g.recall('gift') === k;
+    ch.hint = 'Only open to the gift "' + x.t + '". ' + ch.hint;
+    n.choices.push(ch);
+  };
+  only('c_hs_track', 'book', { t: 'You can handle both, so you join the school\'s competition class', dev: 15, hint: 'Knowledge rises a lot and the gaokao looks less daunting; less time to play',
+    fx: (g) => { g.remember('track', 'sci'); g.stat('学识', 6); g.stat('心情', -2); }, res: 'The competition class has an extra period at night. You work problems until the building lights go out, and you feel steady.' });
+  only('c_xiaoshengchu', 'ball', { t: 'A sports-school coach notices you; get into the good school as an athlete', dev: 15, hint: 'A good middle school without the exam; early training every morning',
+    fx: (g) => { g.remember('school', 'key'); g.remember('xsc', 'exam'); g.remember('talent', 'sport'); g.stat('健康', 3); }, res: 'You arrive an hour before everyone else and run laps around the field. You get to wear that good school\'s uniform too.' });
+  only('f_pension', 'abacus', { t: 'Open the account, max it out, and put another $2,900 into funds', dev: 20, hint: 'The pension is funded and you have one more investment; money is tight for a while',
+    fx: (g) => { g.remember('paYear', true); CN.invest(g, 20000, 'fund'); g.stat('事业', 1); }, res: 'You run the numbers all evening, open the account and put $2,900 into funds. You note on your phone which money can be touched and when.' });
+  only('y_last34', 'seal', { t: 'Go nowhere; make yourself impossible to replace', dev: 10, hint: 'A big step up in career; no risk, and no chance of doubling your money either',
+    fx: (g) => { g.remember('last34', 'stay'); g.stat('事业', 8); }, res: 'You take on the work nobody else wants. A year later it cannot run without you.' });
+  only('y_love23', 'mic', { t: 'Set the matchmaking aside; you meet someone at a dinner on your own', dev: 15, hint: 'No luck needed; you start dating right away',
+    fx: (g) => { g.remember('love', 'dating'); g.remember('loveFrom', 'work'); g.info('婚姻', 'Dating'); g.stat('心情', 5); }, res: 'At a dinner a friend put together, you talk with the person beside you all evening. As everyone leaves, they ask for your contact.' });
+  only('f_hy', 'coin', { t: 'Try it with just $1,400 for three months, then take the interest and get out', dev: 15, hint: 'Make a little and leave; you will not be caught in a blow-up',
+    fx: (g) => { g.remember('hy', 'no'); CN.earn(g, 200); g.stat('心情', 2); }, res: 'You try it with $1,400 for three months, collect $30 in interest and withdraw every cent of the principal. Half a year later your old classmate stops mentioning the product.' });
+  only('y_back27', 'brush', { t: 'Go home, clear out a room in the old house and take on your own commissions', dev: 25, hint: 'Back with family, living off your craft; income is shaky for the first few years',
+    fx: (g) => { g.remember('backHome', 'late'); CN.goCity(g, 3, g.recall('city')); CN.setJob(g, 'freelance', 'Self-employed craftsperson'); g.stat('心情', 6); g.stat('人缘', 3); },
+    res: (g) => 'You move back to ' + g.recall('city') + ' and turn a room of the old house into a workshop. Work is thin for the first few months, and you eat dinner at home.' });
+  only('y_crisis31', 'sleep', { t: 'Sleep on it', dev: 10, hint: 'The anger fades fast and nobody has to back down',
+    fx: (g) => { g.remember('fight', 'talk'); g.stat('心情', 5); g.stat('人缘', 2); }, res: 'You sleep until morning. By the time you wake the anger is gone; the two of you share a small smile and neither brings it up again.' });
 
   // 每年的小好处
   const WINDFALL = ['a receipt lottery pays out', 'a forgotten deposit is refunded', 'work pays an unexpected bonus', 'an old classmate repays a loan from years ago', 'a lottery ticket wins a small prize'];
@@ -240,6 +296,8 @@
       s.gift = g.recall('gift') || '';
       s.liveWith = g.recall('liveWith') || '';
       s.cityTier = g.recall('cityTier') || 0;
+      if (g.recall('seed') != null) life.seed = g.recall('seed');
+      life.seedFrom = !!g.recall('seedFrom');
       const e = endOf(s);
       life.end = { k: e.k, t: e.t, d: e.d, beat: beat(s) };
       const ws = wishList(g), done = g.recall('wishDone') || [];
@@ -267,6 +325,7 @@
           + (p != null ? ' About ' + (p < 1 ? 'under 1' : Math.round(p)) + '% of lives end this way. ' : '')
           + (l.end.beat != null ? ' Your net worth at the end beat <b>' + l.end.beat + '%</b> of people born into the same kind of family. ' : '')
           + (g ? ' Gift: ' + esc(g.t) + '. ' : '') + '</p>'
+          + (l.seed != null ? '<p class="note">' + (l.seedFrom ? 'This life started from a birth a friend shared. ' : '') + 'Same-birth challenge: share this life, and a friend who opens the link or scans the code will be born in the same place and the same family on their first try.</p>' : '')
           + (l.newGifts && l.newGifts.length ? '<p class="note">New gift unlocked: <b>' + esc(l.newGifts.join(', ')) + '</b>. It may be laid out in front of you at your next first-birthday pick.</p>' : ''), 'rare-card');
       }
       if (l.wish && l.wish.length) {
@@ -274,6 +333,10 @@
         h += card('Wishes written at sixteen', 'Done ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(w.t) + '</b><span>' + (w.ok ? 'Done' : 'Not done') + '</span></li>').join('') + '</ul>');
       }
       return h;
+    },
+    // 首页：网址里带着朋友分享的出身时，提示一句
+    homeChallenge() {
+      return pending == null ? '' : '<section class="album"><div class="section-h"><h2>Same-birth challenge</h2><span>A friend sent you a birth</span></div><div class="card"><p class="note">Press the button to be born, and you will start in the same place and the same family as your friend. Same starting point: see what you make of it.</p></div></section>';
     },
     // 首页人生图鉴里的两行
     homeRows(al, row) {

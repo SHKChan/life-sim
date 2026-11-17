@@ -207,7 +207,7 @@
       y += 18;
     }
     // 页脚：左边一句话和网址，右边二维码（扫码直接打开游戏页，分享截图到任何平台都能导流）
-    const url = JY.siteUrl();
+    const url = (SH.url && SH.url(life)) || JY.siteUrl(); // share.url(life)：游戏可以给这一世单独的链接（例如带上出身的种子）
     const QR = 96;
     Ht = y + (url ? QR + 44 : 76);
     c.fillStyle = 'rgba(0,0,0,0.12)';
@@ -252,7 +252,7 @@
     if (line) lines.push('“' + line + '”');
     if (SH.summary) {
       lines.push(...SH.summary(life));
-      const u = JY.siteUrl();
+      const u = (SH.url && SH.url(life)) || JY.siteUrl();
       lines.push((GAME.shareLead || '') + (withUrl !== false && u ? u : ''));
       return lines.join('\n');
     }

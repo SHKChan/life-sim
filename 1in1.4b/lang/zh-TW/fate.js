@@ -7,6 +7,9 @@
  *      墓志页显示做到了几件（取代原来按公式算的“志向达成度”）。
  *   3. 结局（life.end）：命终时按这一生的样子给一个名字，一共 33 种，收进人生图鉴。
  *      另外按 data/rarity.js 的统计，写一句“家底超过了百分之几同样出身的人”。
+ *   4. 天赋专属的路：八个大事里各有一个选项，只有带着对应天赋的人看得到。
+ *   5. 同命挑战：每一世的出身由一个种子定下（记忆键 seed）。分享出去的链接、二维码带着 ?s=种子，
+ *      朋友点开后第一次投胎会生在同一个地方、同一个家里。
  * 排在 tech.js 之后、spine.js 之前载入；墓志页、首页、分享卡由 legacy.js 调用 JY.FATE。
  */
 (function () {
@@ -46,14 +49,40 @@
   const laidOut = (g) => {
     const saved = g.recall('zzOpts');
     if (saved) return saved;
-    const r = prng(seedOf(g)), pool = unlocked().map((x) => x.k);
+    // 朋友分享来的出身：只摆一开始就有的五样，免得各人解锁的不一样
+    const r = prng(seedOf(g)), pool = (g.recall('seedFrom') ? GIFTS.filter((x) => !x.need) : unlocked()).map((x) => x.k);
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
     const opts = pool.slice(0, 3);
     g.remember('zzOpts', opts);
     return opts;
   };
+  /* 投胎：整个生成过程用一个种子（同一个种子生出同一个人、同一家人、同一条行情链） */
+  const readSeed = () => {
+    try {
+      const m = /[?&]s=([0-9a-z]{1,8})(?:&|$)/.exec(location.search || '');
+      const v = m ? parseInt(m[1], 36) : NaN;
+      return Number.isFinite(v) && v >= 0 ? v : null;
+    } catch (e) { return null; }
+  };
+  let pending = readSeed();
   const gen = JY.GENERATE;
-  JY.GENERATE = () => { const r = gen(); r.me.mem.zzSeed = Math.floor(Math.random() * 1e9); return r; };
+  JY.GENERATE = () => {
+    const friend = pending != null;
+    const seed = friend ? pending : Math.floor(Math.random() * 2e9);
+    const real = Math.random;
+    let r;
+    Math.random = prng(seed);
+    try { r = gen(); r.me.mem.zzSeed = Math.floor(Math.random() * 1e9); } finally { Math.random = real; }
+    r.me.mem.seed = seed;
+    if (friend) {
+      r.me.mem.seedFrom = true;
+      pending = null;
+      // 用过就把网址里的种子去掉，刷新页面不会再投到同一个出身
+      try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* 忽略 */ }
+    }
+    return r;
+  };
+  JY.GAME.share.url = (l) => { const u = JY.siteUrl ? JY.siteUrl() : ''; return u && l && l.seed != null ? u + (u.includes('?') ? '&' : '?') + 's=' + Number(l.seed).toString(36) : ''; };
 
   // 判定：天赋对口的那一类容易 12%
   CN.giftOdds = (g, chk) => { const x = giftOf(g); return x && chk && chk[0] === x.stat ? 12 : 0; };
@@ -97,6 +126,33 @@
     { id: 'm_gift38', age: 38, t: '天生的本事', auto: true, echoOf: 'c_zhuazhou', cond: (g) => !!GIFT38[g.recall('gift')],
       text: (g) => GIFT38[g.recall('gift')], fx: (g) => g.stat('心情', 2) },
   ]);
+
+  /* 天赋专属的路：加到已有的大事里，只有带着这样天赋的人看得到（每个节点原来最多三个选项，加上以后最多四个） */
+  const only = (id, k, ch) => {
+    const n = JY.LIFE_NODES.find((x) => x.id === id);
+    if (!n || !n.choices) return;
+    const x = GIFTS.find((y) => y.k === k);
+    ch.cond = (g) => g.recall('gift') === k;
+    ch.hint = '天賦“' + x.t + '”才有的路。' + ch.hint;
+    n.choices.push(ch);
+  };
+  only('c_hs_track', 'book', { t: '兩門都學得動，報了學校的競賽班', dev: 15, hint: '學識漲得多，高考更有底氣；少了玩的時間',
+    fx: (g) => { g.remember('track', 'sci'); g.stat('学识', 6); g.stat('心情', -2); }, res: '競賽班晚上多上一節課。你做題做到教學樓熄燈，心裡是踏實的。' });
+  only('c_xiaoshengchu', 'ball', { t: '體校的教練看上了你，走體育特長進那所好學校', dev: 15, hint: '不用考試就能進好初中；每天要早起訓練',
+    fx: (g) => { g.remember('school', 'key'); g.remember('xsc', 'exam'); g.remember('talent', 'sport'); g.stat('健康', 3); }, res: '你每天比別人早到一個小時，繞著操場跑圈。那所好學校的校服，你也穿上了。' });
+  only('f_pension', 'abacus', { t: '開戶存滿，再拿兩萬買基金', dev: 20, hint: '養老金照存，另外多一份理財；手頭會緊一陣',
+    fx: (g) => { g.remember('paYear', true); CN.invest(g, 20000, 'fund'); g.stat('事业', 1); }, res: '你算了一晚上，開了戶，又拿 ¥2 萬買了基金。哪筆錢什麼時候能動，你記在了手機備忘錄裡。' });
+  only('y_last34', 'seal', { t: '哪兒也不去，把手上的活做到沒人替得了', dev: 10, hint: '事業往上走一大截；不冒險，也沒有翻倍的機會',
+    fx: (g) => { g.remember('last34', 'stay'); g.stat('事业', 8); }, res: '你把別人不願接的那攤事接了過來。一年以後，這攤事離了你轉不動。' });
+  only('y_love23', 'mic', { t: '相親先放一放，自己在飯局上認識了一個人', dev: 15, hint: '不用碰運氣，直接處上了',
+    fx: (g) => { g.remember('love', 'dating'); g.remember('loveFrom', 'work'); g.info('婚姻', '戀愛中'); g.stat('心情', 5); }, res: '朋友攢的飯局上，你和鄰座聊了一晚上。散的時候，對方問你要了聯絡方式。' });
+  only('f_hy', 'coin', { t: '只拿一萬塊試三個月，拿到利息就取出來', dev: 15, hint: '賺一點小錢就走，不會碰上暴雷',
+    fx: (g) => { g.remember('hy', 'no'); CN.earn(g, 200); g.stat('心情', 2); }, res: '你拿 ¥1 萬試了三個月，利息到手 ¥200，本金一分不少地取了出來。半年後，老同學不再提這款理財了。' });
+  only('y_back27', 'brush', { t: '回老家，把老房子收拾出一間，自己接活做', dev: 25, hint: '回到家人身邊，靠手藝吃飯；頭幾年收入不穩',
+    fx: (g) => { g.remember('backHome', 'late'); CN.goCity(g, 3, g.recall('city')); CN.setJob(g, 'freelance', '自己接活的手藝人'); g.stat('心情', 6); g.stat('人缘', 3); },
+    res: (g) => '你回了' + g.recall('city') + '，把老房子的一間屋改成了工作間。頭幾個月活不多，晚飯是在家吃的。' });
+  only('y_crisis31', 'sleep', { t: '先睡一覺再說', dev: 10, hint: '氣消得快，誰也不用低頭',
+    fx: (g) => { g.remember('fight', 'talk'); g.stat('心情', 5); g.stat('人缘', 2); }, res: '你一覺睡到天亮。醒來的時候氣已經消了，兩個人對著笑了一下，誰也沒再提。' });
 
   // 每年的小好处
   const WINDFALL = ['發票刮中了獎', '一筆忘了的押金退回來了', '單位發了一筆沒想到的獎金', '老同學還了一筆多年前借的錢', '買的彩票中了個小獎'];
@@ -240,6 +296,8 @@
       s.gift = g.recall('gift') || '';
       s.liveWith = g.recall('liveWith') || '';
       s.cityTier = g.recall('cityTier') || 0;
+      if (g.recall('seed') != null) life.seed = g.recall('seed');
+      life.seedFrom = !!g.recall('seedFrom');
       const e = endOf(s);
       life.end = { k: e.k, t: e.t, d: e.d, beat: beat(s) };
       const ws = wishList(g), done = g.recall('wishDone') || [];
@@ -267,6 +325,7 @@
           + (p != null ? ' 大約 ' + (p < 1 ? '不到 1' : Math.round(p)) + '% 的人生是這個結局。' : '')
           + (l.end.beat != null ? ' 臨終時的家底，超過了 <b>' + l.end.beat + '%</b> 同樣出身的人。' : '')
           + (g ? ' 天賦：' + esc(g.t) + '。' : '') + '</p>'
+          + (l.seed != null ? '<p class="note">' + (l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：把這一世分享出去，朋友點開連結或掃碼，第一次投胎會生在和你同一個地方、同一個家裡。</p>' : '')
           + (l.newGifts && l.newGifts.length ? '<p class="note">解鎖了新的天賦：<b>' + esc(l.newGifts.join('、')) + '</b>。下一世抓周的時候可能擺在你面前。</p>' : ''), 'rare-card');
       }
       if (l.wish && l.wish.length) {
@@ -274,6 +333,10 @@
         h += card('十六歲寫下的心願', '做到了 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(w.t) + '</b><span>' + (w.ok ? '做到了' : '沒做到') + '</span></li>').join('') + '</ul>');
       }
       return h;
+    },
+    // 首页：网址里带着朋友分享的出身时，提示一句
+    homeChallenge() {
+      return pending == null ? '' : '<section class="album"><div class="section-h"><h2>同命挑戰</h2><span>朋友發來了一個出身</span></div><div class="card"><p class="note">點“投胎”，你會生在和朋友同一個地方、同一個家裡。同一個起點，看你能活成什麼樣。</p></div></section>';
     },
     // 首页人生图鉴里的两行
     homeRows(al, row) {

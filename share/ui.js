@@ -724,7 +724,7 @@
 
   /* ---------- 分享 ---------- */
   function shareLinks(l, line) {
-    const url = JY.siteUrl();
+    const url = (T.share && T.share.url && T.share.url(l)) || JY.siteUrl();
     const text = JY.shareText(l, line, false);
     const enc = encodeURIComponent;
     return {
@@ -795,7 +795,7 @@
   }
   function nativeShare() {
     const text = JY.shareText(ui.life, ui.share.line, false);
-    const url = JY.siteUrl();
+    const url = (T.share && T.share.url && T.share.url(ui.life)) || JY.siteUrl();
     const tryText = () => {
       if (navigator.share) navigator.share({ title: T.title, text, url: url || undefined }).catch(() => {});
       else copyShareText();

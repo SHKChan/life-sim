@@ -189,10 +189,11 @@
   G.homeCards = (W, u) => {
     const { esc } = u;
     const al = JY.album();
-    if (!al.lives) return '';
+    const ch = JY.FATE ? JY.FATE.homeChallenge(u) : '';
+    if (!al.lives) return ch;
     const row = (name, n, total) => '<div class="alb-row"><span>' + esc(name) + '</span><span class="bar"><i style="width:' + Math.round(100 * Math.min(1, n / total)) + '%"></i></span><b>' + n + ' / ' + total + '</b></div>';
     const got = ACH.filter((a) => al.ach[a.id]);
-    return '<section class="album"><div class="section-h"><h2>人生圖鑑</h2><span>活過 ' + al.lives + ' 世 · 清空投胎記錄也不會丟</span></div><div class="card">'
+    return ch + '<section class="album"><div class="section-h"><h2>人生圖鑑</h2><span>活過 ' + al.lives + ' 世 · 清空投胎記錄也不會丟</span></div><div class="card">'
       + row('投胎過的省份', Object.keys(al.provs).length, PROV_N)
       + row('出身', Object.keys(al.fams).length, Object.keys(FAM_T).length)
       + row('学历', Object.keys(al.edus).length, Object.keys(EDU_T).length)
