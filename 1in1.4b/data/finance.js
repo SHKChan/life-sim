@@ -48,7 +48,7 @@
     if (CACHE[seed]) return CACHE[seed];
     const r = prng(seed), out = {};
     let m = 'calm';
-    for (let y = 2026; y <= 2140; y++) {
+    for (let y = 2026; y <= 2160; y++) {
       const p = r(); let acc = 0;
       for (const [k, w] of NEXT[m]) { acc += w; if (p < acc) { m = k; break; } }
       out[y] = { m, r: RET[m] + (r() - 0.5) * 0.1 };
@@ -56,8 +56,9 @@
     return (CACHE[seed] = out);
   }
   const seedOf = (g) => { let s = g.recall('mktSeed'); if (s == null) { s = Math.floor(Math.random() * 1e9); g.remember('mktSeed', s); } return s; };
-  CN.marketMood = (g, Y) => chain(seedOf(g))[Y || g.Y].m;
-  CN.marketRet = (g, Y) => chain(seedOf(g))[Y || g.Y].r;
+  const CALM = { m: 'calm', r: 0.04 }; // 行情链以外的年份（极少数人活得比它长）按震荡算
+  CN.marketMood = (g, Y) => (chain(seedOf(g))[Y || g.Y] || CALM).m;
+  CN.marketRet = (g, Y) => (chain(seedOf(g))[Y || g.Y] || CALM).r;
   CN.moodName = (m) => MOOD_T[m] || '';
   // 投胎时就定下这一世的行情
   const gen = JY.GENERATE;

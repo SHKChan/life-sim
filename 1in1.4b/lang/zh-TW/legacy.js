@@ -121,7 +121,7 @@
     get() { try { return JSON.parse(localStorage.getItem(ALBUM_KEY) || 'null') || null; } catch (e) { return null; } },
     set(v) { try { localStorage.setItem(ALBUM_KEY, JSON.stringify(v)); } catch (e) { /* 忽略 */ } },
   };
-  JY.album = () => store.get() || { lives: 0, provs: {}, fams: {}, edus: {}, jobs: {}, ach: {}, best: null };
+  JY.album = () => { const al = store.get() || { lives: 0, provs: {}, fams: {}, edus: {}, jobs: {}, ach: {}, best: null }; al.ends = al.ends || {}; al.gifts = al.gifts || {}; return al; };
   G.engine.onFinish = (g, life) => {
     const s = snap(g, life);
     s.aim = g.recall('aim');
@@ -143,6 +143,9 @@
     life.newAch = life.ach.filter((id) => !al.ach[id]);
     life.ach.forEach((id) => { al.ach[id] = al.ach[id] || life.to; });
     if (life.rare && (!al.best || life.rare.oneIn > al.best.oneIn)) { al.best = { oneIn: life.rare.oneIn, name: life.name, where: life.birthplace }; life.bestEver = true; }
+    // 结局、心愿、天赋（data/fate.js）
+    if (JY.FATE) { try { JY.FATE.finish(g, life, s, al); } catch (e) { console.warn(e); } }
+    if (life.newEnd && life.end) fresh.push('結局“' + life.end.t + '”');
     life.fresh = fresh.filter(Boolean);
     store.set(al);
   };
@@ -151,14 +154,14 @@
   const PROV_N = 31; // 大陆 31 个省级行政区（生成器只投到这些地方）
   G.endCards = (l, u) => {
     const { esc, card } = u;
-    let h = '';
+    let h = JY.FATE ? JY.FATE.endCards(l, u) : '';
     const s = l.snap || {};
     if (l.rare) {
       h += card('這一生有多少見', l.bestEver ? '你見過的最少見的一生' : '',
         '<div class="big-num"><div><span>大約</span><b>' + esc(oneInText(l.rare.oneIn)) + '</b><span>人裡才有一個</span></div><div><span>比</span><b>' + l.rare.pct + '%</b><span>的人生更少見</span></div></div>'
         + '<p class="note">按出身、學歷、職業、婚姻、孩子、住在哪、活了多久，各自在十四億人裡的比例算的。</p>', 'rare-card');
     }
-    if (l.aim && l.aim.v != null) {
+    if (l.aim && l.aim.v != null && !l.wish) {
       h += card('十六歲的志向', esc(AIM_T[l.aim.k] || ''), '<div class="aim-bar"><i style="width:' + l.aim.v + '%"></i></div><p class="note">達成了 <b>' + l.aim.v + '%</b>。'
         + esc({ rich: '臨終時的家底 ' + fmt(s.net) + '。', proud: '學歷、事業和人緣一起算。', free: '心情和“走自己的路”一起算。', none: '心情和人緣一起算。' }[l.aim.k] || '') + '</p>');
     }
@@ -195,6 +198,7 @@
       + row('学历', Object.keys(al.edus).length, Object.keys(EDU_T).length)
       + row('职业', Object.keys(al.jobs).length, Object.keys(JOB_T).length - 1)
       + row('成就', got.length, ACH.length)
+      + (JY.FATE ? JY.FATE.homeRows(al, row) : '')
       + (al.best ? '<p class="note">最少見的一生：' + esc(al.best.name) + '（' + esc(al.best.where || '') + '），大約 ' + esc(oneInText(al.best.oneIn)) + ' 人裡才有一個。</p>' : '')
       + '<div class="ach-grid">' + ACH.map((a) => '<span class="' + (al.ach[a.id] ? 'on' : '') + '" title="' + esc(al.ach[a.id] ? a.d : '還沒解鎖') + '">' + esc(al.ach[a.id] ? a.t : '？？？') + '</span>').join('') + '</div>'
       + '</div></section>';
@@ -202,10 +206,10 @@
 
   /* ---------- 分享卡上的几行 ---------- */
   G.share.badges = (l) => {
-    const out = [];
+    const out = JY.FATE ? JY.FATE.badges(l) : [];
     if (l.rare) out.push('大約 ' + oneInText(l.rare.oneIn) + ' 人裡才有一個這樣的人生（比 ' + l.rare.pct + '% 的人生更少見）');
     if (l.ach && l.ach.length) out.push('解鎖成就：' + l.ach.slice(0, 4).map((id) => (ACH.find((a) => a.id === id) || {}).t).join('、'));
-    if (l.aim && l.aim.v != null) out.push('十六歲的志向“' + AIM_T[l.aim.k] + '”，達成了 ' + l.aim.v + '%');
+    if (l.aim && l.aim.v != null && !l.wish) out.push('十六歲的志向“' + AIM_T[l.aim.k] + '”，達成了 ' + l.aim.v + '%');
     return out;
   };
 })();

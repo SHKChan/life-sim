@@ -103,7 +103,7 @@
     贫困: 'Poor', 拮据: 'Tight', 温饱: 'Getting by', 小康: 'Comfortable', 宽裕: 'Well-off', 富足: 'Wealthy',
     起步: 'Starting out', 普通: 'Ordinary', 骨干: 'Core staff', 出色: 'Outstanding', 顶尖: 'Top',
     // profile fields
-    户籍: 'Hukou', 家庭: 'Family', 学历: 'Education', 职业: 'Work', 婚姻: 'Marriage', 住处: 'Lives in', 子女: 'Children', 志向: 'Ambition', 心结: 'Weighs on you', 心愿: 'Hope', 遗愿: 'Last wish',
+    户籍: 'Hukou', 家庭: 'Family', 学历: 'Education', 职业: 'Work', 婚姻: 'Marriage', 住处: 'Lives in', 子女: 'Children', 志向: 'Ambition', 天赋: 'Gift', 心结: 'Weighs on you', 心愿: 'Hope', 遗愿: 'Last wish',
     同住: 'Lives with you',
     // life stages
     襁褓: 'Infant', 幼年: 'Toddler', 少年: 'Child', 青年: 'Young adult', 壮年: 'Adult', 中老年: 'Older adult', 暮年: 'Old age',

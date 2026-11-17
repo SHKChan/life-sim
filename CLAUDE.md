@@ -21,6 +21,7 @@
 | 打包 | `node tools/build.js`：固定 `--base=life-sim`，实际在 `share/tools/build.js`（加内容哈希、写 `dist/_headers`、把版本号写进 `vg:version`）。页面引用的本地 js/css、游戏目录下的 `fonts/` `assets/` `lang/` 和带 `index.html` 的子目录会自动打包 |
 | 版本号 | 各游戏 `game.js` 的 `version`；群侠是 `qunxia/ui.js` 的 `VERSION`。打包时写进页面，不用手写 meta。大厅（根目录 `index.html`）**有意不写**版本号：首页游戏卡按 `GAMES` 的 `parts` 分别显示三个游戏的版本 |
 | 存档键 | `<game.id>.save.v2`（例如 `1in1.4b.save.v2`）；群侠是 `jianghuyimeng.qunxia.v1`，下次改存档结构时改成 `jianghuyimeng.qunxia.save.v2` 并迁移旧键。**例外**：前缀用各游戏的 id，不用 slug `life-sim` |
+| 更新日志 | 根目录 `CHANGELOG.md`，三个游戏写在同一份里，标题写明是哪个游戏 |
 | 问题反馈 | `share/ui.js` 和群侠 `ui.js` 定义了 `window.VG_FEEDBACK`，顶栏的“问题反馈”打开带进度的反馈框 |
 | 语言 | `share/i18n.js` 的 `LANG_OPEN = false`（GUIDE：暂时只开中文） |
 

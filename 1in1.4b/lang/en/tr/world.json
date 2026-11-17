@@ -369,5 +369,8 @@
  "四": "fourth ",
  "五": "fifth ",
  " 个": " child(ren)",
- "钱": "Money"
+ "钱": "Money",
+ "事业 +2～3（越往上越难涨），年终多拿一笔；健康和心情慢慢掉。事业高，工资高、升职和创业更容易成。": "Career +2 to 3 (harder to raise the higher it gets), plus a year-end bonus; health and mood slowly drop. Higher career means better pay and better odds at promotion and starting a business.",
+ "学识；学识高时事业也会涨。二十五岁以后不学，学识会慢慢旧掉。": "Knowledge; with high knowledge, career rises too. After 25, knowledge slowly goes stale if you stop learning.",
+ "健康回升；六十岁以后只能老得慢一些。": "Health recovers; after sixty it only slows aging down."
 }

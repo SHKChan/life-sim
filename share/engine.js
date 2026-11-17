@@ -51,6 +51,7 @@
     // hookDeathFirst：yearEnd 钩子里 g.die 的死法优先，不再被“伤病”“寿终”覆盖
     // minor(n, g)：返回 true 的抉择节点不停下来问玩家，按“这一生的性子”自动选（见 E.autoIndex），生平里记一行“顺其自然”
     // onFinish(g, life)：命终、清空这一世之前调用，可以往 life 上加字段（成就、稀有度……）
+    // oddsMod(g, chk)：返回一个数，加到判定的成功率上（例如这一世的天赋让某项判定容易一些）
   }, (JY.GAME && JY.GAME.engine) || {});
   JY.STATS = CONF().stats;
   const KEY = () => ((JY.GAME && JY.GAME.id) || 'game') + '.save.v2';
@@ -454,7 +455,8 @@
     const k = chk[0], dc = chk[1], mode = chk[2];
     const v = L.st[k];
     const diff = mode === 'low' ? dc - v : v - dc;
-    return clamp(50 + diff * 3, 5, 95);
+    const h = CONF().oddsMod;
+    return clamp(Math.round(50 + diff * 3 + (h ? Number(h(G, chk)) || 0 : 0)), 5, 95);
   };
 
   // auto 为真：小事自动选（E.isMinor），不算玩家做过的抉择，不算进与众不同度

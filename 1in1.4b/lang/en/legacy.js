@@ -121,7 +121,7 @@
     get() { try { return JSON.parse(localStorage.getItem(ALBUM_KEY) || 'null') || null; } catch (e) { return null; } },
     set(v) { try { localStorage.setItem(ALBUM_KEY, JSON.stringify(v)); } catch (e) { /* 忽略 */ } },
   };
-  JY.album = () => store.get() || { lives: 0, provs: {}, fams: {}, edus: {}, jobs: {}, ach: {}, best: null };
+  JY.album = () => { const al = store.get() || { lives: 0, provs: {}, fams: {}, edus: {}, jobs: {}, ach: {}, best: null }; al.ends = al.ends || {}; al.gifts = al.gifts || {}; return al; };
   G.engine.onFinish = (g, life) => {
     const s = snap(g, life);
     s.aim = g.recall('aim');
@@ -143,6 +143,9 @@
     life.newAch = life.ach.filter((id) => !al.ach[id]);
     life.ach.forEach((id) => { al.ach[id] = al.ach[id] || life.to; });
     if (life.rare && (!al.best || life.rare.oneIn > al.best.oneIn)) { al.best = { oneIn: life.rare.oneIn, name: life.name, where: life.birthplace }; life.bestEver = true; }
+    // 结局、心愿、天赋（data/fate.js）
+    if (JY.FATE) { try { JY.FATE.finish(g, life, s, al); } catch (e) { console.warn(e); } }
+    if (life.newEnd && life.end) fresh.push('Ending "' + life.end.t + '”');
     life.fresh = fresh.filter(Boolean);
     store.set(al);
   };
@@ -151,14 +154,14 @@
   const PROV_N = 31; // 大陆 31 个省级行政区（生成器只投到这些地方）
   G.endCards = (l, u) => {
     const { esc, card } = u;
-    let h = '';
+    let h = JY.FATE ? JY.FATE.endCards(l, u) : '';
     const s = l.snap || {};
     if (l.rare) {
       h += card('How rare was this life', l.bestEver ? 'Your rarest life so far' : '',
         '<div class="big-num"><div><span>About</span><b>1 in ' + esc(oneInText(l.rare.oneIn)) + '</b><span>people live a life like this</span></div><div><span>Rarer than</span><b>' + l.rare.pct + '%</b><span>of lives</span></div></div>'
         + '<p class="note">Based on how common your origin, education, job, marriage, children, home city and lifespan each are among 1.4 billion people.</p>', 'rare-card');
     }
-    if (l.aim && l.aim.v != null) {
+    if (l.aim && l.aim.v != null && !l.wish) {
       h += card('Your ambition at sixteen', esc(AIM_T[l.aim.k] || ''), '<div class="aim-bar"><i style="width:' + l.aim.v + '%"></i></div><p class="note">Achieved <b>' + l.aim.v + '%</b>. '
         + esc({ rich: 'Net worth at death ' + fmt(s.net) + '. ', proud: 'Counts education, career and social ties.', free: 'Counts mood and how often you took your own road.', none: 'Counts mood and social ties.' }[l.aim.k] || '') + '</p>');
     }
@@ -195,6 +198,7 @@
       + row('学历', Object.keys(al.edus).length, Object.keys(EDU_T).length)
       + row('职业', Object.keys(al.jobs).length, Object.keys(JOB_T).length - 1)
       + row('Achievements', got.length, ACH.length)
+      + (JY.FATE ? JY.FATE.homeRows(al, row) : '')
       + (al.best ? '<p class="note">Rarest life: ' + esc(al.best.name) + ' (' + esc(al.best.where || '') + '), about 1 in ' + esc(oneInText(al.best.oneIn)) + '.</p>' : '')
       + '<div class="ach-grid">' + ACH.map((a) => '<span class="' + (al.ach[a.id] ? 'on' : '') + '" title="' + esc(al.ach[a.id] ? a.d : 'Locked') + '">' + esc(al.ach[a.id] ? a.t : '???') + '</span>').join('') + '</div>'
       + '</div></section>';
@@ -202,10 +206,10 @@
 
   /* ---------- 分享卡上的几行 ---------- */
   G.share.badges = (l) => {
-    const out = [];
+    const out = JY.FATE ? JY.FATE.badges(l) : [];
     if (l.rare) out.push('About 1 in ' + oneInText(l.rare.oneIn) + ' people live a life like this (rarer than ' + l.rare.pct + '% of lives)');
     if (l.ach && l.ach.length) out.push('Achievements: ' + l.ach.slice(0, 4).map((id) => (ACH.find((a) => a.id === id) || {}).t).join(', '));
-    if (l.aim && l.aim.v != null) out.push('Ambition at 16, “' + AIM_T[l.aim.k] + '”: ' + l.aim.v + '%');
+    if (l.aim && l.aim.v != null && !l.wish) out.push('Ambition at 16, “' + AIM_T[l.aim.k] + '”: ' + l.aim.v + '%');
     return out;
   };
 })();

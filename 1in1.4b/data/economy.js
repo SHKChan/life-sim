@@ -145,7 +145,9 @@
     if (!atParents && (house === 'rent' || ((house === 'none' || !house) && g.recall('hhPlace') !== 'dorm'))) c += RENT[t] || RENT[3];
     // 钱少就省着花（最低省到一半），钱多就多花一点（人情、车、看病、旅行）
     const inc = CN.income(g);
-    const spend = Math.max(c * 0.5, Math.min(c, inc * 0.7)) + Math.max(0, inc - c) * 0.45;
+    // v2.1：收入够用时按实际开销花，结余的三成花掉（原来是 45%）；不够用时省到六成，最多花掉收入的九成五。
+    // 这样家里多一口人、住哪座城，都会实实在在地改变每年能攒下多少
+    const spend = inc >= c ? c + (inc - c) * 0.3 : Math.max(c * 0.6, Math.min(c, inc * 0.95));
     return Math.round(spend);
   }
 
@@ -353,6 +355,8 @@
       g.remember('houseVal', price);
       out.push('买房的首付 ' + CN.fmt(down) + (mine >= down ? '，全是你们自己攒的。' : '，你们出了 ' + CN.fmt(mine) + '，剩下的是家里凑的。'));
     }
+    // 房价分化（v2.1）：一线每年涨 2%，省会涨 1%，地级市不动，县城和农村慢慢跌
+    if (V.houseVal(g) > 0) { const dr = { 1: 0.02, 2: 0.01, 3: 0, 4: -0.005, 5: -0.01 }[tierOf(g)] || 0; if (dr) g.remember('houseVal', Math.round(V.houseVal(g) * (1 + dr) * 10) / 10); }
     // 存款利息、理财涨跌
     if (cash > 0) cash *= 1.015;
     const inv = V.invest(g), style = g.recall('investStyle');
@@ -464,6 +468,9 @@
     if (age >= 55) {
       let keep = (M >= 60 ? 0.5 : 0) + (g.focus === '锻炼身体' ? 1 : 0) + (g.s('财富') >= 60 ? 0.4 : 0) + (g.s('人缘') >= 60 ? 0.3 : 0);
       if (M < 30) keep -= 0.5;
+      // 晚年身边有人：孩子还在的多一分照应，七十岁以后一个人住的少一分
+      if (['k1', 'k2', 'k3'].some((id) => JY.byId[id] && g.alive(id))) keep += 0.25;
+      if (age >= 70 && CN.alone(g)) keep -= 0.25;
       const whole = Math.floor(keep) + (g.rnd() < keep - Math.floor(keep) ? 1 : 0);
       if (whole) g.stat('健康', whole);
     }
@@ -541,20 +548,46 @@
     return { loc: homeLoc(g), cap: homeCap(g) + ' · ' + who + (p ? '，还有' + (PET_T[p.kind] || '') + p.name : ''), party: CN.household(g).slice(0, 6), pets: p ? [{ kind: p.kind }] : [] };
   }
 
+  /* ---------- 属性越高越难涨（v2.1） ----------
+   * 原来事业、学识、人缘到中年人人都是满的，状态栏每一世长得一样。现在过了一道线，往上涨的那部分打折：
+   *   人缘从 55 起，心情从 70 起，学识从 80 起，离 100 越近涨得越少（小数按概率取整）。
+   *   事业的线看学历：小学 30，初中 36，职高、高中 42，大专 48，本科 54，硕士 60，博士 66；自己当老板、做自媒体、自由职业的至少 50。
+   *   过了线涨得很慢，所以读书多的人、自己干的人，事业的天花板更高。
+   *   健康：六十岁以后身体还不错（55 以上）的，补回来的只算一半；七十五岁以后（40 以上）只算四分之一。锻炼只能让人老得慢一些。
+   * 往下掉的不打折。返回 false 表示这里已经改好了属性。 */
+  const SOFT = { '人缘': 55, '心情': 70, '学识': 80 };
+  const EDU_CAP = { primary: 30, junior: 36, vocational: 42, senior: 42, college: 48, bachelor: 54, master: 60, phd: 66 };
+  const careerLine = (g) => { const e = (EDU_CAP[g.recall('edu')] || 36) + (CN.giftCareer ? CN.giftCareer(g) : 0); return ['boss', 'creator', 'freelance', 'shop'].includes(g.recall('job')) ? Math.max(e, 50) : e; };
+  const frac = (g, x) => Math.floor(x) + (g.rnd() < x - Math.floor(x) ? 1 : 0);
+  function soft(g, k, d) {
+    if (d <= 0) return true;
+    let f = 1;
+    if (k === '健康') { const h = g.s(k); f = g.age >= 75 ? (h > 40 ? 0.25 : 1) : g.age >= 60 ? (h > 55 ? 0.5 : 1) : 1; }
+    else if (k === '事业') { const v = g.s(k), from = careerLine(g); if (v > from) f = Math.max(0.06, Math.pow((100 - v) / (100 - from), 2)); }
+    else if (SOFT[k] != null) { const v = g.s(k), from = SOFT[k]; if (v > from) f = Math.max(0.12, (100 - v) / (100 - from)); }
+    if (f >= 1) return true;
+    g.setStat(k, g.s(k) + frac(g, d * f));
+    return false;
+  }
+
   /* ---------- 挂到引擎上（game.js 的 engine 钩子调用这些） ---------- */
   JY.ECON = {
     // 旧剧情的 g.stat('财富', n)：成年后换算成一笔钱。一点“财富”按全家年收入的 6% 算，最少五千
     onStat: (g, k, d) => {
-      if (k !== '财富' || !on(g)) return true;
+      if (k !== '财富') return soft(g, k, d);
+      if (!on(g)) return true;
       const unit = Math.max(5000, CN.income(g) * 0.06);
       if (d < 0) CN.pay(g, -d * unit); else CN.earn(g, d * unit);
       return false;
     },
+    oddsMod: (g, chk) => (CN.giftOdds ? CN.giftOdds(g, chk) : 0),
     yearEnd: (g, age) => {
       reconcile(g, age).forEach((t) => g.log(t, 'auto'));
       pets(g).forEach((t) => g.log(t, 'auto'));
       body(g, age).forEach((t) => g.log(t, 'auto'));
       if (L_().death) return;
+      // 学识不用会旧（v2.1）：二十五岁以后，这一年没在“学习充电”，学的东西有三成半的可能旧掉一点
+      if (age >= 25 && g.focus !== '学习充电' && g.s('学识') > 55 && g.rnd() < 0.35) g.stat('学识', -1);
       const first = startMoney(g, age);
       if (first) g.log(first, 'auto');
       ledger(g, age).forEach((t) => g.log(t, 'auto'));

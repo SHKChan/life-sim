@@ -52,8 +52,14 @@ const q = [];
 for (let i = 0; i < 200; i++) q.push(Math.round(sc[Math.floor(i / 200 * sc.length)] * 1000) / 1000);
 const ach = {};
 JY.ACH.forEach((a) => { ach[a.id] = Math.round(lives.filter((l) => l.ach.includes(a.id)).length / N * 1000) / 10; });
+// 每种出身的净资产分位点（5%–95%，19 个）：墓志页写“家底超过了百分之几同样出身的人”
+const nq = {};
+Object.keys(f.fam || {}).forEach((k) => { const a = lives.filter((l) => (l.snap.family || 'worker') === k).map((l) => l.snap.net).sort((x, y) => x - y); if (a.length >= 20) { nq[k] = []; for (let i = 1; i <= 19; i++) nq[k].push(a[Math.floor(i / 20 * a.length)]); } });
+// 每种结局占百分之几（data/fate.js）
+const end = {};
+(JY.FATE ? JY.FATE.ENDS : []).forEach((e) => { end[e.k] = Math.round(lives.filter((l) => l.end && l.end.k === e.k).length / N * 1000) / 10; });
 const out = '/* 由 tools/rarity.js 生成（' + N + ' 次人生），不要手改。规则改了以后重跑：node 1in1.4b/tools/rarity.js */\n'
-  + 'window.JY.RARITY = ' + JSON.stringify({ n: N, f, q, ach }) + ';\n';
+  + 'window.JY.RARITY = ' + JSON.stringify({ n: N, f, q, ach, nq, end }) + ';\n';
 fs.writeFileSync(path.join(dir, 'data', 'rarity.js'), out);
 console.log('写好 data/rarity.js（' + N + ' 次）。成就解锁比例：');
 JY.ACH.forEach((a) => console.log('  ' + a.t + ' ' + ach[a.id] + '%'));

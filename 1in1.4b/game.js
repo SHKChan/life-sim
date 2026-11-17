@@ -12,9 +12,9 @@ JY.GAME = {
   // langFiles：已经翻好的数据文件，没列出的照旧载入中文原文（翻译一个文件，加一个）
   langs: ['en', 'zh-TW'],
   langFiles: {
-    en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'spine.js', 'legacy.js'],
+    en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js'],
     // 繁体：share/tools/tw.py 从简体自动生成，全部文件都有
-    'zh-TW': ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'spine.js', 'legacy.js', 'rarity.js'],
+    'zh-TW': ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
   },
   intro: '今年，中国大约有九百万个孩子出生。你是其中一个。省份、城乡、家境都是随机的，按真实的人口比例来。剩下的一生，由你来过。',
   freshLine: '还没有投过胎。',
@@ -52,7 +52,8 @@ JY.GAME = {
     healthStat: '健康',
     healthDeath: '久病不起，在医院去世',
     naturalDeath: '寿终正寝',
-    lifespan: { base: 70, k: 0.3, rate: 0.03, decline: [[52, 1], [75, 1]] },
+    lifespan: { base: 70, k: 0.3, rate: 0.03, decline: [[52, 1], [75, 1], [85, 1]] }, // 八十五岁以后老得更快
+    oddsMod: (g, chk) => JY.ECON.oddsMod(g, chk),
     wakeBoost: [],
     endTitle: '离世',
     devMode: 'ratio',
@@ -62,7 +63,7 @@ JY.GAME = {
     deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
     flavorRepeat: true,
   },
-  version: '2.0.0',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.0.1',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人
