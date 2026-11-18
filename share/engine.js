@@ -59,6 +59,10 @@
   let W = null; // 世界：跨多世保存
   let L = null; // 当前这一世
   let quiet = false; // 世界事件改动的标记不算玩家的功劳
+  // “前世所改”：写生平那一行时，如果文字读到了前几世设下的标记，那一行记 pre（标记名数组）。只加记录，不改 g.f 的返回值。
+  let reads = null;
+  const collect = () => { reads = new Set(); };
+  const take = () => { const r = reads && reads.size ? [...reads] : null; reads = null; return r; };
 
   const val = (x) => (typeof x === 'function' ? x(G) : x);
   const tt = (s, v) => (JY.t ? JY.t(s, v) : s); // 界面用语的翻译（share/i18n.js），剧情文字不走这里
@@ -78,7 +82,11 @@
     get loc() { return L ? L.loc : null; },
     get focus() { return L ? L.focus : null; },
     s(k) { return L ? L.st[k] : 0; },
-    f(k) { return !!W.flags[k]; },
+    f(k) {
+      const v = !!W.flags[k];
+      if (v && reads && L && W.flagBy && JY.FLAGS[k]) { const b = W.flagBy[k]; if (b && b.n < W.lives.length) reads.add(k); }
+      return v;
+    },
     // 这一世的记忆：只在当前这一世有效，下一世清空。用来让几年后的节点读到当年的选择。
     remember(k, v) { if (!L) return; (L.mem = L.mem || {})[k] = { v: v === undefined ? true : v, y: L.year }; },
     recall(k) { const m = L && L.mem && L.mem[k]; return m ? m.v : undefined; },
@@ -87,6 +95,7 @@
       if (v === undefined) v = true;
       if (W.flags[k] === v) return;
       W.flags[k] = v;
+      (W.flagBy = W.flagBy || {})[k] = { n: W.lives.length, who: L ? L.cid : null };
       if (L && !quiet && JY.FLAGS[k] && !L.changes.includes(k)) L.changes.push(k);
     },
     isMe(id) { return !!L && L.cid === id; },
@@ -129,7 +138,10 @@
       const a = age && c.born <= G.Y ? tt('（{n} 岁）', { n: G.Y - c.born }) : '';
       return (r ? tt('你的{r}', { r: tt(r) }) : '') + c.name + a;
     },
-    log(t, kind) { if (L && t) L.log.push({ y: L.year, a: G.age, t: JY.polish ? JY.polish(t) : t, k: kind || '', loc: L.loc }); },
+    log(t, kind, pre) {
+      if (!pre) pre = take(); else reads = null;
+      if (L && t) { const e = { y: L.year, a: G.age, t: JY.polish ? JY.polish(t) : t, k: kind || '', loc: L.loc }; if (pre && pre.length) e.pre = pre; L.log.push(e); }
+    },
     chron(t, mod) { if (t) W.chron.push({ y: G.Y, t, mod: !!mod }); },
     name(id) { return JY.byId[id] ? JY.byId[id].name : id; },
     slot(n) { return JY.SLOTS[n] ? JY.SLOTS[n](G) : n; },
@@ -198,12 +210,14 @@
       if (e.y !== Y) return;
       if (e.who && L && [].concat(e.who).includes(L.cid)) return;
       if (e.cond && !e.cond(G)) return;
+      collect();
       if (e.fx) e.fx(G);
       const t = val(e.t);
+      const pre = take();
       if (t) {
         const mod = !!val(e.mod);
         G.chron(t, mod);
-        out.push({ t, mod });
+        out.push({ t, mod, pre });
       }
     });
     quiet = false;
@@ -355,6 +369,8 @@
   E.focusOptions = (age) => JY.FOCUS.filter((f) => age >= f.minAge && (f.maxAge == null || age <= f.maxAge));
 
   /* ---------- 一年 ---------- */
+  // 标记是哪一世、哪个人设的（旧存档没有记录，返回 null）
+  E.flagWho = (k) => { const b = W.flagBy && W.flagBy[k]; return b ? { n: b.n + 1, who: b.who } : null; };
   E.node = (id) => {
     if (!L) return null;
     const c = JY.byId[L.cid];
@@ -397,13 +413,14 @@
   };
 
   E.nextYear = () => {
+    reads = null;
     L.year += 1;
     W.year = L.year;
     const Y = L.year, c = JY.byId[L.cid], age = Y - c.born;
     // 焦点随年龄自动解锁
     const opts = E.focusOptions(age);
     if (!opts.find((o) => o.name === L.focus)) L.focus = E.defaultFocus(c, age);
-    worldYear(Y).forEach((n) => G.log(n.t, n.mod ? 'wmod' : 'world'));
+    worldYear(Y).forEach((n) => G.log(n.t, n.mod ? 'wmod' : 'world', n.pre));
     const q = c.arc.nodes.filter((n) => nodeYear(c, n) === Y && !L.done[n.id]).map((n) => n.id);
     const encs = JY.ENCOUNTERS.filter((e) => !L.done[e.id] && !W.flags['enc:' + e.id] && Y >= e.y[0] && Y <= e.y[1]
       && (e.minAge == null || age >= e.minAge) && (e.maxAge == null || age <= e.maxAge) && (!e.cond || e.cond(G)));
@@ -432,6 +449,7 @@
         L.queue.shift();
         L.done[n.id] = 1;
         if (n.once) W.flags['enc:' + n.id] = true;
+        collect();
         if (n.fx) n.fx(G);
         G.log(head(n.t) + val(n.text) + E.echoTail(n), n.echoOf ? 'echo' : n.kind || 'auto');
         if (L.death) { L.marks[L.year] = 'd'; return { type: 'death' }; }
@@ -464,6 +482,8 @@
     const n = E.node(L.queue[0]);
     const ch = n.choices[i];
     const c = JY.byId[L.cid];
+    collect();
+    try { val(n.text); } catch (e) { /* 只为记下这段文字读了哪些前世的标记 */ }
     const label = val(ch.t); // 选项文字可以是函数，按选的那一刻算
     L.queue.shift();
     L.done[n.id] = 1;

@@ -431,7 +431,7 @@
           return '<button class="pick" id="pick-' + c.id + '" data-act="start" data-id="' + c.id + '">'
             + '<canvas class="px" data-portrait="' + c.id + '" data-age="' + Math.max(18, a) + '"></canvas>'
             + '<div><div class="nm">' + esc(c.name) + '</div><div class="meta">' + esc(bookOf(c.book).short) + ' · ' + esc(t(c.sex)) + ' · ' + esc(t('生于{y}', { y: yearText(c.born) }))
-            + ' · ' + esc(a > 0 ? t('醒来时 {n} 岁', { n: a }) : t('从出生开始')) + '</div><div class="fate">' + esc(c.fateText) + '</div></div></button>';
+            + ' · ' + esc(a > 0 ? t('醒来时 {n} 岁', { n: a }) : t('从出生开始')) + '</div><div class="fate">' + esc(c.fateText) + '</div>' + (T.pickNote ? T.pickNote(c, W, { esc, t }) : '') + '</div></button>';
         }).join('') + '</div>';
       } else {
         h += '<p class="empty">' + esc(t('这个{w}里能重生的人都已经走完了一生。可以看看大事记，或者重开一个{w}。', { w: T.world })) + '</p>';
@@ -642,7 +642,7 @@
     let h = '<div class="card log-card"><div class="card-h"><h3>' + t('生平') + '</h3><small>' + t('最新在上 · 点一行加 ☆') + '</small></div>'
       + '<p class="log-note">' + esc(T.random ? t('这是你的第 {n} 世', { n: W.lives.length + 1 }) : t('这是这个{w}里的第 {n} 世 · 此刻{w}上还活着的有名有姓者 {m} 人', { w: T.world, n: W.lives.length + 1, m: aliveCount })) + '</p>'
       + (ui.result ? resultCard() : '') + '<ul class="log">'
-      + shownLines.map(({ e, i }, k) => '<li class="k-' + (e.k || 'auto') + (k === 0 ? ' new' : '') + '" data-act="star" data-i="' + i + '"><span class="a">' + esc(ageText(e.a)) + '</span><span class="t">' + esc(e.t) + '</span><span class="s">' + (e.star ? '☆' : '') + '</span></li>').join('')
+      + shownLines.map(({ e, i }, k) => '<li class="k-' + (e.k || 'auto') + (k === 0 ? ' new' : '') + '" data-act="star" data-i="' + i + '"><span class="a">' + esc(ageText(e.a)) + '</span><span class="t">' + esc(e.t) + (e.pre ? ' <i class="pre" title="' + esc(e.pre.map((k) => JY.FLAGS[k] || k).join('；')) + '">' + t('前世所改') + '</i>' : '') + '</span><span class="s">' + (e.star ? '☆' : '') + '</span></li>').join('')
       + '</ul>';
     if (lines.length > shownLines.length) h += '<button class="b log-more" id="l-all" data-act="logall">' + t('显示全部 {n} 行', { n: lines.length }) + '</button>';
     return h + '</div>';

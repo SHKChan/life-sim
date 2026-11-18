@@ -128,8 +128,9 @@
   };
   JY.album = () => {
     const al = store.get() || {};
-    return { lives: al.lives || 0, ends: al.ends || {}, flags: al.flags || {}, wishes: al.wishes || {}, chars: al.chars || {}, quests: al.quests || {} };
+    return { lives: al.lives || 0, ends: al.ends || {}, flags: al.flags || {}, wishes: al.wishes || {}, chars: al.chars || {}, quests: al.quests || {}, items: al.items || {} };
   };
+  JY.albumSave = (al) => store.set(al);
 
   /* ---------- 命终：记下结局、更新图鉴 ---------- */
   const prevFinish = G.engine.onFinish;

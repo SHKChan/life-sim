@@ -469,3 +469,13 @@ details.what p { margin-top: 6px; }
 /* 语言切换（单独打包的版本才有）：简 / 繁 / EN */
 .langs { display: inline-flex; gap: 4px; margin-left: 6px; }
 .langs .b[aria-pressed="true"] { border-color: var(--brand); color: var(--fg); }
+
+/* 前世所改：这一行文字是因为前几世留下的改命才变的 */
+.log-card li .pre { font-style: normal; font-size: 11px; margin-left: 6px; padding: 0 6px; border-radius: 8px; color: var(--mod); border: 1px solid currentColor; white-space: nowrap; opacity: .85; }
+.pick .pick-note { margin-top: 4px; font-size: 12px; color: var(--mod); }
+.world-diff .wd-row { display: flex; gap: 10px; padding: 4px 0; font-size: 13px; }
+.world-diff .wd-row b { flex: none; min-width: 5.5em; color: var(--muted, #8a8f98); font-weight: 500; }
+.quest-row { display: flex; gap: 10px; padding: 6px 0; align-items: baseline; }
+.quest-row .q-mark { flex: none; width: 1.4em; }
+.quest-row.done .q-t { color: var(--mod); }
+.quest-row .q-d { font-size: 12px; color: var(--muted, #8a8f98); display: block; }
