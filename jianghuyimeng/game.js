@@ -5,7 +5,7 @@
 window.JY = window.JY || {};
 window.JY.GAME = {
   id: 'jianghuyimeng',              // 存档键名前缀，每个游戏不同
-  version: '2.5.1',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.5.2',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   title: '江湖一梦',
   titleHtml: '江湖<i>一</i>梦',      // 标题里 <i> 包住的字用品牌色
   brand: '#c8566a',                 // 品牌色：标题强调字、少量按钮
@@ -19,6 +19,8 @@ window.JY.GAME = {
     lifespan: { base: 62, k: 0.4, rate: 0.025, decline: [[50, 1], [68, 1]] },
     hookDeathFirst: true,
     yearEnd: (g, age) => { if (window.JY.CULTIVATE) window.JY.CULTIVATE(g, age); },
+    // 命终时算这一世的心愿（data/wishes.js）：life.wishes = [{ t, ok }]
+    onFinish: (g, life) => { life.wishes = window.JY.wishList ? window.JY.wishList(g, life) : []; },
   },
 
   // 界面用词
@@ -45,6 +47,25 @@ window.JY.GAME = {
     plain: '江湖路远，就此别过。',
     changed: '原来命，是可以改的。',
     canon: '我这一生，大概就是书里写的那样。',
+  },
+
+  // 心愿（data/wishes.js）：名帖下面、醒来页列出，墓志页打勾，分享卡上写“心愿 2/3”
+  sideCards: (c, u) => {
+    const ws = (window.JY.WISHES || {})[c.id];
+    if (!ws) return '';
+    return u.card('这一世的心愿', '命终时算', '<ul class="ulist wish-list">' + ws.map((w) => '<li>' + u.esc(w.t) + '</li>').join('') + '</ul>', 'wish-card');
+  },
+  endCards: (l, u) => {
+    if (!l.wishes || !l.wishes.length) return '';
+    const n = l.wishes.filter((w) => w.ok).length;
+    return u.card('这一世的心愿', n + ' / ' + l.wishes.length,
+      '<ul class="ulist wish-list">' + l.wishes.map((w) => '<li class="' + (w.ok ? 'mod' : '') + '">' + (w.ok ? '✓ ' : '○ ') + u.esc(w.t) + '</li>').join('') + '</ul>', 'wish-card');
+  },
+  share: {
+    // 第一行总数，后面每条心愿一行（分享图上每行只排一行字，写短一点）
+    badges: (l) => (l.wishes && l.wishes.length
+      ? ['心愿 ' + l.wishes.filter((w) => w.ok).length + '/' + l.wishes.length].concat(l.wishes.map((w) => (w.ok ? '✓ ' : '○ ') + w.t))
+      : []),
   },
 
   // 分享

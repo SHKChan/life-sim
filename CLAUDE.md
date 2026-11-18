@@ -128,6 +128,8 @@
 
 **顺其自然、回响、游戏自己的卡片**（引擎和界面的可选钩子，江湖一梦没用）：`GAME.engine.minor(n, g)` 返回真的抉择自动选（`E.autoIndex` 按这一生的性子），不算玩家的抉择；`GAME.engine.onFinish(g, life)` 命终时往 life 上加字段；节点的 `stake`、选项的 `hint`、回响节点的 `echoOf` 会显示在弹框里；`GAME.endCards(life, u)`、`GAME.homeCards(W, u)` 加墓志页、首页的卡片；`GAME.share.badges(life)` 往分享卡上加几行；`GAME.yearMs` 改 1× 一年多长。
 
+**心愿**（江湖一梦，`data/wishes.js`）：每个可玩人物 3 条，名帖和醒来页下面列出，命终时算（`engine.onFinish` 写 `life.wishes`），墓志页打勾，分享卡写“心愿 x/3”。界面用的是 `share/ui.js` 的可选钩子 `GAME.sideCards(人物, u)`（醒来页和名帖下面各放一次），没写这个钩子的游戏没有任何变化。
+
 **分享卡的二维码**：`share/vendor/qrcode.js`（MIT，Kazuhiko Arase）在分享图右下角画 `config.js` 的 `siteUrl` 的二维码，左边印网址；分享框里能复制图片、保存图片、复制文字。发到哪个平台，就在那个平台的打包里把 `siteUrl` 换成那个平台的地址（itch 版见 `1in1.4b/tools/build-itch.js`）。
 
 **两种记忆**：

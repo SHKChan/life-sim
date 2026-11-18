@@ -261,6 +261,7 @@
     lines.push(t('{canon}里的{name}：', { canon: CANON, name: life.name }) + life.fateText);
     lines.push(ch.length ? t('这一世我改了命：{x}。', { x: ch.slice(0, 3).join(t('；')) }) : t('这一世，我照着{canon}走完了。', { canon: CANON }));
     lines.push(t('改命度 {dev}%，做过 {n} 个抉择。临终一句：“{words}”', { dev: life.dev, n: life.picks.filter((p) => !p.auto).length, words: life.words }));
+    if (SH.badges) lines.push(...SH.badges(life)); // 游戏自己加的几行（和分享图上的一样）
     const url = JY.siteUrl();
     lines.push((GAME.shareLead || '') + (withUrl !== false && url ? url : ''));
     return lines.join('\n');

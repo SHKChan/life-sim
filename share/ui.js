@@ -467,8 +467,10 @@
       + (c.fateText ? '<div class="fate-box" style="margin-top:14px"><b>' + esc(T.fateLabel) + '</b>' + esc(c.fateText) + '</div>' : '')
       + '<div style="margin-top:16px">' + SUI.bars.map((x) => lifeBar(x.cls, statName(x.k), L.st[x.k])).join('') + '</div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="b primary big" id="w-begin" data-act="begin">' + esc(T.beginBtn) + '</button></div>'
-      + '</div></div>';
-    return h;
+      + '</div>';
+    // 游戏自己加的卡片（例如江湖一梦的心愿）：sideCards(人物, u) 返回 HTML 片段；醒来页和这一生的名帖下面各放一次
+    if (T.sideCards) h += T.sideCards(c, { esc, t, card });
+    return h + '</div>';
   }
 
   /* ---------- 这一生 ---------- */
@@ -510,6 +512,7 @@
       + Object.keys(L.info).filter((k) => L.info[k] && !(PROF.hide || []).includes(k)).map((k) => '<dt>' + esc(t(k)) + '</dt><dd>' + esc(L.info[k]) + '</dd>').join('')
       + '<dt>' + t('出身') + '</dt><dd class="dots">' + dots(c.bg || 3) + '</dd>'
       + '</dl></div></div></div>';
+    if (T.sideCards) h += T.sideCards(c, { esc, t, card });
     h += card(t('状态'), '0–100',
       SUI.bars.map((x) => lifeBar(x.cls, statName(x.k), L.st[x.k])).join('')
       + '<details class="what"><summary>' + t('这些是什么意思？') + '</summary>'
