@@ -130,6 +130,8 @@
 
 **心愿**（江湖一梦，`data/wishes.js`）：每个可玩人物 3 条，名帖和醒来页下面列出，命终时算（`engine.onFinish` 写 `life.wishes`），墓志页打勾，分享卡写“心愿 x/3”。界面用的是 `share/ui.js` 的可选钩子 `GAME.sideCards(人物, u)`（醒来页和名帖下面各放一次），没写这个钩子的游戏没有任何变化。
 
+**结局和图鉴**（江湖一梦，`data/legacy.js`）：每人 4–7 个结局（`JY.ENDINGS`，按顺序第一个命中的算数，最后一条兜底），命终写 `life.end`；图鉴存在 `jianghuyimeng.album.v1`，记结局、亲手改过的标记、心愿，“重开一个江湖”不清它；首页 `homeCards` 显示“江湖图鉴”，没见过的只显示“？？？”。
+
 **分享卡的二维码**：`share/vendor/qrcode.js`（MIT，Kazuhiko Arase）在分享图右下角画 `config.js` 的 `siteUrl` 的二维码，左边印网址；分享框里能复制图片、保存图片、复制文字。发到哪个平台，就在那个平台的打包里把 `siteUrl` 换成那个平台的地址（itch 版见 `1in1.4b/tools/build-itch.js`）。
 
 **两种记忆**：

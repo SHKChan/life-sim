@@ -461,6 +461,10 @@ details.what p { margin-top: 6px; }
 .ach-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .ach-grid span { font-size: 12.5px; padding: 3px 8px; border-radius: 999px; border: 1px dashed var(--line); color: var(--muted); }
 .ach-grid span.on { border-style: solid; border-color: var(--brand); color: var(--fg); }
+.alb-char { margin: 10px 0 14px; }
+.alb-char .ach-grid { margin-top: 6px; }
+.alb-detail { margin-top: 12px; }
+.end-card .end-name b { font-size: 20px; }
 
 /* 语言切换（单独打包的版本才有）：简 / 繁 / EN */
 .langs { display: inline-flex; gap: 4px; margin-left: 6px; }

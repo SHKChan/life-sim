@@ -5,7 +5,7 @@
 window.JY = window.JY || {};
 window.JY.GAME = {
   id: 'jianghuyimeng',              // 存档键名前缀，每个游戏不同
-  version: '2.5.2',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.5.3',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   title: '江湖一梦',
   titleHtml: '江湖<i>一</i>梦',      // 标题里 <i> 包住的字用品牌色
   brand: '#c8566a',                 // 品牌色：标题强调字、少量按钮
@@ -64,7 +64,7 @@ window.JY.GAME = {
   share: {
     // 第一行总数，后面每条心愿一行（分享图上每行只排一行字，写短一点）
     badges: (l) => (l.wishes && l.wishes.length
-      ? ['心愿 ' + l.wishes.filter((w) => w.ok).length + '/' + l.wishes.length].concat(l.wishes.map((w) => (w.ok ? '✓ ' : '○ ') + w.t))
+      ? [(l.end ? '结局“' + l.end.t + '” · ' : '') + '心愿 ' + l.wishes.filter((w) => w.ok).length + '/' + l.wishes.length].concat(l.wishes.map((w) => (w.ok ? '✓ ' : '○ ') + w.t))
       : []),
   },
 
