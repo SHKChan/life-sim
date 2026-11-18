@@ -479,3 +479,7 @@ details.what p { margin-top: 6px; }
 .quest-row .q-mark { flex: none; width: 1.4em; }
 .quest-row.done .q-t { color: var(--mod); }
 .quest-row .q-d { font-size: 12px; color: var(--muted, #8a8f98); display: block; }
+.item-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; list-style: none; margin: 8px 0 0; }
+.item-list li { padding: 2px 8px; border: 1px solid var(--line, #3a3d44); border-radius: 10px; font-size: 12px; }
+.item-list li small { opacity: .6; margin-left: 4px; }
+.item-list li.off { opacity: .45; }
