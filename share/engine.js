@@ -555,7 +555,7 @@
     if (L.death && cf.hookDeathFirst) { /* yearEnd 钩子里定下的死法（例如走火入魔）不被寿终覆盖 */ }
     else if (L.st[H] <= 0) L.death = cf.healthDeath;
     else {
-      const lim = ls.base + L.st[H] * ls.k;
+      const lim = ls.base + L.st[H] * ls.k + (c.lifeBonus || 0); // lifeBonus：人物可选的额外寿限（张三丰活过一百岁）
       if (age > lim && Math.random() < (age - lim) * ls.rate) L.death = cf.naturalDeath;
     }
     if (L.death) L.marks[Y] = 'd';

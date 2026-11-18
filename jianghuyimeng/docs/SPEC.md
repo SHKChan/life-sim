@@ -290,6 +290,13 @@ JY.addEvents([
 * 成功：设一个 `pr*` 标记，并在后面某个节点的文字里用字面的 `g.f('pr…')` 读一句话（`READ` 表）。失败：`bad(line, p, dead, hurt)`，概率 p 当场 `g.die(line)`，否则内伤（`ns` 至少 1）、根骨和心境下降。
 * 加险境要回头测寿命：`node /tmp/harness.js 400` 那样随机乱选，12 人的平均寿命和加之前相比下降不要超过 5 岁，不够就调 p。
 
+## 张三丰（`data/zhangsanfeng.js`）
+
+* 把世界里原有的配角张三丰（`world.js`，id `zhangsanfeng`）升为可玩人物：用 `Object.assign` 补上 `arc`、`look`、`st`、`home`、`fateText`、`death`、`ms`，不新建人物。
+* `lifeBonus`（人物可选字段，引擎里加到寿限上）：他原著百岁以上，设 22。
+* 分叉：`sfXiangyang`（去襄阳，节点带 `cond`，分两条路，在 75 年合流）、`sfNoSect`、`cuishanLives`（已有的标记）。别人的节点和奇遇用文字补丁读它们（文件末尾的 `READ`）。
+* 玩家是他时，把他写成配角的奇遇（`e_yt_sanfeng`、`e_sd_junbao`、`e_sd_xianglong`、`e_yt_wudang7`）不再出现。
+
 ## v1.4：醒来年纪、练功、寿命、晚年
 
 **醒来年纪**：`game.js` 的 `wakeAge: 10`。首页默认从 10 岁醒来（`E.startLife(id, { fromAge: 10 })`），之前的节点按原著结算，醒来页列出“醒来之前的你”（每个跳过的节点：年纪、标题、原著选项、结果的第一句）。首页勾“从出生开始”就从出生玩。醒来年纪不晚于本人最后一个原著节点和原定死期。`simulate.js` 不带参数调用，仍从出生跑。所以 10 岁以前的抉择照样要写好，玩家可以选从出生开始。
