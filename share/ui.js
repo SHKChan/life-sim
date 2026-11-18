@@ -15,6 +15,8 @@
   const SPEEDS = [1, 2, 4, 8, 16];
   // 1× 时一年多长（毫秒），速度翻倍时间减半。默认一分钟；游戏可在 game.js 里用 yearMs 改（十四亿分之一一局要短）
   const YEAR_MS = (JY.GAME && JY.GAME.yearMs) || 60000;
+  // 空白年（这一年只有闲笔）在 1× 下走多久（毫秒）。游戏在 game.js 里写 quietYearMs 才生效；没写的游戏行为完全不变
+  const QUIET_MS = (JY.GAME && JY.GAME.quietYearMs) || 0;
   const STEP = 100;
   // 游戏用词：默认值是江湖一梦的；游戏的 game.js 覆盖；当前语言再用 JY.GAME.i18n.<语言> 覆盖
   const LOC = (JY.GAME && JY.GAME.i18n && JY.GAME.i18n[JY.LANG]) || {};
@@ -210,7 +212,14 @@
    * ui.frac 是当前这一年走过的比例（0–1），顶栏纪年下面的小进度条显示它。
    * 这一年的生平行在前 85% 的时间里均匀出现，走满一年再推演下一年。
    * 抉择框弹出时时钟停住，选完接着走。 */
-  function yearMs() { const { L } = E.get(); const d = YEAR_MS / ui.speed; return L && L.death ? Math.min(d, 4000) : d; }
+  // 空白年：这一年已经推演完，没有要玩家选的事、人也没死，生平里只有闲笔（日志种类 'flavor'）。
+  // 别的种类（剧情、奇遇、回响、关口、世界事件、身边人去世、练功的境界和内伤等没写种类的行）一律算“有事”，宁可不缩短。
+  function quietYear(L) {
+    if (!QUIET_MS || !L || L.death || ui.pending) return false;
+    const lines = L.log.slice(ui.yBase || 0);
+    return lines.length > 0 && lines.every((e) => e.k === 'flavor');
+  }
+  function yearMs() { const { L } = E.get(); const d = (quietYear(L) ? QUIET_MS : YEAR_MS) / ui.speed; return L && L.death ? Math.min(d, 4000) : d; }
   function paceText() {
     const sec = YEAR_MS / ui.speed / 1000;
     return sec >= 60 ? t('一年约 {n} 分钟', { n: sec / 60 }) : t('一年约 {n} 秒', { n: Math.round(sec * 2) / 2 });
