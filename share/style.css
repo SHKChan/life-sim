@@ -483,3 +483,6 @@ details.what p { margin-top: 6px; }
 .item-list li { padding: 2px 8px; border: 1px solid var(--line, #3a3d44); border-radius: 10px; font-size: 12px; }
 .item-list li small { opacity: .6; margin-left: 4px; }
 .item-list li.off { opacity: .45; }
+.focus-pre { margin: 8px 0 0; padding: 6px 10px; border-left: 3px solid var(--brand); background: color-mix(in srgb, var(--brand) 9%, transparent); font-size: 13.5px; color: var(--soft); }
+.fmenu .fpre { margin: 0 0 4px; padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--soft); }
+@media (max-width: 420px) { .frow { gap: 5px; } .fs { gap: 3px; } .fs small { font-size: 11px; } .fs b { font-size: 14px; } .fpick { padding-left: 8px; padding-right: 8px; } }

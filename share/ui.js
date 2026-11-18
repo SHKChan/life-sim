@@ -617,9 +617,15 @@
     h += '<div class="fpick-wrap"><button class="b fpick" id="f-open" data-act="focus-menu" aria-haspopup="menu" aria-expanded="' + !!ui.focusOpen + '" title="' + esc(t('今年的重心')) + '">'
       + esc(t(L.focus || '重心')) + ' ▾</button>';
     if (ui.focusOpen) {
-      h += '<div class="fmenu" role="menu" aria-label="' + esc(t('今年的重心')) + '">' + opts.map((f) => '<button class="fopt" role="menuitemradio" id="fm-' + f.name + '" data-act="focus" data-v="' + f.name + '" aria-checked="' + (f.name === L.focus) + '"><b>' + esc(t(f.name)) + '</b><small>' + esc(t(f.d)) + '</small></button>').join('') + '</div>';
+      h += '<div class="fmenu" role="menu" aria-label="' + esc(t('今年的重心')) + '">' + (focusPre(L, age) ? '<p class="fpre">' + esc(focusPre(L, age)) + '</p>' : '') + opts.map((f) => '<button class="fopt" role="menuitemradio" id="fm-' + f.name + '" data-act="focus" data-v="' + f.name + '" aria-checked="' + (f.name === L.focus) + '"><b>' + esc(t(f.name)) + '</b><small>' + esc(t(f.d)) + '</small></button>').join('') + '</div>';
     }
     return h + '</div>' + jump + '</div></div>';
+  }
+
+  /* 重心预告：游戏可选提供 GAME.focusPreview(L, g, age)，返回一行字（没有就返回空串）。电脑上放在“今年的重心”卡里，手机上放在重心下拉菜单顶部 */
+  function focusPre(L, age) {
+    if (typeof T.focusPreview !== 'function' || age < 6) return '';
+    try { return T.focusPreview(L, G, age) || ''; } catch (e) { return ''; }
   }
 
   function focusCard(L, c, age) {
@@ -629,7 +635,7 @@
     if (age < 6) {
       h += '<p class="focus-d">' + t('还小，由大人照看。性情在这几年慢慢定下来；六岁起可以选每一年的重心。这一段可以开 8× 跳过。') + '</p>';
     } else {
-      h += '<p class="focus-d">' + esc(cur ? t(cur.d) : '') + '</p><div class="chips">'
+      h += '<p class="focus-d">' + esc(cur ? t(cur.d) : '') + '</p>' + (focusPre(L, age) ? '<p class="focus-pre">' + esc(focusPre(L, age)) + '</p>' : '') + '<div class="chips">'
         + opts.map((f) => '<button class="chip" id="f-' + f.name + '" data-act="focus" data-v="' + f.name + '" aria-pressed="' + (f.name === L.focus) + '">' + esc(t(f.name)) + '</button>').join('') + '</div>';
     }
     return h + '</div>';

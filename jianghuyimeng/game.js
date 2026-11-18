@@ -5,7 +5,7 @@
 window.JY = window.JY || {};
 window.JY.GAME = {
   id: 'jianghuyimeng',              // 存档键名前缀，每个游戏不同
-  version: '2.5.7',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.5.8',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   title: '江湖一梦',
   titleHtml: '江湖<i>一</i>梦',      // 标题里 <i> 包住的字用品牌色
   brand: '#c8566a',                 // 品牌色：标题强调字、少量按钮
@@ -49,6 +49,27 @@ window.JY.GAME = {
     plain: '江湖路远，就此别过。',
     changed: '原来命，是可以改的。',
     canon: '我这一生，大概就是书里写的那样。',
+  },
+
+  // 重心预告：未来 5 年内本人最近的一个带判定的原著节点（此刻 cond 成立），只说年头和属性，不剧透内容
+  focusPreview: (L, g, age) => {
+    const JY = window.JY, c = JY.byId[L.cid];
+    if (!c || !c.arc) return '';
+    const yr = (n) => (n.y != null ? n.y : c.born + n.age);
+    let best = null;
+    c.arc.nodes.forEach((n) => {
+      const d = yr(n) - L.year;
+      if (d < 1 || d > 5 || (L.done && L.done[n.id]) || n.auto) return;
+      if (!n.choices || !n.choices.some((x) => x.canon) || !n.choices.some((x) => x.check)) return;
+      if (n.cond && !n.cond(g)) return;
+      if (!best || d < best.d) best = { d, n };
+    });
+    if (!best) return '';
+    const stats = [];
+    best.n.choices.forEach((x) => { if (x.check && stats.indexOf(x.check[0]) < 0) stats.push(x.check[0]); });
+    const num = ['', '一', '两', '三', '四', '五'];
+    const when = best.d === 1 ? '明年' : num[best.d] + '年后';
+    return when + '有一场硬仗，看' + stats.slice(0, 2).join('或');
   },
 
   // 心愿（data/wishes.js）：名帖下面、醒来页列出，墓志页打勾，分享卡上写“心愿 2/3”
