@@ -75,7 +75,7 @@
       ] },
 
     /* 悬赏榜：城镇的客店门口都有，揭一回榜歇二十天 */
-    { id: 'bounty', anywhere: true, act: '看悬赏榜', once: false, cond: (g) => town(g) && cool(g, 'bountyDay', 20), t: '悬赏榜',
+    { id: 'bounty', anywhere: true, act: '看悬赏榜', once: false, cond: (g) => town(g) && cool(g, 'bountyDay', 14), t: '悬赏榜',
       text: (g) => '客店门口贴着几张榜。' + (g.at('dadu') ? '最新的一张盖着汝阳王府的印，悬赏捉拿明教反贼，赏格很高。' : '一张写着附近山里有一伙贼，抢了好几个村子。'),
       fx: (g) => g.set('bountyDay', g.day),
       choices: [
@@ -87,7 +87,7 @@
       ] },
 
     /* 赌坊：押小押大，期望亏一成；出千期望赚三成，被识破要打一架 */
-    { id: 'gamble', anywhere: true, act: '进赌坊', once: false, cond: (g) => ['lintan', 'dadu', 'xiangyang'].includes(g.loc), t: '赌坊',
+    { id: 'gamble', tick: 1, anywhere: true, act: '进赌坊', once: false, cond: (g) => ['lintan', 'dadu', 'xiangyang'].includes(g.loc), t: '赌坊',
       text: '赌坊里烟气熏人，骰子在碗里哗啦啦地转。庄家是个独眼的胖子。',
       choices: [
         { t: '押十两', cost: { 银两: 10 }, fx: (g) => { if (g.rnd() < 0.45) { g.add('银两', 20); g.log('骰子开出来，你赢了十两。'); } else g.log('骰子开出来，你输了。'); }, res: '你又看了几把，收手出了门。' },

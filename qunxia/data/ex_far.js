@@ -239,7 +239,7 @@
         { t: '拿一份金创药给他的羊', cond: (g) => g.has('jinchuang'), fx: (g) => { g.take('jinchuang', 1); g.add('品德', 2); g.set('gmSpring'); }, res: '他的羊前几天叫狼咬了。他千恩万谢，给你指了去热泉的路，又硬塞给你一碗奶茶。' },
         { t: '赶路要紧', res: '牧民赶着羊走远了。' },
       ] },
-    { id: 'gm_ex_spring', loc: 'guangming', act: '去山坳里泡热泉', cond: (g) => g.f('gmSpring'), once: false, t: '热泉',
+    { id: 'gm_ex_spring', loc: 'guangming', act: '去山坳里泡热泉', cond: (g) => g.f('gmSpring') && !(g.f('gmSpringUse') && g.day - g.f('gmSpringUse') < 7), fx: (g) => g.set('gmSpringUse', g.day), once: false, t: '热泉',
       text: (g) => (again(g, 'gm_ex_spring') ? '你又来到山坳里的热泉。' : '你第一次泡进热泉，烫得直吸气。')
         + (winter(g) || g.m === 3 ? '四面都是雪，只有这一眼泉冒着白气。' : '泉边的草长得很高，羊在不远处吃草。'),
       choices: [
@@ -258,7 +258,7 @@
         { t: '用兵器把冰凿开', fx: (g) => { g.days(2); g.hurt(20); g.set('gmMural'); }, res: '你凿了两天，虎口震得发麻，总算凿出一条能走人的道。' },
         { t: '回去', res: '天快黑了，你下了山。' },
       ] },
-    { id: 'gm_ex_mural', loc: 'guangming', act: '举着火把进后山的石窟', cond: (g) => g.f('gmMural') && !g.f('gmMuralDone'), once: false, t: '石窟',
+    { id: 'gm_ex_mural', tick: 1, loc: 'guangming', act: '举着火把进后山的石窟', cond: (g) => g.f('gmMural') && !g.f('gmMuralDone'), once: false, t: '石窟',
       text: (g) => '火把一照，四壁上画的是一个白袍老人在沙漠里教人练武，手里拿着几块黑铁牌。旁边写着弯弯曲曲的波斯字。'
         + (g.has('shenghuo') ? '你摸出怀里的圣火令一比，铁牌上的字和壁上的一模一样。' : ''),
       choices: [

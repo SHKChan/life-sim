@@ -6,11 +6,10 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = '2.5.1';
-  JY.GAME = JY.GAME || { id: 'jianghuyimeng.qunxia', title: '群侠', version: VERSION };
-  const app = document.getElementById('app');
+  const VERSION = (window.JY && JY.GAME && JY.GAME.version) || '3.0.0';
+    const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const THEME_KEY = 'jianghuyimeng.theme'; // 和江湖一梦共用
+  const THEME_KEY = 'jianghuyimeng.theme'; // 和浮生录其他游戏共用
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* 忽略 */ } } };
   const th = store.get(THEME_KEY); if (th) document.documentElement.dataset.theme = th;
   if (CFG.fontCss) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = CFG.fontCss; document.head.appendChild(l); }
@@ -45,6 +44,20 @@
   }
 
   /* ---------- 开始 ---------- */
+  /* 图鉴：跨局收集。点亮的写名字，没点亮的写问号 */
+  function codexCard() {
+    const c = QX.codex(), has = (k, id) => !!(c[k] && c[k][id]);
+    const sec = (title, ids, k, nm) => '<p class="qx-muted"><b>' + esc(t(title)) + ' ' + ids.filter((id) => has(k, id)).length + '/' + ids.length + '</b>　' + ids.map((id) => esc(has(k, id) ? nm(id) : '？')).join(' · ') + '</p>';
+    const comps = Object.keys(QX.PEOPLE).filter((id) => QX.PEOPLE[id].comp);
+    const ends = QX.ENDINGS.filter((e) => e.id).map((e) => e.id);
+    return '<div class="card"><div class="card-h"><h3>' + t('图鉴') + '</h3><small>' + t('走过 {n} 局', { n: c.runs || 0 }) + '</small></div>'
+      + sec('信物', QX.relicIds(), 'relics', (id) => QX.ITEMS[id].name)
+      + sec('武功', Object.keys(QX.ARTS), 'arts', (id) => QX.ARTS[id].name)
+      + sec('同伴', comps, 'comps', (id) => QX.PEOPLE[id].name)
+      + sec('结局', ends, 'ends', (id) => val2(QX.ENDINGS.find((e) => e.id === id).t))
+      + sec('出身', QX.ORIGINS.map((o) => o.id), 'origins', (id) => QX.ORIGINS.find((o) => o.id === id).name) + '</div>';
+  }
+  const val2 = (v) => (typeof v === 'function' ? v({}) : v);
   function startView() {
     const sl = QX.slots(), f = ui.form;
     // 旧版本的存档读不了（v2.4 加了装备、钱庄、货物），开始页说一声
@@ -59,6 +72,7 @@
     if (sl.auto && !sl.auto.over) h += '<div class="card"><div class="card-h"><h3>' + t('继续') + '</h3><small>' + t('自动存档') + '</small></div><p class="qx-muted">' + esc(sl.auto.name) + ' · ' + esc(dateText(sl.auto.day)) + ' · ' + esc(QX.LOCS[sl.auto.loc].short) + ' · ' + t('信物') + ' ' + sl.auto.relics + '/14</p><div class="end-btns" style="margin-top:12px"><button class="b primary big" data-act="load" data-v="auto">' + t('继续这一局') + '</button>'
       + (sl.manual ? '<button class="b big" data-act="load" data-v="manual">' + t('读取手动存档') + '</button>' : '') + '</div></div>';
     else if (sl.manual) h += '<div class="card"><button class="b big" data-act="load" data-v="manual">' + t('读取手动存档') + '：' + esc(sl.manual.name) + ' · ' + esc(dateText(sl.manual.day)) + '</button></div>';
+    h += codexCard();
     h += '<div class="card qx-form"><div class="card-h"><h3>' + t('新的江湖') + '</h3></div>'
       + '<label class="lbl" for="f-name">' + t('姓名') + '</label><input id="f-name" class="qx-input" maxlength="8" placeholder="' + esc(t('最多八个字')) + '" value="' + esc(f.name) + '">'
       + '<div class="lbl">' + t('性别') + '</div>' + chips('sex', [['男', '男'], ['女', '女']])
@@ -113,7 +127,8 @@
   function fightCard() {
     const F = QX.state().fight;
     const unit = (u, i, foe) => '<button class="qx-unit' + (foe ? ' foe' : '') + (u.hp <= 0 ? ' down' : '') + (foe && F.target === i ? ' tgt' : '') + '"' + (foe ? ' data-act="target" data-i="' + i + '"' : ' disabled') + '><b>' + esc(u.name) + '</b>'
-      + '<span class="qx-track hp"><i style="width:' + Math.max(0, Math.round((u.hp / u.max) * 100)) + '%"></i></span><small>' + Math.max(0, u.hp) + '/' + u.max + (u.id === 'me' ? ' · ' + t('内力') + ' ' + u.mp + '/' + u.maxMp : '') + '</small></button>';
+      + '<span class="qx-track hp"><i style="width:' + Math.max(0, Math.round((u.hp / u.max) * 100)) + '%"></i></span><small>' + Math.max(0, u.hp) + '/' + u.max + (u.id === 'me' ? ' · ' + t('内力') + ' ' + u.mp + '/' + u.maxMp : '') + '</small>'
+      + (foe && u.hp > 0 && !F.result ? '<small class="qx-int ' + QX.foeIntent(i) + '">' + esc(t('擅长{s}', { s: u.style })) + ' · ' + esc(t('意图_' + QX.foeIntent(i))) + '</small>' : '') + '</button>';
     // 小擂台：左边是你，右边是此刻的目标；出招、挨打时在这里放动画（fightFx）
     const tg = F.foes[F.target] && F.foes[F.target].hp > 0 ? F.foes[F.target] : F.foes.find((x) => x.hp > 0) || F.foes[0];
     const stage = '<div class="qx-stage" aria-hidden="true"><div class="qx-actor" id="fx-me"><canvas class="px" data-portrait="me" width="20" height="24"></canvas></div>'
@@ -124,8 +139,9 @@
       + '<ol class="qx-flog">' + F.lines.slice(-7).map((l) => '<li>' + esc(l) + '</li>').join('') + '</ol>';
     if (F.result) h += '<div class="choices"><button class="b primary big" data-act="fightdone" id="cont">' + t('继续') + '</button></div>';
     else {
+      if (F.allies.length > 1) h += '<div class="qx-cmds">' + ['focus', 'guard', 'free'].map((c) => '<button class="b' + (F.cmd === c ? ' primary' : '') + '" data-act="fightcmd" data-c="' + c + '"' + (F.auto ? ' disabled' : '') + '>' + esc(t('同伴指令_' + c)) + '</button>').join('') + '</div>';
       h += '<div class="qx-opts">' + QX.fightOptions().map((o, i) => '<button class="choice qx-opt" data-act="fight" data-i="' + i + '"' + (o.dis || F.auto ? ' disabled' : '') + '><span class="t">' + esc(t(o.label)) + '</span><span class="m">' + esc(o.dis || t(o.sub)) + (o.cost ? ' · ' + t('内力') + ' ' + o.cost : '') + '</span></button>').join('') + '</div>'
-        + '<p class="hint" style="margin-top:8px">' + t('点对手的名字可以换目标。') + '</p>';
+        + '<p class="hint" style="margin-top:8px">' + t('点对手的名字可以换目标。看对手的意图：重击用闪避，普通招架可以反击，蓄力时打断它，对手防守时别硬打。拳掌克兵器，兵器克内功，内功克拳掌。') + '</p>';
     }
     return h + '</div>';
   }
@@ -174,7 +190,7 @@
     return '<div class="card"><div class="card-h"><h3>' + esc(S.name) + '</h3><small>' + esc(t(S.sex)) + ' · ' + esc(QX.ORIGINS.find((o) => o.id === S.origin).name) + '</small></div>'
       + '<p class="qx-way">' + ic('门派') + esc(sect) + '</p>'
       + '<div class="qx-apts">' + APT.map(aptRow).join('') + '</div>' + bodyNote(S)
-      + '<p class="qx-way">' + esc(t(deWord(S.st.品德))) + ' · ' + esc(t(fameWord(S.st.声望))) + ' · ' + t('银两') + ' ' + Math.round(S.st.银两) + (S.bank ? ' · ' + t('钱庄 {n}', { n: S.bank }) : '') + (QX.cargoCount() ? ' · ' + t('货 {n} 包', { n: QX.cargoCount() }) : '') + '</p>'
+      + '<p class="qx-way"><b>' + esc(QX.rankName()) + '</b> · ' + esc(t(deWord(S.st.品德))) + ' · ' + esc(t(fameWord(S.st.声望))) + ' · ' + t('银两') + ' ' + Math.round(S.st.银两) + (S.bank ? ' · ' + t('钱庄 {n}', { n: S.bank }) : '') + (QX.cargoCount() ? ' · ' + t('货 {n} 包', { n: QX.cargoCount() }) : '') + '</p>'
       + '<p class="qx-way qx-gear">' + QX.SLOTS.map((sl) => { const x = S.gear && S.gear[sl]; return x ? '<span class="' + (x.wear >= QX.gearDur(x.id) ? 'qx-badv' : '') + '">' + esc(QX.GEAR[x.id].name) + '</span>' : '<span class="qx-muted">' + t('无{a}', { a: t(sl) }) + '</span>'; }).join(' · ') + '</p>'
       + tasksHtml(S)
       + '<div class="qx-zx" title="' + esc(t('品德') + ' ' + Math.round(S.st.品德)) + '"><i style="left:' + S.st.品德 + '%"></i></div><div class="qx-zxl"><span>' + t('魔') + '</span><span>' + t('侠') + '</span></div></div>';
@@ -235,9 +251,9 @@
         + (a.lv < QX.CFG.maxLv ? '<span class="qx-track xp' + (stuck ? ' stuck' : '') + '"><i style="width:' + Math.round((a.xp / QX.need(a.lv)) * 100) + '%"></i></span>' : '<p class="qx-muted">' + t('已经练到顶了。') + '</p>')
         + (stuck ? '<p class="qx-muted qx-badv">' + esc(t('第 {n} 级是个关口：找会这门功夫的人请教、带着秘籍练、去{w}闭关，或者打赢一场硬仗。', { n: a.lv, w: where || t('合适的地方') })) + '</p>' : '')
         + '<p class="qx-muted">' + esc(A.d) + '</p>'
-        + (can ? '<div class="end-btns"><button class="b" data-act="practise" data-id="' + id + '">' + t('练十天') + (r1 ? ' · ' + t('风险 {p}%', { p: r1 }) : '') + '</button><button class="b" data-act="practise" data-id="' + id + '" data-hard="1"' + (block ? ' disabled title="' + esc(block) + '"' : '') + '>' + t('冒进苦练') + ' · ' + (block ? esc(t('伤重')) : t('风险 {p}%', { p: r2 })) + '</button></div>' : '') + '</div>';
+        + (can ? '<div class="end-btns">' + [[1, '十天'], [3, '一个月'], [9, '三个月']].map((x) => '<button class="b" data-act="practise" data-id="' + id + '" data-n="' + x[0] + '">' + t('稳练') + t(x[1]) + (r1 && x[0] === 1 ? ' · ' + t('风险 {p}%', { p: r1 }) : '') + '</button>').join('') + '</div><div class="end-btns">' + [[1, '十天'], [3, '一个月'], [9, '三个月']].map((x) => '<button class="b" data-act="practise" data-id="' + id + '" data-hard="1" data-n="' + x[0] + '"' + (block ? ' disabled title="' + esc(block) + '"' : '') + '>' + t('冒进') + t(x[1]) + (x[0] === 1 ? ' · ' + (block ? esc(t('伤重')) : t('风险 {p}%', { p: r2 })) : '') + '</button>').join('') + '</div>' : '') + '</div>';
     }).join('');
-    return modal(t('武功'), (ui.toast && ui.modal === 'arts' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + body + '<p class="hint">' + t('冒进苦练长进加倍，可能受内伤或走火入魔；走火入魔还会伤了经脉。内功越深越安全。内伤三层以上不能冒进。') + '</p>');
+    return modal(t('武功'), '<p class="qx-muted">' + t('心得 {n}/{m}：练功每次用一点；打架、探索、深谈、读秘籍、差事能攒。', { n: QX.insight(), m: QX.INSIGHT_MAX }) + '</p>' + (ui.toast && ui.modal === 'arts' ? '<div class="result"><p>' + esc(ui.toast) + '</p></div>' : '') + body + '<p class="hint">' + t('冒进苦练长进加倍，可能受内伤或走火入魔；走火入魔还会伤了经脉。内功越深越安全。内伤三层以上不能冒进。') + '</p>');
   }
   function itemsModal() {
     const S = QX.state(), ids = Object.keys(S.items).filter((k) => !QX.ITEMS[k].relic);
@@ -418,7 +434,11 @@
       case 'open': ui.modal = d.v; ui.toast = ''; ui.confirmNew = false; render(); break;
       case 'close': case 'bg': ui.modal = null; ui.mapHi = ''; ui.toast = ''; if (ui.fb && a === 'close') ui.fb = null; render(); break;
       case 'theme': { const i = THEMES.findIndex((x) => x[0] === themeNow()); const nx = THEMES[(i + 1) % THEMES.length][0]; document.documentElement.dataset.theme = nx; store.set(THEME_KEY, nx); render(); break; }
-      case 'choose': QX.choose(Number(d.i)); ui.toast = ''; render(); focusMid(); break;
+      case 'choose': {
+        QX.choose(Number(d.i)); ui.toast = '';
+        if (QX.lightResult()) { ui.toast = QX.state().ev.res; QX.cont(); }
+        render(); focusMid(); break;
+      }
       case 'cont': QX.cont(); ui.toast = ''; render(); focusMid(); break;
       case 'do': {
         ui.toast = '';
@@ -430,8 +450,12 @@
       case 'go': { const why = QX.travel(d.id, QX.canHorse() && ui.horse); ui.modal = null; ui.mapHi = ''; ui.toast = why || ''; render(); window.scrollTo(0, 0); break; }
       case 'look': ui.modal = 'map'; ui.mapHi = d.id; ui.toast = ''; render(); break;
       case 'practise': {
-        const r = QX.practise(d.id, !!d.hard);
-        if (r) { const A = QX.ARTS[d.id]; ui.toast = r.hurt === 'zouhuo' ? t('走火入魔！功力倒退。') : r.hurt === 'neishang' ? t('受了内伤。') + ' ' + t('长进 {n}。', { n: r.gain }) : t('{a}长进 {n}。', { a: A.name, n: r.gain }) + (r.up ? ' ' + t('升到第 {n} 级！', { n: QX.artLv(d.id) }) : ''); }
+        const r = QX.practiseSpan(d.id, !!d.hard, Number(d.n) || 1);
+        if (r) {
+          const A = QX.ARTS[d.id];
+          const stop = { event: t('半路有事，先停下。'), stuck: t('卡在瓶颈了。'), broke: t('破关了！'), noinsight: t('心得用完了，先出去走走。'), hard: t('伤重不能再冒进。'), max: t('练到顶了。') }[r.stop] || '';
+          ui.toast = (r.hurt === 'zouhuo' ? t('走火入魔！功力倒退。') : r.hurt === 'neishang' ? t('受了内伤。') + ' ' : '') + t('{a}练了 {d} 天，长进 {n}。', { a: A.name, d: r.days, n: r.gain }) + (r.up ? ' ' + t('升到第 {n} 级！', { n: QX.artLv(d.id) }) : '') + (r.low ? ' ' + t('没有心得，长进打了折扣。') : '') + (stop ? ' ' + stop : '');
+        }
         if (QX.state().ev || QX.state().fight) ui.modal = null;
         render(); break;
       }
@@ -445,6 +469,7 @@
       case 'dismiss': QX.dismiss(d.id); render(); break;
       case 'savem': QX.saveManual(); ui.toast = t('已存档。'); render(); break;
       case 'fight': { const o = QX.fightOptions()[Number(d.i)]; const b = fightSnap(); if (o && !o.dis) QX.fightAct(o); render(); fightFx(b); break; }
+      case 'fightcmd': QX.fightCmd(d.c); render(); break;
       case 'target': QX.fightTarget(Number(d.i)); render(); break;
       case 'auto': QX.fightAuto(); if (S.fight.auto) startAuto(); else stopAuto(); render(); break;
       case 'fightdone': stopAuto(); QX.fightDone(); render(); focusMid(); break;

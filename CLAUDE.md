@@ -15,12 +15,12 @@
 
 | 项 | 值 |
 |---|---|
-| 网址 | https://www.vibe-game.com/life-sim/（大厅），`1in1.4b/`、`jianghuyimeng/`、`jianghuyimeng/qunxia/` |
+| 网址 | https://www.vibe-game.com/life-sim/（大厅），`1in1.4b/`、`jianghuyimeng/`、`qunxia/`（群侠，v3 起独立；旧网址 `jianghuyimeng/qunxia/` 留跳转页） |
 | 路径 / Worker | `life-sim` |
 | 生产分支 | `main`（推送即部署） |
 | 打包 | `node tools/build.js`：固定 `--base=life-sim`，实际在 `share/tools/build.js`（加内容哈希、写 `dist/_headers`、把版本号写进 `vg:version`）。页面引用的本地 js/css、游戏目录下的 `fonts/` `assets/` `lang/` 和带 `index.html` 的子目录会自动打包 |
-| 版本号 | 各游戏 `game.js` 的 `version`；群侠是 `qunxia/ui.js` 的 `VERSION`。打包时写进页面，不用手写 meta。大厅（根目录 `index.html`）**有意不写**版本号：首页游戏卡按 `GAMES` 的 `parts` 分别显示三个游戏的版本 |
-| 存档键 | `<game.id>.save.v2`（例如 `1in1.4b.save.v2`）；群侠是 `jianghuyimeng.qunxia.v1`，下次改存档结构时改成 `jianghuyimeng.qunxia.save.v2` 并迁移旧键。**例外**：前缀用各游戏的 id，不用 slug `life-sim` |
+| 版本号 | 各游戏 `game.js` 的 `version`；群侠是 `qunxia/game.js` 的 `version`（和其他游戏一样）。打包时写进页面，不用手写 meta。大厅（根目录 `index.html`）**有意不写**版本号：首页游戏卡按 `GAMES` 的 `parts` 分别显示三个游戏的版本 |
+| 存档键 | `<game.id>.save.v2`（例如 `1in1.4b.save.v2`）；群侠是 `qunxia.save.v2`（已从旧键 `jianghuyimeng.qunxia.v1` 迁移）。**例外**：前缀用各游戏的 id，不用 slug `life-sim` |
 | 更新日志 | 根目录 `CHANGELOG.md`，三个游戏写在同一份里，标题写明是哪个游戏 |
 | 问题反馈 | `share/ui.js` 和群侠 `ui.js` 定义了 `window.VG_FEEDBACK`，顶栏的“问题反馈”打开带进度的反馈框 |
 | 语言 | `share/i18n.js` 的 `LANG_OPEN = false`（GUIDE：暂时只开中文） |
@@ -158,7 +158,7 @@
 
 **翻译流水线（十四亿分之一 v2.0 起）**：中文数据文件是唯一的源头，翻译写成字符串对照表 `<游戏>/lang/<语言>/tr/<文件>.json`（`{ "中文原样": "译文", "__keep": [不翻的内部键] }`），`node share/tools/tr.js <游戏> <语言> --all` 生成 `lang/<语言>/<文件>.js`（代码一字不改，只换字符串；`--fill` 把新出现的中文追加进对照表）。中文改了剧情就重跑一次。翻好一个文件，就加进 `game.js` 的 `langFiles.<语言>`；没列出的文件照旧载入中文原文。网站上语言仍锁中文；单独打包的版本在 `config.js` 写 `langOpen: true`、`defaultLang`，页面上出现“EN / 中文”按钮。所有文件共用的词（城市、省份、专业、亲属称呼、要保持一致的比较值）在 `lang/<语言>/tr/_common.json`，给译者的说明在 `1in1.4b/lang/en/tr/TRANSLATORS.md`。英文界面里剧情是片段拼出来的，`JY.polish` 负责句首大写、去多余空格；名字在英文下由 `world.js` 转成拼音（取姓用 `CN.surOf`，不要写 `name[0]`）。**繁体中文**（`zh-TW`）由 `python3 share/tools/tw.py 1in1.4b` 用 OpenCC（s2twp）从简体自动生成 `lang/zh-TW/*.js` 和界面词表 `share/lang.zh-TW.js`（需要 `pip install opencc-python-reimplemented`），简体改了就重跑。钱在中文（简、繁）下显示人民币，其他语言显示美元。itch.io 版：`node 1in1.4b/tools/build-itch.js [--url=itch 页面地址]`，输出 `dist/itch-1in1.4b/` 和 `dist/1in1.4b-itch.zip`。
 
-**江湖一梦 v1.4**：名单人物默认十岁醒来（`game.js` 的 `wakeAge`，首页可勾“从出生开始”），醒来前自己的节点按原著结算并在醒来页列出；练功分稳扎稳打、闭关（苦练）、冒进求成，有内伤和走火入魔；内功深的人老得慢；45 岁后有传艺、长老、论剑、闭关、著书、归隐、传人等后半生事件。细节见 `jianghuyimeng/docs/SPEC.md` 的 v1.4 一节。群侠模式（文字武侠 RPG）在 `jianghuyimeng/qunxia/`，有自己的引擎和存档，见那里的 README。
+**江湖一梦 v1.4**：名单人物默认十岁醒来（`game.js` 的 `wakeAge`，首页可勾“从出生开始”），醒来前自己的节点按原著结算并在醒来页列出；练功分稳扎稳打、闭关（苦练）、冒进求成，有内伤和走火入魔；内功深的人老得慢；45 岁后有传艺、长老、论剑、闭关、著书、归隐、传人等后半生事件。细节见 `jianghuyimeng/docs/SPEC.md` 的 v1.4 一节。群侠（文字武侠 RPG）v3 起是顶层独立游戏 `qunxia/`，有自己的引擎和存档，见那里的 README；时间线和关系表仍引用 `jianghuyimeng/docs/SPEC.md`、`jianghuyimeng/data/relations.js`。
 
 **导航和反馈**：页面最上面是全站顶栏（GUIDE 第四节），本仓库不做底栏、不放语言下拉。游戏里的“反馈”按钮和顶栏的“问题反馈”打开同一个带进度的反馈框。
 

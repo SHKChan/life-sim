@@ -8,9 +8,9 @@
   const JY = (window.JY = window.JY || {});
   const QX = (window.QX = window.QX || {});
   const CFG = (QX.CFG = Object.assign({
-    start: [131, 1], end: [138, 12], age: 12, key: 'jianghuyimeng.qunxia.v1',
+    start: [131, 1], end: [138, 12], age: 12, key: 'qunxia.save.v2', oldKey: 'jianghuyimeng.qunxia.v1',
     partyMax: 2, maxLv: 10, relicsAll: 14, retireFrom: [137, 1],
-    companions: false, // 同伴功能：暂时关掉（不出现“邀请同行”，旧存档里的同伴也会离开）。改成 true 就恢复
+    companions: true, // 同伴功能（v3 重新打开）
   }, QX.CFG || {}));
 
   /* ---------- 注册 ---------- */
@@ -82,7 +82,22 @@
     const v0 = S.st[k];
     S.st[k] = clamp(Math.round((S.st[k] + n) * 10) / 10, r[0], r[1]);
     // 银两的进出记账（试玩脚本看收入、花销、被抢了多少）：rob() 里扣的算被抢
+    if (k === '声望') checkRank();
     if (k === '银两') { const d = S.st[k] - v0; S.acct = S.acct || { earn: 0, spend: 0, lost: 0 }; if (d > 0) S.acct.earn += d; else if (d < 0) S.acct[robbing ? 'lost' : 'spend'] -= d; }
+  }
+  /* 名号阶梯：按声望分四档。高一档，人对你更客气（好感起点 +5）、拜师礼和请教费少四分之一，一方高手起打听不收钱；升档时送一笔心得 */
+  const RANKS = [['无名小卒', 0], ['后起之秀', 15], ['一方高手', 45], ['一代宗师', 90]];
+  QX.RANKS = RANKS;
+  QX.rankIdx = () => { let r = 0; RANKS.forEach((x, i) => { if (S.st.声望 >= x[1]) r = i; }); return r; };
+  QX.rankName = () => RANKS[QX.rankIdx()][0];
+  function checkRank() {
+    const r = QX.rankIdx(), r0 = S.rankIdx || 0;
+    if (r <= r0) return;
+    S.rankIdx = r;
+    addInsight(5);
+    const t = QX.tx('升名号', { a: RANKS[r][0] });
+    log(t, 'good');
+    news(t, { cred: '确凿' });
   }
   /* 被抢：身上的钱最多被抢走 ROB_PCT、不超过 ROB_CAP 两（存在钱庄里的抢不走）。frac、cap 可以按剧情写得更狠 */
   const ROB_PCT = 0.15, ROB_CAP = 50;
@@ -226,7 +241,7 @@
     const up = QX.UPRIGHT.includes(P.side);
     if (up) v += (S.st.品德 - 50) / 4;
     if (S.flags.servedWang) v += up ? -10 : P.side === 'wangfu' ? 15 : 0;
-    return v + Math.min(15, S.st.声望 / 8);
+    return v + Math.min(15, S.st.声望 / 8) + QX.rankIdx() * 5;
   }
   QX.aff = (pid) => clamp(Math.round(affBase(pid) + ((S.aff || {})[pid] || 0)), 0, 100);
   QX.affTier = (pid) => { const v = QX.aff(pid); let r = '敌'; for (const [k, n] of AFF_TIERS) if (v >= n) r = k; return r; };
@@ -338,7 +353,7 @@
       v: SAVE_V, name: (o.name || '').trim().slice(0, 8) || QX.tx('无名'), sex: o.sex === '女' ? '女' : '男', origin: org.id, sect: '', rank: 0, contrib: 0,
       day: 0, loc: org.loc, pend: 0,
       st: { 资质: 45, 根骨: 12, 内力: 6, 攻击: 10, 防御: 6, 轻功: 10, 品德: 50, 声望: 0, 银两: 20 },
-      hp: 1, mp: 0, inj: 0, xp: 0, gear: {}, bank: 0, cargo: {}, tasks: {}, acct: { earn: 0, spend: 0, lost: 0 }, arts: {}, items: {}, relics: [], party: [], comp: {}, flags: {}, met: {}, dead: {}, holder: {}, done: {}, tl: {},
+      hp: 1, mp: 0, inj: 0, xp: 0, insight: 4, gear: {}, bank: 0, cargo: {}, tasks: {}, acct: { earn: 0, spend: 0, lost: 0 }, arts: {}, items: {}, relics: [], party: [], comp: {}, flags: {}, met: {}, dead: {}, holder: {}, done: {}, tl: {},
       log: [], news: [], ev: null, queue: [], fight: null, over: null, seen: {}, kills: 0, wins: 0, fights: 0,
     };
     for (const k in org.st || {}) addSt(k, org.st[k]);
@@ -364,6 +379,18 @@
   };
 
   /* ---------- 时间 ---------- */
+  /* 年度大事预告：每年年初，传闻里点明今年最早的一件有地点的大势；还没有同伴时，再指一个愿意结伴的人 */
+  function yearPreview() {
+    const y = QX.date(S.day).y;
+    if (S.yearSeen === y) return;
+    S.yearSeen = y;
+    const T = QX.TIMELINE.filter((x) => x.at[0] === y && x.loc && !S.tl[x.id]).sort((a, b) => dv(a.at[0], a.at[1], a.at[2]) - dv(b.at[0], b.at[1], b.at[2]))[0];
+    if (T) { const t = QX.tx('年度大事', { y, m: T.at[1], l: QX.LOCS[T.loc].short }); log(t, 'news'); news(t, { loc: T.loc, cred: '听说' }); }
+    if (CFG.companions && !(S.party || []).length) {
+      const pid = Object.keys(QX.PEOPLE).find((id) => QX.PEOPLE[id].comp && !S.comp[id] && !S.dead[id] && QX.where(id) && QX.affTier(id) !== '敌');
+      if (pid) { const t = QX.tx('同伴风声', { a: QX.PEOPLE[pid].name, l: QX.LOCS[QX.where(pid)].short }); log(t, 'news'); news(t, { loc: QX.where(pid), cred: '听说' }); }
+    }
+  }
   function passDays(n) {
     n = Math.max(0, Math.round(n));
     if (!n) return;
@@ -374,6 +401,7 @@
     S.injT = (S.injT || 0) + n;
     while (S.injT >= 30) { S.injT -= 30; if (S.inj > SELF_HEAL) S.inj--; }
     expireTasks();
+    yearPreview();
     timeline();
     if (!S.over && S.day >= END_DAY()) finish('deadline');
   }
@@ -539,6 +567,12 @@
       startEvent(id);
     }
   }
+  /* 小事不用点“继续”：路上、探索、差事、修炼小事选完，结果没有判定、没有后续事件，界面直接记进日志往下走 */
+  QX.lightResult = () => {
+    if (!S.ev || !S.ev.id || S.ev.talk || S.ev.back || S.ev.roll || S.ev.next || !S.ev.res || S.fight || S.over) return false;
+    const E = QX.EVENTS[S.ev.id];
+    return !!(E && (E.road || E.explore || E.chore || E.train));
+  };
   QX.cont = () => {
     if (!S.ev) { flush(); QX.save(); return; }
     const nx = S.ev.next, back = S.ev.back;
@@ -659,7 +693,7 @@
       case 'chat': {
         const P = personDef(a.p);
         S.chat = S.chat || {}; S.chat[a.p] = S.day;
-        like(a.p, CHAT_AFF + (P.chatAff || 0));
+        like(a.p, CHAT_AFF + (P.chatAff || 0)); addInsight(1);
         passDays(1);
         S.ev = { id: '', who: a.p, title: P.name, text: '', choices: [], res: chatText(P, g), back: a.p };
         break;
@@ -710,7 +744,7 @@
     let r = null;
     switch (k) {
       case 'talk': QX.talk(id); return null;
-      case 'ev': startEvent(id); break;
+      case 'ev': { const E = QX.EVENTS[id]; if (E && E.tick) passDays(E.tick); if (!S.over) startEvent(id); break; } // tick：这件事本身要耗几天，免得白拿的事能无限点
       case 'explore': r = explore(); break;
       case 'inn': r = inn(); break;
       case 'ask': r = ask(); break;
@@ -759,6 +793,7 @@
       (mine ? local : general).push([id, val(E.w, g) || (mine ? 4 : 1)]);
     }
     passDays(3);
+    addInsight(1);
     if (S.over) return null;
     if (!local.length && !general.length) { const t = QX.tx('一无所获'); log(t); return t; }
     // 本地这副牌还有没抽过的，就多半从本地抽
@@ -803,8 +838,9 @@
   QX.ASKS = [];
   QX.addAsks = (arr) => arr.forEach((f) => QX.ASKS.push(f));
   function ask() {
-    if (S.st.银两 < ASK_COST) return QX.tx('打听不起', { n: ASK_COST });
-    addSt('银两', -ASK_COST);
+    const ac = QX.rankIdx() >= 2 ? 0 : ASK_COST;
+    if (S.st.银两 < ac) return QX.tx('打听不起', { n: ASK_COST });
+    addSt('银两', -ac);
     passDays(1);
     const up = QX.upcoming()[0];
     if (up) { rumor(up, true); return QX.tx('打听到') + val(up.rumor.t, G()); }
@@ -854,6 +890,7 @@
   function chore() {
     const SC = QX.SECTS[S.sect];
     passDays(10);
+    addInsight(1);
     S.contrib++;
     addSt('声望', 1);
     // 门派差事事件：chore: 门派 id（或 '*' 哪个门派都行），用牌堆轮着来；抽到了就接着发生这件事
@@ -877,6 +914,11 @@
 
   /* ---------- 练功 ---------- */
   const need = (lv) => 15 + lv * 12;
+  /* 心得：战斗、探索、深谈、读秘籍、门派差事、修炼小事攒下；练功每次耗一点，没有心得长进只有三成 */
+  const INSIGHT_MAX = 20, LOW_GAIN = 0.3;
+  QX.INSIGHT_MAX = INSIGHT_MAX;
+  QX.insight = () => S.insight || 0;
+  function addInsight(n) { S.insight = clamp((S.insight || 0) + n, 0, INSIGHT_MAX); }
   QX.need = need;
   /* 瓶颈：武功练到 3、6、9 级（入门功夫只在 6、9 级）卡住，长进攒满了也升不上去。
    * 突破的办法：找会这门功夫的人指点（请教）、带着对应的秘籍练、到合适的地方闭关（QX.GATE_LOCS，按武功类型，一半机会），
@@ -904,6 +946,8 @@
       a.xp -= need(a.lv); a.lv++; up = true;
       for (const k in A.grow || {}) addSt(k, A.grow[k]);
       log(QX.tx('升级', { a: A.name, n: a.lv }), 'good');
+      const nm = (A.moves || []).find((m) => m[0] === a.lv && a.lv > 1);
+      if (nm) log(QX.tx('领悟新招', { a: A.name, m: nm[1] }), 'good');
     }
     if (a.lv >= CFG.maxLv) a.xp = 0;
     return up;
@@ -924,6 +968,8 @@
     let gain = (9 + QX.eff('资质') * 0.3 + R() * 9) / (A.diff || 1);
     if (hard) gain *= 2;
     if (coach) gain *= coach;
+    else if ((S.insight || 0) >= 1) S.insight--;
+    else { gain *= LOW_GAIN; out.low = true; }
     gain = Math.max(1, Math.round(gain));
     const risk = coach ? 0 : QX.practiseRisk(id, hard);
     if (R() < risk) {
@@ -945,7 +991,7 @@
       else if (QX.gateLocs(id).includes(S.loc) && R() < 0.5) out.broke = breakGate(id, QX.tx('闭关', { a: QX.LOCS[S.loc].short }));
       else if (!S.gateTold || S.gateTold[id] !== a.lv) { S.gateTold = S.gateTold || {}; S.gateTold[id] = a.lv; log(QX.tx('瓶颈', { a: A.name, n: a.lv }), 'bad'); }
     }
-    if (!coach) { S.trainN = (S.trainN || 0) + 1; if (S.trainN % TRAIN_EVERY === 0) { const ev = trainEvent(); if (ev) S.queue.push(ev); } }
+    if (!coach) { S.trainN = (S.trainN || 0) + 1; if (S.trainN % TRAIN_EVERY === 0) { const ev = trainEvent(); if (ev) { S.queue.push(ev); addInsight(1); } } }
     passDays(10);
     return out;
   }
@@ -956,6 +1002,28 @@
     for (const id in QX.EVENTS) { const E = QX.EVENTS[id]; if (E.train && evAvailable(E, g)) pool.push([id, val(E.w, g) || 1]); }
     return drawFrom('_train', pool);
   }
+  /* 一次安排一段：n 次十天（1 / 3 / 9）。碰到事件、受伤、破关、卡在瓶颈、心得用完就停下 */
+  QX.practiseSpan = (id, hard, n) => {
+    if (S.ev || S.fight || S.over || !QX.canPractise(id)) return null;
+    const tot = { gain: 0, up: false, hurt: '', sessions: 0, broke: false, stop: '', low: 0, days: 0 };
+    for (let i = 0; i < n; i++) {
+      if (hard && QX.hardBlock()) { tot.stop = 'hard'; break; }
+      if (!QX.canPractise(id)) { tot.stop = 'max'; break; }
+      const d0 = S.day, r = practise(id, hard);
+      tot.sessions++; tot.gain += r.gain; tot.days += S.day - d0; tot.up = tot.up || r.up; if (r.low) tot.low++;
+      if (r.broke) tot.broke = true;
+      if (r.hurt) { tot.hurt = r.hurt; break; }
+      if (S.over) break;
+      if (S.queue.length || S.ev) { tot.stop = 'event'; break; }
+      if (r.broke) { tot.stop = 'broke'; break; }
+      if (QX.stuck(id)) { tot.stop = 'stuck'; break; }
+      if (i < n - 1 && !(S.insight || 0)) { tot.stop = 'noinsight'; break; }
+    }
+    if (id === 'yijin' && S.mer && QX.artLv('yijin') >= 3) cureMer(QX.tx('易筋经治经脉'));
+    flush();
+    QX.save();
+    return tot;
+  };
   // 内伤三层以上不许冒进
   QX.hardBlock = () => (S.inj >= HARD_MAX_INJ ? QX.tx('伤重不能冒进', { n: S.inj }) : '');
   QX.practise = (id, hard) => {
@@ -989,7 +1057,7 @@
         if (A.req && !A.req(g)) { t += QX.tx('读不懂', { a: A.name, why: val(A.reqText, g) || '' }); continue; }
         learn(a, 1); got.push(A.name);
       }
-      if (got.length) { t = QX.tx('读秘籍', { a: it.name, b: got.join('、') }) + t; if (it.consume) take(id, 1); passDays(5); } else if (!t) t = QX.tx('都会了');
+      if (got.length) { addInsight(2); t = QX.tx('读秘籍', { a: it.name, b: got.join('、') }) + t; if (it.consume) take(id, 1); passDays(5); } else if (!t) t = QX.tx('都会了');
     }
     if (t) log(t);
     flush();
@@ -1085,7 +1153,7 @@
     const t = QX.tx('出货', { a: QX.GOODS[id].name, k, n: p * k }); log(t, 'good'); QX.save(); return t;
   };
   // 押镖：要声望 ESCORT_FAME；每月镖局有两趟镖；路上四成会遇劫（data 里的 esc_rob 事件），丢了镖赔一半镖银
-  const ESCORT_FAME = 20, ESCORT_ROB = 0.4;
+  const ESCORT_FAME = 20, ESCORT_ROB = 0.4, ESCORT_PAY = 0.8;
   QX.ESCORT_FAME = ESCORT_FAME;
   QX.escortOffers = () => {
     const L = QX.LOCS[S.loc];
@@ -1096,7 +1164,7 @@
       const to = towns[Math.floor(swing(S.loc + 'esc' + i) * 1000) % towns.length];
       if (out.some((o) => o.to === to)) continue;
       const days = landDays(S.loc, to);
-      out.push({ to, days, pay: Math.round((25 + days * 2.2) * swing(S.loc + to)), limit: Math.round(days * 1.6 + 8) });
+      out.push({ to, days, pay: Math.round((25 + days * 2.2) * ESCORT_PAY * swing(S.loc + to)), limit: Math.round(days * 1.6 + 8) });
     }
     return out;
   };
@@ -1145,7 +1213,7 @@
     if (A.fee != null) return A.fee;
     return (A.diff || 1) >= 1.3 || (A.pow || 0) >= 11 ? 300 : (A.pow || 0) >= 6 || (A.type !== '拳掌' && (A.diff || 1) >= 1) ? 100 : 30;
   }
-  QX.teachFee = (pid, art) => { const P = personDef(pid), T = (P.teach || []).find((x) => x.art === art); return T ? teachFee(P, T) : 0; };
+  QX.teachFee = (pid, art) => { const P = personDef(pid), T = (P.teach || []).find((x) => x.art === art); return T ? Math.round(teachFee(P, T) * (1 - 0.25 * QX.rankIdx())) : 0; };
   QX.coachFee = (pid, art) => { const f = QX.teachFee(pid, art); return f ? Math.max(5, Math.round(f / 10)) : 0; };
 
   /* ---------- 地图、行走 ---------- */
@@ -1221,11 +1289,17 @@
   }
   QX.power = tierOf;
   function bestAttackPow() { let b = 0; for (const id in S.arts) { const A = QX.ARTS[id]; if (A && A.pow) b = Math.max(b, A.pow * S.arts[id].lv); } return b; }
-  function scaleFoe(E) { // 带 scale 的对手按玩家强弱伸缩（路上的强盗不会一直那么弱或那么强）
+  /* v3：对手强弱按地区和年份定，不再跟着玩家一起变强。练过功的人路上遇到小贼会觉得轻松，远处的地方更凶 */
+  const REGION_DANGER = { jiangnan: 0.8, zhongyuan: 1, xinan: 1, zhongnan: 1.1, xiangyang: 1.3, dadu: 1.5, xiyu: 1.5, donghai: 1.6 };
+  function scaleFoe(E) {
     if (!E.scale) return 1;
-    const p = tierOf();
-    return clamp(p / E.scale, 0.7, 3);
+    const L = QX.LOCS[S.loc], d = (L && REGION_DANGER[L.region]) || 1;
+    return d * (1 + 0.3 * clamp(S.day / 2880, 0, 1));
   }
+  /* 拳掌克兵器，兵器克内功，内功克拳掌；对手没写 style 就按 id 定一个固定的 */
+  const STYLES = ['拳掌', '兵器', '内功'], BEATS = { 拳掌: '兵器', 兵器: '内功', 内功: '拳掌' };
+  const styleOf = (E, id) => E.style || STYLES[[...id].reduce((s, c) => s + c.charCodeAt(0), 0) % 3];
+  QX.styleBeats = (a, b) => (BEATS[a] === b ? 1 : BEATS[b] === a ? -1 : 0);
   function mkFoe(f) {
     const id = typeof f === 'string' ? f : f.id;
     const E = QX.ENEMIES[id];
@@ -1233,7 +1307,28 @@
     const k = scaleFoe(E) * ((f && f.k) || 1);
     const hp = Math.round(E.hp * k);
     return { id, name: (f && f.name) || E.name, hp, max: hp, mp: E.mp || 0, atk: Math.round(E.atk * Math.sqrt(k)), def: Math.round(E.def * Math.sqrt(k)), agi: E.agi || 10,
-      moves: E.moves, side: 'foe', st: {}, xp: Math.round((E.xp || 5) * k), silver: E.silver || [0, 0], drops: E.drops || [], pid: E.pid || '' };
+      moves: E.moves, style: styleOf(E, id), side: 'foe', st: {}, xp: Math.round((E.xp || 5) * k), silver: E.silver || [0, 0], drops: E.drops || [], pid: E.pid || '' };
+  }
+  /* 对手的意图：每回合开始先亮出来，玩家看了再选。出招 55%、重击 20%、蓄力 10%（下回合全力一击）、防守 15% */
+  function rollIntent(e) {
+    if (e.next) { const k = e.next; e.next = null; return k; }
+    const r = R();
+    if (r < 0.55) return 'hit';
+    if (r < 0.75) return 'heavy';
+    if (r < 0.85) { e.next = 'burst'; return 'charge'; }
+    return 'guard';
+  }
+  function rollIntents(F) { F.intents = F.foes.map((e) => (e.hp > 0 ? rollIntent(e) : '')); }
+  QX.foeIntent = (i) => { const F = S.fight; if (!F) return ''; if (!F.intents) rollIntents(F); return F.intents[i] || ''; };
+  QX.fightCmd = (c) => { if (S.fight && !S.fight.result && S.fight.allies.length > 1 && ['focus', 'guard', 'free'].includes(c)) S.fight.cmd = c; };
+  let curMod = null; // strike 用：{ mul 伤害倍数, evade 躲开的几率 }
+  function atkMod(type, tgt, intent) {
+    let mul = 1;
+    const sb = type ? QX.styleBeats(type, tgt.style) : 0;
+    if (sb > 0) { mul *= 1.3; line(QX.tx('克制')); } else if (sb < 0) { mul *= 0.75; line(QX.tx('被克')); }
+    if (intent === 'guard') mul *= 0.4;
+    if (intent === 'charge') mul *= 1.3;
+    return { mul };
   }
   function mkMe() {
     return { id: 'me', name: S.name, hp: S.hp, max: QX.maxHp(), mp: S.mp, maxMp: QX.maxMp(), atk: QX.eff('攻击'), def: QX.eff('防御'), agi: QX.eff('轻功'), side: 'me', st: {} };
@@ -1248,8 +1343,17 @@
     S.fights++;
     const foes = F.foes.map(mkFoe);
     const allies = [mkMe()].concat(F.solo ? [] : S.party.map(mkComp));
-    S.fight = { foes, allies, round: 1, lines: [], noFlee: !!F.noFlee, after, auto: false, target: 0, mode: (F.lose && F.lose.mode) || 'injury', maxRound: F.rounds || 40 };
+    S.fight = { foes, allies, round: 1, lines: [], noFlee: !!F.noFlee, after, auto: false, target: 0, mode: (F.lose && F.lose.mode) || 'injury', maxRound: F.rounds || 40, cmd: 'focus' };
     S.fight.lines.push(QX.tx('开打', { a: foes.map((x) => x.name).join('、') }));
+    // 一招了结：对手全是路上的小角色（带 scale、没指定倍数），而你远强于他们，就不进战斗画面
+    const small = F.foes.every((f) => QX.ENEMIES[typeof f === 'string' ? f : f.id].scale && !(f && f.k)) && F.easy !== false && !F.noFlee && !(F.lose && F.lose.mode === 'death');
+    if (small && tierOf() >= 1.8 * Math.max(...foes.map((f) => QX.ENEMIES[f.id].scale * (f.max / QX.ENEMIES[f.id].hp)))) {
+      S.quick = (S.quick || 0) + 1;
+      S.fight.lines.push(QX.tx('一招了结'));
+      foes.forEach((f) => { f.hp = 0; });
+      return endFight('win');
+    }
+    rollIntents(S.fight);
   }
   QX.startFight = (F) => { startFight(F, null); QX.save(); }; // 工具用
   function meMove(id) {
@@ -1270,6 +1374,10 @@
       if (A.item && !QX.has(A.item)) dis = QX.tx('缺少', { a: itemDef(A.item).name });
       out.push({ k: 'art', id, label: A.name, sub: mv.name, cost: mv.cost, dis });
     }
+    out.push({ k: 'parry', label: QX.tx('招架'), sub: QX.tx('招架说明'), cost: 0, dis: '' });
+    out.push({ k: 'dodge', label: QX.tx('闪避'), sub: QX.tx('闪避说明'), cost: 0, dis: '' });
+    const al1 = F.allies[1];
+    if (al1 && al1.hp > 0 && !F.comboUsed && QX.affTier(al1.id) === '信') out.push({ k: 'combo', label: QX.tx('合击'), sub: al1.name, cost: 30, dis: me.mp < 30 ? QX.tx('内力不足') : '' });
     out.push({ k: 'fist', label: QX.tx('拳脚'), sub: QX.tx('不耗内力'), cost: 0, dis: '' });
     out.push({ k: 'yun', label: QX.tx('运功'), sub: QX.tx('回内力'), cost: 0, dis: '' });
     for (const id in S.items) { const it = QX.ITEMS[id]; if (it && it.use && it.combat !== false && S.items[id] > 0) out.push({ k: 'item', id, label: it.name, sub: '×' + S.items[id], cost: 0, dis: '' }); }
@@ -1289,6 +1397,34 @@
     if (best && best.k === 'fist' && me.mp < me.maxMp * 0.4 && opts.some((o) => o.k === 'art')) return opts.find((o) => o.k === 'yun');
     return best || opts.find((o) => o.k === 'yun');
   };
+  /* 会看意图的打法：重击就闪，普通招在血少时招架，对手防守时运功，挑克制对手的招。给“自动战斗”比一比用：自动不看这些 */
+  QX.aiSmart = () => {
+    const F = S.fight, me = F.allies[0], opts = QX.fightOptions();
+    const its = F.foes.map((e, i) => (e.hp > 0 ? QX.foeIntent(i) : ''));
+    // 先打正在蓄力的（打断它），再打没在防守的里血最少的
+    let ti = its.indexOf('charge');
+    if (ti < 0) { let lo = 1e9; its.forEach((k, i) => { if (k && k !== 'guard' && F.foes[i].hp < lo) { lo = F.foes[i].hp; ti = i; } }); }
+    if (ti < 0) ti = its.findIndex((k) => k);
+    QX.fightTarget(ti);
+    const tgt = F.foes[ti];
+    const heavy = its.some((k) => k === 'heavy' || k === 'burst'), plain = its.includes('hit');
+    const tInt = QX.foeIntent(F.foes.indexOf(tgt));
+    if (me.hp < me.max * 0.3) { const med = opts.find((o) => o.k === 'item' && QX.ITEMS[o.id].use.hp); if (med) return med; }
+    const find = (k) => opts.find((o) => o.k === k && !o.dis);
+    if ((its.includes('burst') || (heavy && me.hp < me.max * 0.45)) && find('dodge')) return find('dodge');
+    if (find('combo') && tInt !== 'guard') return find('combo');
+    if (tInt === 'guard') return (me.mp < me.maxMp * 0.7 && find('yun')) || (plain && find('parry')) || find('yun');
+    if (plain && !heavy && its.filter(Boolean).length === 1 && me.hp < me.max * 0.9 && find('parry')) return find('parry');
+    let best = null, bv = -1;
+    for (const o of opts) {
+      if (o.dis || (o.k !== 'art' && o.k !== 'fist')) continue;
+      let v = o.k === 'fist' ? QX.eff('攻击') * 0.8 : (QX.eff('攻击') + QX.ARTS[o.id].pow * QX.artLv(o.id) * (1 + QX.bestNei() * 0.06)) * meMove(o.id).mult;
+      if (o.k === 'art') { const sb = QX.styleBeats(QX.ARTS[o.id].type, tgt.style); v *= sb > 0 ? 1.3 : sb < 0 ? 0.75 : 1; }
+      if (v > bv) { bv = v; best = o; }
+    }
+    if (best && best.k === 'fist' && me.mp < me.maxMp * 0.4 && opts.some((o) => o.k === 'art')) return find('yun');
+    return best || find('yun');
+  };
   function dmgCalc(att, def, pow, mult) {
     const dodge = clamp(0.05 + (def.agi - att.agi) * 0.006, 0.03, 0.3);
     if (R() < dodge) return -1;
@@ -1299,6 +1435,10 @@
   function strike(att, tgt, moveName, pow, mult, sp) {
     let d = dmgCalc(att, tgt, pow, mult);
     if (d < 0) { line(QX.tx('落空', { a: att.name, m: moveName, t: tgt.name })); return 0; }
+    if (curMod) {
+      if (curMod.evade && R() < curMod.evade) { line(QX.tx('闪过了', { a: tgt.name, m: moveName })); return 0; }
+      d = Math.max(1, Math.round(d * (curMod.mul || 1)));
+    }
     if (sp === 'crit' && R() < 0.3) { d = Math.round(d * 1.8); line(QX.tx('重手')); }
     if (sp === 'taiji') d = Math.round(d + tgt.atk * 0.5);
     // 乾坤大挪移：玩家挨打时有机会把劲力挪回去
@@ -1323,6 +1463,15 @@
     const me = F.allies[0];
     const foes = alive(F.foes);
     let tgt = F.foes[F.target] && F.foes[F.target].hp > 0 ? F.foes[F.target] : foes[0];
+    if (!F.intents) rollIntents(F);
+    const ti = F.foes.indexOf(tgt), tInt = F.intents[ti];
+    const hitTgt = (type, nm, pow, mult, sp) => { // 玩家出手：克制、对手防守或蓄力都在这里算
+      curMod = atkMod(type, tgt, tInt);
+      const dd = strike(me, tgt, nm, pow, mult, sp);
+      curMod = null;
+      if (tInt === 'charge' && tgt.hp > 0 && dd > 0) { F.intents[ti] = 'stun'; tgt.next = null; line(QX.tx('打断', { a: me.name, t: tgt.name })); }
+      return dd;
+    };
     // 玩家
     if (me.st.frozen) { me.st.frozen = 0; line(QX.tx('被冻', { a: me.name })); }
     else if (opt.k === 'art') {
@@ -1330,9 +1479,22 @@
       if (me.mp < mv.cost) return;
       me.mp -= mv.cost;
       const pow = A.pow * QX.artLv(opt.id) * (1 + QX.bestNei() * 0.06);
-      strike(me, tgt, A.name + '·' + mv.name, pow, mv.mult, A.sp);
+      hitTgt(A.type, A.name + '·' + mv.name, pow, mv.mult, A.sp);
       if (A.aoe) for (const o of alive(F.foes)) if (o !== tgt) strike(me, o, mv.name, pow * 0.5, mv.mult, A.sp);
-    } else if (opt.k === 'fist') strike(me, tgt, QX.tx('拳脚'), 0, 1, '');
+    } else if (opt.k === 'fist') hitTgt(null, QX.tx('拳脚'), 0, 1, '');
+    else if (opt.k === 'parry' || opt.k === 'dodge') {
+      me.st[opt.k] = 1;
+      me.mp = Math.min(me.maxMp, me.mp + Math.round(me.maxMp * 0.08));
+      line(QX.tx(opt.k === 'parry' ? '摆架势' : '摆身法', { a: me.name }));
+    } else if (opt.k === 'combo') {
+      const al1 = F.allies[1];
+      if (!al1 || al1.hp <= 0 || F.comboUsed || me.mp < 30) return;
+      me.mp -= 30; F.comboUsed = 1;
+      const dd = Math.max(1, Math.round((me.atk + al1.atk) * 1.8 * (0.9 + R() * 0.2) - tgt.def * 0.5));
+      tgt.hp -= dd;
+      line(QX.tx('同伴合击', { a: me.name, b: al1.name, t: tgt.name, n: dd }) + (tgt.hp <= 0 ? QX.tx('倒下', { t: tgt.name }) : ''));
+      for (const o of alive(F.foes)) if (o !== tgt) { const d2 = Math.round(dd * 0.5); o.hp -= d2; if (o.hp <= 0) line(QX.tx('倒下', { t: o.name })); }
+    }
     else if (opt.k === 'yun') {
       const n = Math.round(12 + me.maxMp * 0.3 + QX.bestNei() * 3);
       me.mp = Math.min(me.maxMp, me.mp + n);
@@ -1355,9 +1517,11 @@
     // 同伴
     for (const a of F.allies.slice(1)) {
       if (a.hp <= 0) continue;
-      const t = pick(alive(F.foes)); if (!t) break;
+      const t = F.cmd === 'focus' && tgt.hp > 0 ? tgt : pick(alive(F.foes)); if (!t) break;
       const mv = pick(a.moves);
+      curMod = { mul: F.cmd === 'focus' ? 1.1 : F.cmd === 'guard' ? 0.6 : 1 };
       strike(a, t, mv[0], 0, mv[1], mv[2]);
+      curMod = null;
       if (!alive(F.foes).length) return endFight('win');
     }
     // 对手
@@ -1365,16 +1529,32 @@
       tickStatus(e);
       if (e.hp <= 0) { line(QX.tx('倒下', { t: e.name })); continue; }
       if (e.st.frozen) { e.st.frozen = 0; line(QX.tx('被冻', { a: e.name })); continue; }
+      const it = F.intents[F.foes.indexOf(e)] || 'hit';
+      if (it === 'charge' || it === 'guard' || it === 'stun') { line(QX.tx(it === 'charge' ? '蓄力了' : it === 'guard' ? '防守了' : '被打断了', { a: e.name })); continue; }
       const al = alive(F.allies); if (!al.length) break;
-      const t = al[0].id === 'me' && R() < 0.55 ? al[0] : pick(al);
+      const t = al[0].id === 'me' && R() < (F.cmd === 'guard' && al.length > 1 ? 0.25 : 0.55) ? al[0] : pick(al);
       const mv = pick(e.moves);
+      const heavy = it === 'heavy' || it === 'burst';
+      const mod = { mul: it === 'burst' ? 2.6 : it === 'heavy' ? 1.8 : 1 };
+      const parried = t.id === 'me' && me.st.parry;
+      if (parried) mod.mul *= heavy ? 0.6 : 0.35;
+      if (t.id === 'me' && me.st.dodge) mod.evade = heavy ? 0.85 : 0.5;
+      curMod = mod;
       strike(e, t, mv[0], 0, mv[1], mv[2]);
+      curMod = null;
+      if (parried && !heavy && me.hp > 0 && e.hp > 0) {
+        const c = Math.max(1, Math.round(me.atk * 1.2 - e.def * 0.5));
+        e.hp -= c;
+        line(QX.tx('反击', { a: me.name, t: e.name, n: c }) + (e.hp <= 0 ? QX.tx('倒下', { t: e.name }) : ''));
+      }
       if (me.hp <= 0) break;
     }
     tickStatus(me);
+    me.st.parry = 0; me.st.dodge = 0;
     if (!F.foes[F.target] || F.foes[F.target].hp <= 0) { const k = F.foes.findIndex((x) => x.hp > 0); if (k >= 0) F.target = k; }
     if (!alive(F.foes).length) return endFight('win');
     if (me.hp <= 0) return endFight('lose');
+    rollIntents(F);
     F.round++;
     if (F.round > F.maxRound) { line(QX.tx('罢手')); return endFight('draw'); }
     QX.save();
@@ -1387,7 +1567,7 @@
     F.result = res;
     let xp = 0, silver = 0;
     if (res === 'win') {
-      S.wins++;
+      S.wins++; addInsight(res === 'win' && F.foes.reduce((s, e) => s + e.xp, 0) >= HARD_FIGHT ? 2 : 1);
       for (const e of F.foes) { xp += e.xp; silver += Math.round(e.silver[0] + R() * (e.silver[1] - e.silver[0])); }
       S.xp += xp; addSt('银两', silver);
       for (const e of F.foes) for (const d of e.drops) if (R() < d[1]) give(d[0], 1);
@@ -1434,14 +1614,33 @@
     S.ev = null; S.fight = null; S.queue = [];
     S.over = { kind, why, id: end.id, title: val(end.t, g), text: val(end.text, g), day: S.day, relics: S.relics.length };
     log(S.over.title, 'end');
+    codexNote(end.id || kind);
   }
   QX.finish = finish;
 
   /* ---------- 存档 ---------- */
   const SAVE_V = 2;
+  // 搬家迁移：旧键 jianghuyimeng.qunxia.v1 里的存档结构和现在相同（v2），原样搬到新键，再删旧键
+  try { if (CFG.oldKey && localStorage.getItem(CFG.oldKey)) { if (!localStorage.getItem(CFG.key)) localStorage.setItem(CFG.key, localStorage.getItem(CFG.oldKey)); localStorage.removeItem(CFG.oldKey); } } catch (e) { /* 存储不可用 */ }
   function readAll() { try { return JSON.parse(localStorage.getItem(CFG.key)) || {}; } catch (e) { return {}; } }
   function writeAll(o) { try { localStorage.setItem(CFG.key, JSON.stringify(o)); } catch (e) { /* 存储不可用 */ } }
-  QX.save = () => { if (!S) return; S.hp = Math.min(S.hp, QX.maxHp()); S.mp = Math.min(S.mp, QX.maxMp()); if (QX.noSave) return; const o = readAll(); o.auto = S; o.autoAt = Date.now(); writeAll(o); };
+  /* 图鉴：跨局记下信物、武功、同伴、结局、出身，存在另一个键里，开新的一局也不会丢 */
+  const CODEX_KEY = 'qunxia.codex.v1';
+  QX.codex = () => { try { return JSON.parse(localStorage.getItem(CODEX_KEY)) || {}; } catch (e) { return {}; } };
+  function codexNote(endId) {
+    if (!S || QX.noSave) return;
+    try {
+      const c = QX.codex();
+      ['relics', 'arts', 'comps', 'ends', 'origins'].forEach((k) => { c[k] = c[k] || {}; });
+      (S.relics || []).forEach((x) => { c.relics[x] = 1; });
+      Object.keys(S.arts || {}).forEach((x) => { c.arts[x] = Math.max(c.arts[x] || 0, S.arts[x].lv); });
+      Object.keys(S.comp || {}).forEach((x) => { c.comps[x] = 1; });
+      c.origins[S.origin] = 1;
+      if (endId) { c.ends[endId] = 1; c.runs = (c.runs || 0) + 1; }
+      localStorage.setItem(CODEX_KEY, JSON.stringify(c));
+    } catch (e) { /* 存储不可用 */ }
+  }
+  QX.save = () => { if (!S) return; codexNote(); S.hp = Math.min(S.hp, QX.maxHp()); S.mp = Math.min(S.mp, QX.maxMp()); if (QX.noSave) return; const o = readAll(); o.auto = S; o.autoAt = Date.now(); writeAll(o); };
   QX.saveManual = () => { if (!S) return; const o = readAll(); o.manual = JSON.parse(JSON.stringify(S)); o.manualAt = Date.now(); writeAll(o); };
   QX.slots = () => { const o = readAll(); return { auto: o.auto ? summary(o.auto, o.autoAt) : null, manual: o.manual ? summary(o.manual, o.manualAt) : null }; };
   // 存档版本：v2.4 加了装备、钱庄、货物，旧存档（v1）作废，开始页会提示

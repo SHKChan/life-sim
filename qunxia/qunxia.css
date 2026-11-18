@@ -199,3 +199,9 @@
 @keyframes qxshake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 @media (prefers-reduced-motion: reduce) { .qx-dmg, .qx-slash, .qx-actor.lunge, .qx-actor.shake { animation-duration: .01s; } }
 .qx-fightm { padding: 14px 18px 16px; max-height: calc(100dvh - 24px); overflow-y: auto; }
+.qx-int { display: block; margin-top: 2px; color: var(--muted, #8a8f94); }
+.qx-int.heavy, .qx-int.burst { color: var(--bad, #d46a5a); font-weight: 600; }
+.qx-int.charge { color: var(--warn, #d9a441); }
+.qx-int.guard { color: var(--ok, #6aa2c7); }
+.qx-cmds { display: flex; gap: 6px; margin: 8px 0 4px; }
+.qx-cmds .b { flex: 1; padding: 6px 4px; }

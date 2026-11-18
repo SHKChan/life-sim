@@ -1,8 +1,8 @@
-# 群侠（江湖一梦 · 群侠模式）
+# 群侠（浮生录 · 独立游戏）
 
 倚天年间（江湖纪年 131–138 年）的文字武侠 RPG。玩法借鉴《金庸群侠传》的自由度：在地图上走动，拜师、找秘籍、结交群侠、回合制比武、收集十四件信物，最后按品德走向“侠”或“魔”的结局。文字、地图、数值都是自己写的，不照抄任何游戏或原著原文。
 
-和年度人生模拟“江湖一梦”完全分开：自己的引擎、数据、界面和存档（`localStorage` 键 `jianghuyimeng.qunxia.v1`）。只共用 `../../share/style.css`、`pixel.js`、`i18n.js`、`lang.js`，不改它们。
+和年度人生模拟“江湖一梦”完全分开：自己的引擎、数据、界面和存档（`localStorage` 键 `qunxia.save.v2`）。只共用 `../share/style.css`、`pixel.js`、`i18n.js`、`lang.js`，不改它们。纪年表见 `../jianghuyimeng/docs/SPEC.md`，人物关系见 `../jianghuyimeng/data/relations.js`。
 
 ## 文件
 
@@ -75,7 +75,7 @@ QX.addAsks([(g) => 文字 | { t, loc, cred } | null]); // 在客店打听时可�
 
 - **地点**：在 `world.js` 的 `QX.addLocs` 加一项（场景用 `pixel.js` 已有的），再在某个事件文件里给它写探索事件（`explore: 'id'`）。
 - **武功**：`arts.js` 加一项；给某个人物的 `teach` 加上，或给某件物品写 `teaches`。
-- **人物**：`people.js` 加一项，`at` 按 `../docs/SPEC.md` 的纪年写；和别人的关系照 `../data/relations.js`。
+- **人物**：`people.js` 加一项，`at` 按 `../jianghuyimeng/docs/SPEC.md` 的纪年写；和别人的关系照 `../jianghuyimeng/data/relations.js`。
 - **事件**：写进对应地区的文件。每个选项都要有结果（`res`、`fx`、`fight` 或 `next`）。设了标记就在别处用 `g.f('名字')` 读，或在 `world.js` 的 `QX.addFlags` 写一句说明（会出现在结局页）。
 - 文风：中文、第二人称“你”、短句白描；不用“——”、不用“不是……而是……”、不用表情符号；死亡一句带过。
 
@@ -84,8 +84,8 @@ QX.addAsks([(g) => 文字 | { t, loc, cred } | null]); // 在客店打听时可�
 在仓库根目录：
 
 ```bash
-node jianghuyimeng/qunxia/tools/playtest.js 300      # 必须最后输出“没有发现问题”
-RDBG=守武当 node jianghuyimeng/qunxia/tools/playtest.js 0   # 只跑名字里带“守武当”的路线，并打印每一步
+node qunxia/tools/playtest.js 300      # 必须最后输出“没有发现问题”
+RDBG=守武当 node qunxia/tools/playtest.js 0   # 只跑名字里带“守武当”的路线，并打印每一步
 ```
 
 它会做静态检查（id 重复、引用不存在、选项没结果、触发不了的事件、读了没人设的标记、文风），再让侠、魔、乱三种机器人各玩若干局（查运行错误、卡死、打不完的战斗、两种结局是否都到过），最后按 `ROUTES` 让一个练成了的玩家把每件信物的路线走一遍（走真实事件），确认 14 件都拿得到。

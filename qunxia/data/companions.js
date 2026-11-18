@@ -44,10 +44,10 @@
         { t: '拉住他', check: ['根骨', '中'], fx: (g) => { g.set('zdCalm'); g.add('品德', 2); }, res: '你死死抱住他的腰。他骂了半天，骂累了，坐下喝酒。', fail: { fx: (g) => g.hurt(30), res: '他一甩手把你甩开，冲进去跟杨逍打了一架，鼻青脸肿地出来了。' } },
         { t: '帮他一起骂', fx: (g) => { g.add('声望', 2); g.set('zdLoud'); }, res: '你们两个在殿外骂了一个时辰。杨逍始终没出来。' },
       ] },
-    { id: 'cp_zhou_drink', anywhere: true, act: '陪周颠喝酒', cond: (g) => g.inParty('zhoudian') && g.money() >= 5, once: false, t: '喝酒',
+    { id: 'cp_zhou_drink', anywhere: true, act: '陪周颠喝酒', cond: (g) => g.inParty('zhoudian') && g.money() >= 5 && (!g.f('zhouDrinkDay') || g.day - g.f('zhouDrinkDay') >= 14), once: false, t: '喝酒',
       text: '周颠说他嘴里淡出鸟来了，非要找个地方喝两碗。',
       choices: [
-        { t: '请他喝（5 两）', cost: { 银两: 5 }, fx: (g) => { g.add('声望', 1); g.restMp(30); }, res: '他喝高了，讲了一晚上五散人当年的事。' },
+        { t: '请他喝（5 两）', cost: { 银两: 5 }, fx: (g) => { g.add('声望', 1); g.restMp(30); g.days(1); g.set('zhouDrinkDay', g.day); }, res: '他喝高了，讲了一晚上五散人当年的事。' },
         { t: '不请', res: '周颠说你小气，自己去讨了一碗。' },
       ] },
 

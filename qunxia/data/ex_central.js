@@ -327,7 +327,7 @@
         { t: '推门进去', fx: (g) => g.set('xyGuofu'), res: '院子里长满了蒿草，比人还高。正厅塌了，后头的练武场倒还平整，青砖缝里长着青苔。' },
         { t: '在门口拜三拜', fx: (g) => { g.add('品德', 1); g.add('声望', 1); }, res: '你拜了三拜。卖菜的老妇看着你，点了点头。' },
       ] },
-    { id: 'xy_ex_guofu', loc: 'xiangyang', act: '去郭府旧宅', once: false, cond: (g) => g.f('xyGuofu'), t: '郭府',
+    { id: 'xy_ex_guofu', tick: 1, loc: 'xiangyang', act: '去郭府旧宅', once: false, cond: (g) => g.f('xyGuofu'), t: '郭府',
       text: (g) => (g.done('xy_ex_guofu') > 1 ? '你又进了郭府的旧宅。蒿草被你踩出了一条路。' : '郭府的旧宅里静悄悄的。')
         + (g.f('heardGuojing') ? '老叫化说过，城破那天，郭大侠就是从这里上的城墙。' : ''),
       choices: [
@@ -345,7 +345,7 @@
         { t: '跟他聊几句', fx: (g) => g.set('xyFerry'), res: '老船家说他在汉水上撑了四十年船，两岸的事他都知道。“想过江，随时来找我。”' },
         { t: '在江边洗把脸就走', fx: (g) => g.restMp(20), res: '江水很凉，你清醒了些。' },
       ] },
-    { id: 'xy_ex_ferry', loc: 'xiangyang', act: '坐老船家的渡船', once: false, cond: (g) => g.f('xyFerry'), t: '渡船',
+    { id: 'xy_ex_ferry', tick: 1, loc: 'xiangyang', act: '坐老船家的渡船', once: false, cond: (g) => g.f('xyFerry'), t: '渡船',
       text: (g) => (g.done('xy_ex_ferry') > 1 ? '老船家见是你，把篙一撑，船离了岸。' : '船在江心晃着，老船家一边撑篙一边说话。')
         + (ssn(g) === 1 ? '夏天涨水，江面宽了一倍，浪头打到船舷上。' : winter(g) ? '江风刮得脸疼，船舱里结了一层薄冰。' : ''),
       choices: [
@@ -435,7 +435,7 @@
         { t: '绕到寺后看看', fx: (g) => g.set('ddWansi'), res: (g) => (g.after(135, 4, 10) ? '寺后的院墙塌了一个口子，能钻进去。' : '寺后有一道小门，送菜的伙夫从这里进出，门口的番僧只看车，不看人。') },
         { t: '在寺前的茶摊上坐坐', fx: (g) => { g.add('银两', -1); g.add('资质', 0.3); }, res: '茶摊老板说，塔上的铜铃一响，就是起风了。他在这里坐了二十年，听得出是哪一层的铃。' },
       ] },
-    { id: 'dd_ex_wansi', loc: 'dadu', act: '去万安寺', once: false, cond: (g) => g.f('ddWansi'), t: '万安寺',
+    { id: 'dd_ex_wansi', tick: 1, loc: 'dadu', act: '去万安寺', once: false, cond: (g) => g.f('ddWansi') && !(g.f('ddWansiDay') && g.day - g.f('ddWansiDay') < 7), fx: (g) => g.set('ddWansiDay', g.day), t: '万安寺',
       text: (g) => {
         if (g.after(135, 4, 10)) return (g.done('dd_ex_wansi') > 1 ? '你又钻进万安寺的废墟。' : '万安寺的大殿烧成了一片黑炭，白塔还立着，塔门上的铁链断成两截。') + (g.f('ddFedPrisoners') ? '你想起那些天从后门送进去的饭。' : '');
         if (g.after(134, 7)) return '塔下多了很多番僧和武士，日夜有人巡逻。听说六大派的掌门和高手都关在塔里，每天有人被斩断一根手指。';
@@ -462,7 +462,7 @@
         { t: '教他们几招拳脚', fx: (g) => { g.set('ddKids'); g.set('ddKidsFist'); g.days(1); }, res: '他们学得很认真。最大的那个说，以后你要打听什么，来街口找他们。' },
         { t: '不理他们', res: '你走过去了。' },
       ] },
-    { id: 'dd_ex_kids', loc: 'dadu', act: '找街口的孩子们打听', once: false, cond: (g) => g.f('ddKids'), t: '孩子们',
+    { id: 'dd_ex_kids', loc: 'dadu', act: '找街口的孩子们打听', once: false, cond: (g) => g.f('ddKids') && !(g.f('ddKidsDay') && g.day - g.f('ddKidsDay') < 7), fx: (g) => g.set('ddKidsDay', g.day), t: '孩子们',
       text: (g) => (g.done('dd_ex_kids') > 1 ? '孩子们看见你，一窝蜂围了上来。' : '孩子们把你拉到墙角，七嘴八舌。')
         + (g.f('ddKidsFist') ? '最小的那个还在比划你教的那几招。' : '') + (g.f('ddExtort') ? '有两个孩子躲在后头，不敢靠近。他们看见过你跟着元兵敲诈。' : ''),
       choices: [
@@ -551,7 +551,7 @@
         { t: '数数石头上的脚印', check: ['资质', '易'], fx: (g) => { g.set('znBeidou'); g.add('轻功', 0.3); }, res: '脚印一块比一块深，踩的人都是转着身子落脚的。你照着转了一圈，身子轻了。',
           fail: { res: '脚印叠着脚印，你数乱了。' } },
       ] },
-    { id: 'zn_ex_beidou', loc: 'zhongnan', act: '去后山的北斗石阵', once: false, cond: (g) => g.f('znBeidou'), t: '北斗石阵',
+    { id: 'zn_ex_beidou', tick: 1, loc: 'zhongnan', act: '去后山的北斗石阵', once: false, cond: (g) => g.f('znBeidou'), t: '北斗石阵',
       text: (g) => (g.done('zn_ex_beidou') > 1 ? '七块石头在松林里静静地排着。' : '你站在第一块石头上。七块石头，七个方位，一步错了，后面就全乱了。') + (winter(g) ? '石头上结了霜，滑得站不住脚。' : ''),
       choices: [
         { t: '踩着七块石头走步法', check: ['轻功', '中'], fx: (g) => { g.add('轻功', 0.5); const id = gateArt(g, ['轻功']); if (id) g.breakGate(id, '：你在北斗石上走了一整天，脚下忽然通了'); },

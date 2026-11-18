@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* 群侠 · 无界面试玩
- * 用法（在仓库根目录）：node jianghuyimeng/qunxia/tools/playtest.js [局数=300] [种子=1]
+ * 用法（在仓库根目录）：node qunxia/tools/playtest.js [局数=300] [种子=1]
  * 照 index.html 的顺序载入引擎和数据（不载界面），先做静态检查，再让三种性格的机器人各玩若干局：
  *   侠（挑品德高的选项）、魔（挑品德低的）、乱（随便选）。机器人会找有事可做的地方去、练功、读秘籍、住店。
  * 检查：运行错误、选项是否都通向某处、十四件信物是否都拿得到、侠魔两种结局是否都到过、
@@ -39,7 +39,7 @@ function rng() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 42949
 QX.rnd = rng;
 
 /* ---------- 静态检查 ---------- */
-const pixelSrc = fs.readFileSync(path.join(dir, '..', '..', 'share', 'pixel.js'), 'utf8');
+const pixelSrc = fs.readFileSync(path.join(dir, '..', 'share', 'pixel.js'), 'utf8');
 const scenes = new Set([...pixelSrc.matchAll(/^\s{4}(\w+): \(c, r\) =>/gm)].map((m) => m[1]));
 if (QX.DUP.length) P('重复的 id：' + QX.DUP.join('、'));
 for (const id in QX.LOCS) {
@@ -207,6 +207,7 @@ function playOne(persona, k) {
     if (S.day === lastDay) still++; else { still = 0; lastDay = S.day; }
     if (still > 400) { P('卡住了：' + persona + ' 第 ' + k + ' 局在纪年 ' + JSON.stringify(QX.date(S.day)) + '、' + S.loc + '，' + (S.ev ? '事件 ' + (S.ev.id || S.ev.talk) : S.fight ? '战斗中' : '地点上') + ' 日子不走了'); break; }
     if (S.fight) {
+      stat.cat = stat.cat || {}; stat.cat.战斗回合 = (stat.cat.战斗回合 || 0) + 1;
       if (S.fight.result) { if (S.fight.result === 'draw') stat.draws++; QX.fightDone(); fightRounds = 0; continue; }
       if (++fightRounds > 100) { P('战斗打不完：' + S.fight.foes.map((f) => f.id).join(',')); break; }
       const opts = QX.fightOptions();
@@ -215,6 +216,7 @@ function playOne(persona, k) {
       continue;
     }
     if (S.ev) {
+      stat.cat = stat.cat || {}; const ck = S.ev.talk ? '谈话选项' : '事件选项'; stat.cat[ck] = (stat.cat[ck] || 0) + 1;
       if (S.ev.id) stat.evSeen[S.ev.id] = (stat.evSeen[S.ev.id] || 0) + 1;
       // 每局每件事只记第一次（可重复的偷东西事件会被机器人反复去试，不算）
       if (cur && !cur.ck[S.ev.id]) { cur.ck[S.ev.id] = 1; for (const c of S.ev.choices) if (c.p != null && !c.dis) (stat.ckp[c.ck] = stat.ckp[c.ck] || []).push(c.p); }
@@ -233,6 +235,7 @@ function playOne(persona, k) {
       let best = ch[0][1], bv = -1e9;
       for (const [, i] of ch) { const v = evalChoice(i, persona); if (v > bv) { bv = v; best = i; } }
       QX.choose(best);
+      if (QX.lightResult()) { QX.cont(); stat.cat.自动略过 = (stat.cat.自动略过 || 0) + 1; }
       continue;
     }
     // 在地点上
@@ -272,7 +275,7 @@ function playOne(persona, k) {
     const r = rng();
     if (r < 0.42) {
       const arts = Object.keys(S.arts).filter((a) => QX.canPractise(a));
-      if (arts.length) { const a = arts[Math.floor(rng() * arts.length)]; const hard = rng() < (persona === 'luan' ? 0.4 : 0.15) && !QX.hardBlock(); QX.practise(a, hard); continue; }
+      if (arts.length) { const a = arts[Math.floor(rng() * arts.length)]; const hard = rng() < (persona === 'luan' ? 0.4 : 0.15) && !QX.hardBlock(); QX.practiseSpan(a, hard, rng() < 0.6 ? 3 : 1); stat.pracCalls = (stat.pracCalls || 0) + 1; continue; }
     }
     const exHere = Object.keys(QX.EVENTS).some((id) => { const E = QX.EVENTS[id]; return E.explore === S.loc && evValue(id) > 0 && (!E.cond || E.cond(g)); });
     if (r < 0.58 || (exHere && rng() < 0.6)) { QX.act('explore'); continue; }
@@ -288,7 +291,7 @@ function playOne(persona, k) {
   S = QX.state();
   if (!S.over) { P('一局走了 ' + steps + ' 步还没结束（' + persona + ' 第 ' + k + ' 局）'); return; }
   stat.games++;
-  stat.steps += steps;
+  stat.steps += steps; stat.quick = (stat.quick || 0) + (S.quick || 0);
   const end = S.over.kind + (S.over.id ? ':' + S.over.id : '') + (S.over.why ? '(' + S.over.why + ')' : '');
   stat.ends[end] = (stat.ends[end] || 0) + 1;
   stat.days.push(S.day);
@@ -433,7 +436,7 @@ const CHAINS = [
 ];
 for (const R of CHAINS) {
   if (process.env.RDBG) { if (!R.d.includes(process.env.RDBG)) continue; console.log('托付', R.d); }
-  try { const why = runRoute(R); if (why) P('托付【' + R.d + '】走不通：' + why); }
+  try { let why = runRoute(R); for (let k = 0; why && k < 2; k++) why = runRoute(R); /* 探索和判定用真随机，偶尔掷坏，重试两次才算走不通 */ if (why) P('托付【' + R.d + '】走不通：' + why); }
   catch (e) { QX.rnd = rng; P('托付【' + R.d + '】运行错误：' + String(e.stack).split(/\n/).slice(0, 3).join(' | ')); }
 }
 for (const R of ROUTES) {
@@ -468,6 +471,10 @@ console.log('判定（机器人碰到时的成功率）：' + Object.keys(stat.c
   const ac = per.map((c) => c.acct || { earn: 0, spend: 0, lost: 0 });
   console.log('银两：每局收入 ' + avg(ac.map((a) => a.earn)) + ' 两（低的一成 ' + pct(ac.map((a) => a.earn), 0.1) + '，高的一成 ' + pct(ac.map((a) => a.earn), 0.9) + '），花出去 ' + avg(ac.map((a) => a.spend)) + ' 两，被抢 ' + avg(ac.map((a) => a.lost)) + ' 两（占花销 ' + Math.round(ac.reduce((s, a) => s + a.lost, 0) / Math.max(1, ac.reduce((s, a) => s + a.spend + a.lost, 0)) * 100) + '%）；买过装备的局 ' + Math.round(per.filter((c) => c.gear).length / per.length * 100) + '%，结束时平均穿着 ' + avg(per.map((c) => c.gearN)) + ' 件；押镖每局 ' + avg(per.map((c) => c.escort)) + ' 趟');
   console.log('探索：每局 ' + avg(ex.map((l) => l.length)) + ' 次、' + kinds(ex) + ' 种，同一件平均出现 ' + rep(ex) + ' 次，本地事件占 ' + localShare + '%；路上：每局 ' + avg(road.map((l) => l.length)) + ' 次、' + kinds(road) + ' 种；打坐每局 ' + avg(per.map((c) => c.rest)) + ' 天；打听每局 ' + avg(per.map((c) => c.ask)) + ' 次');
+  console.log('步数：每局 ' + Math.round(stat.steps / Math.max(1, stat.games)) + ' 步；练功每局 ' + Math.round((stat.pracCalls || 0) / Math.max(1, stat.games)) + ' 次');
+  console.log('战斗：每局 ' + Math.round(stat.fights / stat.games) + ' 场，其中一招了结 ' + Math.round((stat.quick || 0) / stat.games) + ' 场');
+  { const top = Object.entries(stat.evSeen).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([id, n]) => { const E = QX.EVENTS[id] || {}; return id + '(' + (E.road ? '路' : E.explore ? '探' : E.chore ? '差' : E.train ? '练' : E.act ? '事' : '它') + ')' + Math.round(n / stat.games * 10) / 10; }); console.log('最常出现的事件（每局次数）：' + top.join('、')); }
+  { const c = stat.cat || {}; const tot = stat.steps; console.log('步数构成（每局）：' + Object.keys(c).map((k) => k + ' ' + Math.round(c[k] / stat.games)).join('，') + '，其余（地点上的操作）' + Math.round((tot - Object.values(c).reduce((a, b) => a + b, 0)) / stat.games)); }
 }
 console.log('每件信物被拿到的局数：' + relics.map((r) => QX.ITEMS[r].name + ' ' + (stat.relicsGot[r] || 0)).join('，'));
 console.log('路线检查：' + ROUTES.length + ' 条，走通 ' + Object.values(routeOk).reduce((a, b) => a + b, 0) + ' 条；每件信物走得通的路线数：' + relics.map((x) => QX.ITEMS[x].name + ' ' + (routeOk[x] || 0)).join('，'));
@@ -476,6 +483,28 @@ if (stat.deaths.length) console.log('死因（前几种）：' + [...new Set(sta
 if (never.length) console.log('从未触发的事件（' + never.length + '）：' + never.join('、'));
 if (neverAll.length > never.length) console.log('从未抽到的探索、路上事件：' + neverAll.filter((x) => !never.includes(x)).join('、'));
 if (unread.length) console.log('设了但没人用 g.f 读的标记（只影响后面不显示变体，提示）：' + unread.join('、'));
+
+/* 战斗对比：同一个角色，“自动”（不看意图、不看克制）和“会看意图”各打 N 场，看胜率和残血。会看的要明显更强，但自动也不能太惨 */
+function duel(ai, foes, N, setup) {
+  let win = 0, hpLeft = 0;
+  for (let k = 0; k < N; k++) {
+    QX.rnd = rng;
+    QX.newGame({ name: '比', sex: '男', origin: 'farmer' });
+    const S = QX.state(); S.ev = null; S.queue = [];
+    setup(S);
+    S.hp = QX.maxHp(); S.mp = QX.maxMp();
+    QX.startFight({ foes, noFlee: true, easy: false });
+    let n = 0;
+    while (S.fight && !S.fight.result && n++ < 120) QX.fightAct(ai());
+    if (S.fight && S.fight.result === 'win') { win++; hpLeft += S.fight.allies[0].hp / S.fight.allies[0].max; }
+  }
+  return { win: Math.round(win * 100 / N), hp: win ? Math.round(hpLeft * 100 / win) : 0 };
+}
+const midSetup = (S) => { Object.assign(S.st, { 根骨: 30, 内力: 40, 攻击: 40, 防御: 25, 轻功: 22 }); S.xp = 400; S.arts.taizu = { lv: 5, xp: 0 }; S.arts.tuna = { lv: 5, xp: 0 }; };
+for (const [nm, foes] of [['两个强化百夫长', [{ id: 'baihu', k: 1.5 }, { id: 'baihu', k: 1.5 }]], ['强化头目带两个山贼', [{ id: 'zeitou', k: 3.4 }, { id: 'shanzei', k: 2.4 }, { id: 'shanzei', k: 2.4 }]]]) {
+  const a = duel(() => QX.aiOption(), foes, 100, midSetup), b = duel(() => QX.aiSmart(), foes, 100, midSetup);
+  console.log('战斗对比【' + nm + '】：自动 胜 ' + a.win + '%（赢时剩血 ' + a.hp + '%）；会看意图 胜 ' + b.win + '%（赢时剩血 ' + b.hp + '%）');
+}
 for (const w of warn) console.log('提示：' + w);
 if (problems.length) {
   console.log('\n发现 ' + problems.length + ' 个问题：');
