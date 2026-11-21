@@ -573,7 +573,7 @@
         const ch = o.ch;
         let meta = '';
         if (ch.check) meta += '<span>' + esc(statName(ch.check[0]) + ' ' + G.s(ch.check[0]) + ' · ' + t('成功率 {p}%', { p: E.odds(ch.check) })) + '</span>';
-        if (!isPause) meta += ch.canon ? '<span class="tag canon">' + esc(T.canon) + '</span>' : (ch.dev === 0 ? '' : '<span class="tag mod">' + esc(T.modTag) + '</span>');
+        if (!isPause && T.choiceTags !== false) meta += ch.canon ? '<span class="tag canon">' + esc(T.canon) + '</span>' : (ch.dev === 0 ? '' : '<span class="tag mod">' + esc(T.modTag) + '</span>');
         if (ch.fatal) meta += '<span class="tag bad">' + t('命终') + '</span>';
         const hint = ch.hint ? val(ch.hint) : '';
         return '<button class="choice" id="ch-' + k + '" data-act="choose" data-i="' + o.i + '"><span class="t">' + (k + 1) + '. ' + esc(pol(val(ch.t))) + (hint ? '<small class="hint-l">' + esc(hint) + '</small>' : '') + '</span><span class="m">' + meta + '</span></button>';
@@ -594,6 +594,7 @@
   function resultCard() {
     const r = ui.result.r, n = ui.result.node;
     let h = '<div class="result" aria-live="polite"><div class="decide-meta"><span>' + esc(t('刚才的抉择') + ' · ' + n.t) + '</span>';
+    if (T.choiceTags === false && !r.pause) h += '<span>' + esc(r.canon ? T.canon : T.modTag) + '</span>';
     if (r.check) h += '<span class="roll ' + (r.ok ? 'ok' : 'no') + '">' + esc(t(r.ok ? '{k}判定成功（成功率 {p}%）' : '{k}判定失败（成功率 {p}%）', { k: statName(r.check[0]), p: r.p })) + '</span>';
     if (!r.canon && r.dev > 0) h += '<span style="color:var(--mod)">' + esc(T.devName) + ' +' + r.dev + '</span>';
     h += '</div><p>' + esc(r.res || (r.pause ? t('你把这个答案记在了心里。') : t('事情就这样定了。'))) + '</p>';
