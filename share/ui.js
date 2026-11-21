@@ -772,6 +772,8 @@
     const text = JY.shareText(l, line, false);
     const enc = encodeURIComponent;
     return {
+      x: 'https://x.com/intent/tweet?url=' + enc(url) + '&text=' + enc(Array.from(text).slice(0, 200).join('')),
+      facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + enc(url),
       weibo: 'https://service.weibo.com/share/share.php?url=' + enc(url) + '&title=' + enc(text),
       qzone: 'https://sns.qzone.qq.com/cgi-bin/qzshare/cgi_qzshare_onekey?url=' + enc(url) + '&title=' + enc(T.title) + '&summary=' + enc(text),
     };
@@ -799,7 +801,8 @@
       + '<button class="b" id="sh-copy" data-act="share-copy">' + t('复制文字总结和链接') + '</button>'
       + '<a class="b" id="sh-save" href="' + ui.share.png + '" download="' + esc(T.title + '-' + l.name) + '.png">' + t('保存图片') + '</a>'
       + (zh ? '<a class="b" id="sh-weibo" href="' + esc(links.weibo) + '" target="_blank" rel="noopener">' + t('发到微博') + '</a>'
-        + '<a class="b" id="sh-qzone" href="' + esc(links.qzone) + '" target="_blank" rel="noopener">' + t('发到 QQ 空间') + '</a>' : '')
+        + '<a class="b" id="sh-qzone" href="' + esc(links.qzone) + '" target="_blank" rel="noopener">' + t('发到 QQ 空间') + '</a>' : JY.LANG === 'en' ? '<a class="b" id="sh-x" href="' + esc(links.x) + '" target="_blank" rel="noopener">Share on X</a>'
+        + '<a class="b" id="sh-facebook" href="' + esc(links.facebook) + '" target="_blank" rel="noopener">Share on Facebook</a>' : '')
       + '</div><p class="hint" id="share-msg" aria-live="polite"></p>'
       + '<div class="lbl">' + t('文字总结') + '</div><textarea id="share-text" class="share-text" readonly rows="7">' + esc(text) + '</textarea>'
       + '<div class="lbl">' + t('分享图') + '</div><img class="card-img" id="share-img" src="' + ui.share.png + '" alt="' + esc(t('{name}的生平卡片', { name: l.name })) + '">'
@@ -820,6 +823,10 @@
     if (w) w.href = links.weibo;
     const q = document.getElementById('sh-qzone');
     if (q) q.href = links.qzone;
+    const x = document.getElementById('sh-x');
+    if (x) x.href = links.x;
+    const fb = document.getElementById('sh-facebook');
+    if (fb) fb.href = links.facebook;
   }
   function shareMsg(m) { const el = document.getElementById('share-msg'); if (el) el.textContent = m; }
   function copyShareText() {
