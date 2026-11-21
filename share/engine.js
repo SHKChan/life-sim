@@ -45,6 +45,10 @@
     devMode: 'sum',                   // 改命度怎么算：sum 累加每个改命选项的 dev（封顶 100）；ratio 按“和大多数人不一样的选择”占几成
     // 以下都是可选的钩子，没写就按原来的规则：
     // onStat(g, k, d)：g.stat 改属性之前调用，返回 false 表示游戏自己处理了（例如把“财富”换算成钱）
+    // GAME.endNote = { max, clean, options(life) }：可选墓志留言输入，默认关闭；仅写本机 life.note
+    // GAME.share.badgeLimit：可选分享卡附加行数；未设置仍为4行
+    // onFocus(g, name)：界面手选年度重心后通知，默认关闭
+    // defaultFocus(c, age, opts, g)：可选，返回年度默认重心名；无效时沿用原逻辑，默认关闭
     // yearEnd(g, age)：每年末、年度重心结算之后调用（记账、同住的人、年度小结）
     // deathLine(g, id, cause)：别人去世时生平里那一行的写法（例如带上“你的爷爷”和岁数）
     // flavorRepeat：闲笔都用过一遍以后，允许再用（长寿的人晚年不会一行字都没有）
@@ -363,6 +367,9 @@
   E.defaultFocus = (c, age) => {
     const opts = E.focusOptions(age);
     if (!opts.length) return null;
+    const hook = CONF().defaultFocus;
+    const preferred = hook && hook(c, age, opts, G);
+    if (opts.some((o) => o.name === preferred)) return preferred;
     const want = c.arc.focus;
     return opts.find((o) => o.name === want) ? want : opts[0].name;
   };

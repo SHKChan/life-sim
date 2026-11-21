@@ -1,0 +1,12 @@
+投胎 100 次。人生节点 392（抉择 170，触发过 153），意外 191，世界事件 152
+平均寿命 92（最短 48，最长 103），平均与众不同 16%
+  户籍：城鎮 58%，農村 29%，縣城 13%
+  学历：本科 61%，大專 22%，碩士 7%，職高 5%，初中 2%，海外碩士 2%，博士 1%
+  职业：退休 97%，公司職員 1%，養老護理員 1%，超市理貨員 1%
+  婚姻：喪偶 75%，再婚 11%，離異 8%，已婚 4%，單身 2%
+  住处：西安，和孩子一起 13%，成都，和孩子一起 9%，回了老家 8%，廣州，和孩子一起 8%，南京，和孩子一起 7%，武漢，和孩子一起 7%，養老院 5%，北京，和孩子一起 5%，深圳，和孩子一起 4%，杭州，和孩子一起 3%
+  死因：壽終正寢 97%，久病不起，在醫院去世 2%，手術後沒能醒過來 1%
+从未触发的抉择：y_zhuanke, y_luobang, y_repeat_college, y_army_back, y_marry32, m_42_none, m_44_own, m_58_home, o_where_nokid, o_fall, i_mechanic_30, i_welder_30, i_cnc_30, i_renovation_30, i_driver_30, i_rider_30, i_maternity_30
+从未触发的意外：e_o_last_hospital, e_part_time_scam, e_rain_rider, e_rent_up, e_relative_kid, e_net_loan, e_rent_offer, e_wage_owed, e_village_coop
+
+没有发现问题。

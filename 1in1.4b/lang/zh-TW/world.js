@@ -254,14 +254,14 @@
     { name: '用功读书', minAge: 6, maxAge: 22, d: '學識 +2～3，心情會悶。中考、高考、考研都看學識。', fx: (g) => { g.stat('学识', g.rnd() < 0.5 ? 3 : 2); if (g.rnd() < 0.35) g.stat('心情', -1); } },
     { name: '贪玩', minAge: 6, maxAge: 17, d: '心情 +2、人緣 +1，學識會往下掉。', fx: (g) => { g.stat('心情', 2); g.stat('人缘', 1); if (g.rnd() < 0.5) g.stat('学识', -1); } },
     { name: '帮家里干活', minAge: 8, maxAge: 17, d: '人緣、健康；人會早熟一些。', fx: (g) => { g.stat('人缘', 1); g.stat('健康', 1); if (g.rnd() < 0.3) g.stat('财富', 1); } },
-    { name: '学个特长', minAge: 6, maxAge: 17, d: '學識，偶爾有意外收穫；家裡要花錢。', fx: (g) => { g.stat('学识', 1); if (g.rnd() < 0.4) g.stat('事业', 1); if (g.rnd() < 0.3) g.stat('财富', -1); } },
-    { name: '埋头工作', minAge: 16, d: '事業 +2～3（越往上越難漲），年終多拿一筆；健康和心情慢慢掉。事業高，工資高、升職和創業更容易成。', fx: (g) => { g.stat('事业', g.rnd() < 0.5 ? 3 : 2); g.stat('财富', 1); if (g.rnd() < 0.35) g.stat('健康', -1); if (g.rnd() < 0.3) g.stat('心情', -1); } },
-    { name: '学习充电', minAge: 18, d: '學識；學識高時事業也會漲。二十五歲以後不學，學識會慢慢舊掉。', fx: (g) => { g.stat('学识', 2); if (g.rnd() < g.s('学识') / 150) g.stat('事业', 1); } },
-    { name: '搞副业', minAge: 18, d: '財富，看運氣；累。', fx: (g) => { if (g.rnd() < 0.6) g.stat('财富', 2); else g.stat('财富', -1); if (g.rnd() < 0.3) g.stat('健康', -1); } },
-    { name: '陪伴家人', minAge: 18, d: '人緣 +2、心情 +1；工作上顧不過來，事業偶爾往下掉。', fx: (g) => { g.stat('人缘', 2); g.stat('心情', 1); if (g.rnd() < 0.3) g.stat('事业', -1); } },
+    { name: '学个特长', minAge: 6, maxAge: 15, d: '學識，偶爾有意外收穫；家裡要花錢。', fx: (g) => { g.stat('学识', 1); if (g.rnd() < 0.4) g.stat('事业', 1); if (g.rnd() < 0.3) g.stat('财富', -1); } },
+    { name: '埋头工作', minAge: 16, maxAge: 69, d: '事業 +2～3（越往上越難漲），年終多拿一筆；健康和心情慢慢掉。連續多年會透支，身體會垮，收入也會受影響。事業高，工資高、升職和創業更容易成。', fx: (g) => { g.stat('事业', g.rnd() < 0.5 ? 3 : 2); g.stat('财富', 1); if (g.rnd() < 0.3) g.stat('心情', -1); } },
+    { name: '学习充电', minAge: 23, maxAge: 39, d: '學識；學識高時事業也會漲。二十五歲以後不學，學識會慢慢舊掉。', fx: (g) => { g.stat('学识', 2); if (g.rnd() < g.s('学识') / 150) g.stat('事业', 1); } },
+    { name: '搞副业', minAge: 18, maxAge: 49, d: '財富，看運氣；累。', fx: (g) => { if (g.rnd() < 0.6) g.stat('财富', 2); else g.stat('财富', -1); if (g.rnd() < 0.3) g.stat('健康', -1); } },
+    { name: '陪伴家人', minAge: 23, d: '人緣 +2、心情 +1；工作上顧不過來，事業偶爾往下掉。', fx: (g) => { g.stat('人缘', 2); g.stat('心情', 1); if (g.rnd() < 0.3) g.stat('事业', -1); } },
     { name: '锻炼身体', minAge: 16, d: '健康回升；六十歲以後只能老得慢一些。', fx: (g) => { g.stat('健康', 2); if (g.rnd() < 0.3) g.stat('心情', 1); } },
-    { name: '躺平休息', minAge: 18, d: '心情 +2；事業往下掉，錢只出不進。', fx: (g) => { g.stat('心情', 2); if (g.rnd() < 0.15) g.stat('健康', 1); g.stat('事业', -1); if (g.rnd() < 0.5) g.stat('财富', -1); } },
-    { name: '出去走走', minAge: 18, d: '心情、見識；意外多，花錢。', fx: (g) => { g.stat('心情', 1); g.stat('学识', 1); if (g.rnd() < 0.4) g.stat('财富', -1); } },
+    { name: '躺平休息', minAge: 18, maxAge: 54, d: '心情 +2；事業往下掉，錢只出不進。', fx: (g) => { g.stat('心情', 2); if (g.rnd() < 0.15) g.stat('健康', 1); g.stat('事业', -1); if (g.rnd() < 0.5) g.stat('财富', -1); } },
+    { name: '出去走走', minAge: 18, maxAge: 84, d: '心情、見識；意外多，花錢。', fx: (g) => { g.stat('心情', 1); g.stat('学识', 1); if (g.rnd() < 0.4) g.stat('财富', -1); } },
     { name: '含饴弄孙', minAge: 55, d: '人緣、心情；累一點。', fx: (g) => { g.stat('人缘', 2); g.stat('心情', 1); if (g.rnd() < 0.2) g.stat('健康', -1); } },
   ];
 
@@ -340,7 +340,7 @@
       return city;
     },
     setEdu: (g, key, title) => { g.remember('edu', key); g.info('学历', title); },
-    setJob: (g, key, title) => { g.remember('job', key); g.info('职业', title); },
+    setJob: (g, key, title) => { if (g.recall('job') !== key && key !== 'retired') g.remember('tradeOwn', false); if (g.recall('lightDuty') && g.recall('job') !== key) g.remember('lightDuty', false); g.remember('job', key); g.info('职业', title); },
     // 结婚：生成配偶（id 'sp'），写进家人
     marry: (g, o) => {
       o = o || {};

@@ -21,7 +21,7 @@
 
   /* ---------- 这一世的结果 ---------- */
   const EDU_T = { primary: '小學', junior: '初中', vocational: '職高中專', senior: '高中', college: '大專', bachelor: '本科', master: '碩士', phd: '博士' };
-  const JOB_T = { none: '沒有正經工作', farmer: '種地', worker: '工人', rider: '騎手', driver: '司機', shop: '開店', office: '公司職員', tech: '技術崗', civil: '公務員', teacher: '老師', doctor: '醫生', nurse: '護士', sales: '銷售', boss: '老闆', creator: '自媒體', soldier: '軍人', freelance: '自由職業', retired: '退休' };
+  const JOB_T = { restaurant: '飯館經營者', beauty: '理髮美容師', grocery: '小超市經營者', mechanic: '汽修師傅', electrician: '電工', welder: '焊工', cnc: '數控技工', renovation: '裝修師傅', parcel: '快遞站經營者', maternity: '月嫂育兒嫂', eldercare: '養老護理員', housekeeping: '家政服務員', cooperative: '合作社經營者', livestock: '養殖戶', grower: '種植大戶', construction: '建築工人', none: '沒有正經工作', farmer: '種地', worker: '工人', rider: '騎手', driver: '司機', shop: '開店', office: '公司職員', tech: '技術崗', civil: '公務員', teacher: '老師', doctor: '醫生', nurse: '護士', sales: '銷售', boss: '老闆', creator: '自媒體', soldier: '軍人', freelance: '自由職業', retired: '退休' };
   const FAM_T = { rich: '富裕人家', civil: '體制內家庭', white: '職員家庭', smallbiz: '個體戶家庭', worker: '工人家庭', farmer: '農戶', migrant: '父母外出打工' };
   const HUKOU_T = { city: '城鎮', county: '縣城', rural: '農村' };
   // 稀有度用的几项（和 tools/rarity.js 的统计口径一致）
@@ -37,7 +37,7 @@
     const s = {
       hukou: r('hukou'), family: r('family'), leftBehind: !!r('leftBehind'), prov: r('prov'), region: r('region'),
       edu: r('edu'), gk: r('gk'), uni: r('uni'), job: r('job'), lastJob: r('preJob') || r('job'), love: r('love'), kids: r('kids') || 0,
-      tier: r('tier') || 5, workCity: r('workCity'), house: r('house'), backHome: r('backHome'), startup: r('startup'), biz: r('biz'),
+      tradeOwn: !!r('tradeOwn'), tier: r('tier') || 5, workCity: r('workCity'), house: r('house'), backHome: r('backHome'), startup: r('startup'), biz: r('biz'),
       ladder: r('ladder50') || r('ladder40'), aiMove: r('aiMove'), kidPlan: r('kidPlan'), remarried: !!r('remarried'),
       hyBlown: Number(r('hyBlown')) || 0, crash: r('crash'), finGain: Number(r('finGain')) || 0, paAcct: Number(r('paAcct')) || 0,
       net: Math.round(CN.net(g)), age: life.to - life.born, city: r('city'),
@@ -82,7 +82,7 @@
     { id: 'tenmil', t: '千萬身家', d: '臨終時淨資產過了一千萬', ok: (s) => s.net >= 1e7 },
     { id: 'selfmade', t: '白手起家', d: '農戶、工人或打工家庭出身，掙下八百萬家底', ok: (s) => ['farmer', 'worker', 'migrant'].includes(s.family) && s.net >= 8e6 },
     { id: 'founder', t: '創業成了', d: '合夥創業，活了下來', ok: (s) => s.startup === 'ok' },
-    { id: 'boss', t: '自己當老闆', d: '擺攤、網店、加盟，做成了一門生意', ok: (s) => ['stall', 'online', 'franchise'].includes(s.biz) },
+    { id: 'boss', t: '自己當老闆', d: '擺攤、網店、加盟，做成了一門生意', ok: (s) => (['stall', 'online', 'franchise'].includes(s.biz) || s.tradeOwn) },
     { id: 'top', t: '走到了頂', d: '五十歲上做到了單位裡的頭一號人物', ok: (s) => s.ladder === 'top' },
     { id: 'investor', t: '會理財', d: '一輩子理財賺了五百萬以上', ok: (s) => s.finGain >= 5e6 },
     { id: 'chive', t: '交過學費', d: '碰上理財暴雷，或者在股災裡割了肉', ok: (s) => s.hyBlown > 0 || s.crash === 'cut' },

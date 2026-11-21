@@ -21,11 +21,17 @@ ctx.window = ctx;
 vm.createContext(ctx);
 for (const s of scripts) vm.runInContext(fs.readFileSync(path.join(dir, s), 'utf8'), ctx, { filename: s });
 const JY = ctx.JY, E = JY.engine;
+// 统计不测试浏览器持久化；避免每年序列化整份生平。图鉴的独立存储仍照常。
+E.save = () => {};
 const N = Number(process.argv[2]) || 3000;
 const lives = [];
 for (let i = 0; i < N; i++) {
+  // reset 会丢掉 W.gen，先清理上一世的人，避免数千局的人物堆在同一个数据池。
+  const old = E.get().W;
+  (old && old.gen || []).forEach((d) => { const c = JY.byId[d.id]; if (c) { JY.CHARS.splice(JY.CHARS.indexOf(c), 1); delete JY.byId[d.id]; } });
   E.reset();
   E.startRandom();
+  if (JY.CHARS.length > 100) throw new Error('人物池没有清理干净');
   let r = E.peek();
   if (r.type === 'idle') r = E.nextYear();
   let guard = 0;

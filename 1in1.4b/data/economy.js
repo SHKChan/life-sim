@@ -34,7 +34,7 @@
 
   /* ---------- 数字 ---------- */
   // 年收入基数（元，按省会城市、事业 50 估）
-  const INCOME = { none: 0, farmer: 30000, worker: 70000, rider: 80000, driver: 80000, shop: 70000, office: 100000, tech: 200000, civil: 110000, teacher: 100000, doctor: 160000, nurse: 90000, sales: 100000, boss: 180000, creator: 70000, soldier: 80000, freelance: 80000, retired: 0 };
+  const INCOME = { restaurant: 95000, beauty: 85000, grocery: 75000, mechanic: 100000, electrician: 95000, welder: 105000, cnc: 100000, renovation: 90000, parcel: 85000, maternity: 105000, eldercare: 75000, housekeeping: 65000, cooperative: 85000, livestock: 80000, grower: 75000, construction: 85000, none: 0, farmer: 30000, worker: 70000, rider: 80000, driver: 80000, shop: 70000, office: 100000, tech: 200000, civil: 110000, teacher: 100000, doctor: 160000, nurse: 90000, sales: 100000, boss: 180000, creator: 70000, soldier: 80000, freelance: 80000, retired: 0 };
   const TIER_INC = { 1: 1.5, 2: 1, 3: 0.8, 4: 0.65, 5: 0.5 };
   // 一个成年人一年的日常开销、一年房租（元），一套普通住房（万）
   const LIVE = { 1: 60000, 2: 45000, 3: 36000, 4: 28000, 5: 18000 };
@@ -113,6 +113,8 @@
       // 老板、博主看运气
       const luck = job === 'boss' || job === 'creator' ? 0.4 + rnd() * 1.4 : 1;
       mine = base * (TIER_INC[tierOf(g)] || 0.8) * career * luck;
+      if ((g.recall('fatigue') || 0) >= 5 && !g.recall('lightDuty')) mine *= 0.68;
+      // 轻岗已通过事业下降影响工资，不再重复扣一次。
       if (g.recall('side')) mine += 10000;
       mine += Number(g.recall('rental')) || 0; // 第二套房的租金
     }
@@ -444,8 +446,32 @@
     if (p && g.Y - p.y >= p.life) {
       out.push('陪了你 ' + (g.Y - p.y) + ' 年的' + p.name + '老了，在一个安静的早上走了。你在楼下的树边给它挖了个小坑。');
       g.remember('petNow', null);
+      return out;
     }
+    if (p && on(g)) { CN.pay(g, 1200); if (g.rnd() < 0.25) g.stat('心情', 1); }
     return out;
+  }
+
+  function overwork(g, age) {
+    if (age < 18) return;
+    let d = { '埋头工作': 1, '搞副业': 0.6, '学习充电': 0.2, '陪伴家人': -0.5, '出去走走': -1, '躺平休息': -1, '锻炼身体': -1.2 }[g.focus];
+    if (d == null) d = -0.3;
+    if (g.focus === '埋头工作' && ['tech', 'rider', 'boss', 'doctor'].includes(g.recall('job'))) d += 0.5;
+    if (g.recall('lightDuty') && d > 0) d *= 0.5;
+    if (g.s('健康') < 40) d += 0.3;
+    const f = Math.max(0, Math.min(12, (Number(g.recall('fatigue')) || 0) + d));
+    g.remember('fatigue', f);
+    const strain = (Number(g.recall('workStrain')) || 0) + (f >= 5 ? (g.recall('lightDuty') ? 0.5 : 1) : 0);
+    g.remember('workStrain', strain);
+    // 长年透支的损伤不会在退休当年消失。
+    if (age >= 60 && strain >= 20 && g.s('健康') > 25) g.stat('健康', g.recall('lightDuty') ? -1 : -3);
+    g.info('状态', f >= 4 ? '长期透支' : '');
+    if (f >= 5 && g.rnd() < 0.5) g.stat('健康', -1);
+    if (age >= 28 && age <= 60) {
+      const warn = g.recall('fatigueWarn');
+      const p = warn === 'ignore' && f >= 8 ? 0.006 * (1.7 - g.s('健康') / 100) : !warn && f >= 10 ? 0.02 : 0;
+      if (p && g.rnd() < p) { g.log('那天你没能从一场急病中缓过来。', 'auto'); g.die('过劳猝死'); }
+    }
   }
 
   /* ---------- 身体和心里 ----------
@@ -476,7 +502,7 @@
     }
     if (g.since('illY') >= 0 && g.since('illY') < 4) return out;
     const base = age < 40 ? 0.015 : age < 60 ? 0.035 : age < 75 ? 0.07 : 0.11;
-    const p = base * (1.7 - H / 100) * (M < 30 ? 1.5 : 1);
+    const p = base * (1.7 - H / 100) * (M < 30 ? 1.5 : 1) * (1 + (Number(g.recall('fatigue')) || 0) / 10);
     if (g.rnd() >= p) return out;
     g.remember('illY', true);
     const serious = g.rnd() < (age < 50 ? 0.25 : 0.4);
@@ -557,7 +583,7 @@
    * 往下掉的不打折。返回 false 表示这里已经改好了属性。 */
   const SOFT = { '人缘': 55, '心情': 70, '学识': 80 };
   const EDU_CAP = { primary: 30, junior: 36, vocational: 42, senior: 42, college: 48, bachelor: 54, master: 60, phd: 66 };
-  const careerLine = (g) => { const e = (EDU_CAP[g.recall('edu')] || 36) + (CN.giftCareer ? CN.giftCareer(g) : 0); return ['boss', 'creator', 'freelance', 'shop'].includes(g.recall('job')) ? Math.max(e, 50) : e; };
+  const careerLine = (g) => { const e = (EDU_CAP[g.recall('edu')] || 36) + (CN.giftCareer ? CN.giftCareer(g) : 0); return (['boss', 'creator', 'freelance', 'shop'].includes(g.recall('job')) || g.recall('tradeOwn')) ? Math.max(e, 50) : e; };
   const frac = (g, x) => Math.floor(x) + (g.rnd() < x - Math.floor(x) ? 1 : 0);
   function soft(g, k, d) {
     if (d <= 0) return true;
@@ -584,6 +610,8 @@
     yearEnd: (g, age) => {
       reconcile(g, age).forEach((t) => g.log(t, 'auto'));
       pets(g).forEach((t) => g.log(t, 'auto'));
+      overwork(g, age);
+      if (L_().death) return;
       body(g, age).forEach((t) => g.log(t, 'auto'));
       if (L_().death) return;
       // 学识不用会旧（v2.1）：二十五岁以后，这一年没在“学习充电”，学的东西有三成半的可能旧掉一点

@@ -1,0 +1,9 @@
+/* 重心说明继承了工具行的不换行规则；在菜单里恢复折行。 */
+.fmenu .fopt { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.life-row [data-life-note] { grid-column: 1 / -1; overflow-wrap: anywhere; }
+
+.end-note-card input { font-size: 16px; }
+@media (max-width: 820px) {
+  .end-note-card .card-h { display: block; }
+  .end-note-card .card-h small { display: block; margin-top: 4px; text-align: left; }
+}

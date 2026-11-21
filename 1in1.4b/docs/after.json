@@ -1,0 +1,221 @@
+[
+  {
+    "choice": "canon",
+    "focus": "def",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 51.3,
+        "three": 2.5
+      }
+    },
+    "earlyCauses": {},
+    "age": 93,
+    "early": 0,
+    "health45": 67,
+    "knowledge60": 85,
+    "knowledge60p10": 76,
+    "knowledge60p90": 90,
+    "knowledgeEnd": 73,
+    "career": 43,
+    "net": 3534505,
+    "asked": 36.67,
+    "wishes": 1.43,
+    "wish2": 51.3,
+    "wish3": 2.5
+  },
+  {
+    "choice": "canon",
+    "focus": "work",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 50,
+        "three": 10
+      }
+    },
+    "earlyCauses": {
+      "手术后没能醒过来": 3,
+      "久病不起，在医院去世": 1
+    },
+    "age": 84,
+    "early": 5,
+    "health45": 54,
+    "knowledge60": 82,
+    "knowledge60p10": 68,
+    "knowledge60p90": 88,
+    "knowledgeEnd": 74,
+    "career": 84,
+    "net": 3852377,
+    "asked": 36.64,
+    "wishes": 1.55,
+    "wish2": 50,
+    "wish3": 10
+  },
+  {
+    "choice": "canon",
+    "focus": "rest",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 12.5,
+        "three": 3.8
+      }
+    },
+    "earlyCauses": {
+      "手术后没能醒过来": 2,
+      "久病不起，在医院去世": 1
+    },
+    "age": 93,
+    "early": 3.8,
+    "health45": 62,
+    "knowledge60": 84,
+    "knowledge60p10": 74,
+    "knowledge60p90": 88,
+    "knowledgeEnd": 71,
+    "career": 4,
+    "net": 1429863,
+    "asked": 34.15,
+    "wishes": 0.93,
+    "wish2": 12.5,
+    "wish3": 3.8
+  },
+  {
+    "choice": "canon",
+    "focus": "gym",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 38.8,
+        "three": 6.3
+      }
+    },
+    "earlyCauses": {},
+    "age": 95,
+    "early": 0,
+    "health45": 100,
+    "knowledge60": 83,
+    "knowledge60p10": 69,
+    "knowledge60p90": 89,
+    "knowledgeEnd": 71,
+    "career": 14,
+    "net": 2694240,
+    "asked": 35.44,
+    "wishes": 1.33,
+    "wish2": 38.8,
+    "wish3": 6.3
+  },
+  {
+    "choice": "odd",
+    "focus": "def",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 65,
+        "three": 15
+      }
+    },
+    "earlyCauses": {
+      "久病不起，在医院去世": 1
+    },
+    "age": 90,
+    "early": 1.3,
+    "health45": 66,
+    "knowledge60": 88,
+    "knowledge60p10": 81,
+    "knowledge60p90": 91,
+    "knowledgeEnd": 79,
+    "career": 60,
+    "net": 2813149,
+    "asked": 33.56,
+    "wishes": 1.75,
+    "wish2": 65,
+    "wish3": 15
+  },
+  {
+    "choice": "odd",
+    "focus": "work",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 68.8,
+        "three": 20
+      }
+    },
+    "earlyCauses": {
+      "久病不起，在医院去世": 4,
+      "因病去世，走得太早": 1
+    },
+    "age": 83,
+    "early": 6.3,
+    "health45": 62,
+    "knowledge60": 84,
+    "knowledge60p10": 70,
+    "knowledge60p90": 90,
+    "knowledgeEnd": 78,
+    "career": 81,
+    "net": 2711459,
+    "asked": 33.4,
+    "wishes": 1.88,
+    "wish2": 68.8,
+    "wish3": 20
+  },
+  {
+    "choice": "odd",
+    "focus": "rest",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 31.3,
+        "three": 2.5
+      }
+    },
+    "earlyCauses": {},
+    "age": 93,
+    "early": 0,
+    "health45": 74,
+    "knowledge60": 85,
+    "knowledge60p10": 74,
+    "knowledge60p90": 90,
+    "knowledgeEnd": 76,
+    "career": 11,
+    "net": 195593,
+    "asked": 31.54,
+    "wishes": 1.13,
+    "wish2": 31.3,
+    "wish3": 2.5
+  },
+  {
+    "choice": "odd",
+    "focus": "gym",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 53.8,
+        "three": 7.5
+      }
+    },
+    "earlyCauses": {},
+    "age": 95,
+    "early": 0,
+    "health45": 100,
+    "knowledge60": 84,
+    "knowledge60p10": 70,
+    "knowledge60p90": 89,
+    "knowledgeEnd": 74,
+    "career": 34,
+    "net": 1504910,
+    "asked": 32.06,
+    "wishes": 1.44,
+    "wish2": 53.8,
+    "wish3": 7.5
+  }
+]

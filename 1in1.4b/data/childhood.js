@@ -548,8 +548,8 @@
       text: '你十六岁了，可以正经出去干活了。表哥说厂里在招人，饭馆的老板也说你可以留下学厨。',
       choices: [
         { t: '跟表哥去南方进厂', canon: true, fx: (g) => { const c = CN.goCity(g, 2, CN.pick(['东莞', '苏州', '佛山', '宁波'])); CN.setJob(g, 'worker', '工厂流水线'); g.move('factory', c + ' · 电子厂'); g.stat('财富', 3); g.stat('健康', -2); }, res: (g) => '你在' + g.recall('workCity') + '的流水线上一站就是十二个小时。第一个月发了钱，你寄了一半回家，剩下的请表哥吃了一顿烧烤。' },
-        { t: '留在饭馆学厨', dev: 15, fx: (g) => { CN.setJob(g, 'shop', '饭馆学徒'); g.move('county', '县城 · 饭馆后厨'); g.remember('craft', 'cook'); g.stat('人缘', 2); }, res: '师傅脾气很差，刀工很好。你切坏了三十斤土豆，才学会切丝。师傅嘴上骂，收工时给你多盛了一碗饭。' },
-        { t: '跟村里的叔叔学手艺', dev: 20, fx: (g) => { CN.setJob(g, 'worker', '学徒'); g.remember('craft', CN.pick(['tile', 'electric', 'weld'])); CN.goHome(g); g.stat('健康', 2); }, res: '你跟着叔叔走村串户，装水电、贴瓷砖。叔叔说，手艺在身上，饿不死。' },
+        { t: '留在饭馆学厨', dev: 15, fx: (g) => { CN.setJob(g, 'restaurant', '饭馆学徒'); g.move('county', '县城 · 饭馆后厨'); g.remember('craft', 'cook'); g.stat('人缘', 2); }, res: '师傅脾气很差，刀工很好。你切坏了三十斤土豆，才学会切丝。师傅嘴上骂，收工时给你多盛了一碗饭。' },
+        { t: '跟村里的叔叔学手艺', dev: 20, fx: (g) => { CN.setJob(g, 'worker', '学徒'); g.remember('craft', CN.pick(['tile', 'electric', 'weld'])); CN.setJob(g, { tile: 'renovation', electric: 'electrician', weld: 'welder' }[g.recall('craft')], '手艺学徒'); CN.goHome(g); g.stat('健康', 2); }, res: '你跟着叔叔走村串户，装水电、贴瓷砖。叔叔说，手艺在身上，饿不死。' },
       ] },
 
     /* ================= 17 岁 ================= */

@@ -14,7 +14,7 @@
   const CN = JY.CN;
 
   /* ---------- 小工具 ---------- */
-  const FORMAL = ['civil', 'teacher', 'doctor', 'nurse', 'soldier', 'office', 'tech', 'sales', 'worker', 'driver'];
+  const FORMAL = ['electrician', 'welder', 'cnc', 'civil', 'teacher', 'doctor', 'nurse', 'soldier', 'office', 'tech', 'sales', 'worker', 'driver'];
   const DECIDE = [65, 66, 67, 68, 69, 71, 73, 74, 76, 78, 80, 82, 84, 86, 88, 91, 94];
   const freeYear = (g) => !DECIDE.includes(g.age);
   // 退休金（元/年），和 economy.js 的 PENSION 一致，只用来显示每月多少
@@ -279,7 +279,7 @@
 
     /* ================= 69 岁：体检 ================= */
     { id: 'o_checkup', age: 69, t: '體檢報告', loc: 'hospital',
-      text: (g) => (g.s('健康') >= 60 ? '體檢報告上，三個箭頭朝上：血壓、血糖、血脂。醫生說不算嚴重，得管。' : '體檢報告翻了三頁才翻完。醫生指著幾行字，說你這身體，得好好養著了。'),
+      text: (g) => (g.recall('chronic') ? '醫生翻出你中年時的慢性病記錄，又核了一遍這些年的用藥。' : '') + (g.s('健康') >= 60 ? '體檢報告上，三個箭頭朝上：血壓、血糖、血脂。醫生說不算嚴重，得管。' : '體檢報告翻了三頁才翻完。醫生指著幾行字，說你這身體，得好好養著了。'),
       choices: [
         { t: '按時吃藥，管住嘴', canon: true, fx: (g) => { g.stat('健康', 3); g.stat('心情', -1); g.remember('chronic', 'control'); stayHome(g); }, res: '你買了一個分七格的藥盒，週日晚上把一週的藥分好。' },
         { t: '戴上健康手環，讓 AI 管著', dev: 10, fx: (g) => { spend(g, 2000); g.stat('健康', 2); g.remember('chronic', 'ai'); stayHome(g); }, res: '手環 ¥2,000。一到飯點它就提醒你少吃一口。你罵了它幾回，它照樣提醒。' },

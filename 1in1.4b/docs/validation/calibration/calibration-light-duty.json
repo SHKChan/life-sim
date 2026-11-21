@@ -1,0 +1,39 @@
+[
+  {
+    "choice": "odd",
+    "focus": "def",
+    "n": 80,
+    "earlyCauses": {
+      "久病不起，在医院去世": 2
+    },
+    "age": 90,
+    "early": 2.5,
+    "health45": 66,
+    "knowledge60": 88,
+    "career": 60,
+    "net": 2613318,
+    "asked": 33.38,
+    "wishes": 1.71,
+    "wish2": 63.8,
+    "wish3": 13.8
+  },
+  {
+    "choice": "odd",
+    "focus": "work",
+    "n": 80,
+    "earlyCauses": {
+      "久病不起，在医院去世": 4,
+      "因病去世，走得太早": 1
+    },
+    "age": 83,
+    "early": 6.3,
+    "health45": 61,
+    "knowledge60": 84,
+    "career": 81,
+    "net": 2711459,
+    "asked": 33.4,
+    "wishes": 1.88,
+    "wish2": 68.8,
+    "wish3": 20
+  }
+]

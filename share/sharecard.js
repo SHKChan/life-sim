@@ -203,7 +203,7 @@
       c.fillRect(30, y - 4, 3, badges.length * 22 + 2);
       c.font = '700 13.5px ' + F_BODY;
       c.fillStyle = INK;
-      badges.slice(0, 4).forEach((b) => { y += wrap(c, b, 42, y + 12, 528, 20, 1) + 2; });
+      badges.slice(0, SH.badgeLimit || 4).forEach((b) => { y += wrap(c, b, 42, y + 12, 528, 20, 1) + 2; });
       y += 18;
     }
     // 页脚：左边一句话和网址，右边二维码（扫码直接打开游戏页，分享截图到任何平台都能导流）

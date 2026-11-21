@@ -1,0 +1,33 @@
+[
+  {
+    "choice": "canon",
+    "focus": "work",
+    "n": 80,
+    "wishByAim": {
+      "rich": {
+        "n": 80,
+        "two": 42.5,
+        "three": 5
+      }
+    },
+    "warning": "ignore",
+    "earlyCauses": {
+      "久病不起，在医院去世": 8,
+      "过劳猝死": 13,
+      "手术后没能醒过来": 4
+    },
+    "age": 81,
+    "early": 31.3,
+    "health45": 42,
+    "knowledge60": 83,
+    "knowledge60p10": 71,
+    "knowledge60p90": 88,
+    "knowledgeEnd": 78,
+    "career": 82,
+    "net": 3462543,
+    "asked": 32.79,
+    "wishes": 1.36,
+    "wish2": 42.5,
+    "wish3": 5
+  }
+]

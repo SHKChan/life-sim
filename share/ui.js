@@ -441,7 +441,7 @@
     // 游戏自己加的首页卡片（例如十四亿分之一的人生图鉴）
     if (T.homeCards) h += T.homeCards(W, { esc, t, card });
     h += '<section><div class="section-h"><h2>' + esc(T.livesTitle) + '</h2><span>' + esc(T.random ? t('你活过的每一世') : t('这个{w}里你活过的每一世', { w: T.world })) + '</span></div>';
-    h += W.lives.length ? '<div class="lives">' + W.lives.slice().reverse().map((l) => '<div class="life-row"><b>' + esc(l.name) + '</b><span>' + esc(T.year + ' ' + l.from + '–' + l.to + ' · ' + t('享年 {n}', { n: l.to - l.born }) + ' · ' + l.cause) + ' · “' + esc(l.words) + '”</span><span class="d">' + esc(T.devShort) + ' ' + l.dev + '%</span></div>').join('') + '</div>'
+    h += W.lives.length ? '<div class="lives">' + W.lives.slice().reverse().map((l, i) => '<div class="life-row"><b>' + esc(l.name) + '</b><span>' + esc(T.year + ' ' + l.from + '–' + l.to + ' · ' + t('享年 {n}', { n: l.to - l.born }) + ' · ' + l.cause) + ' · “' + esc(l.words) + '”</span><span class="d">' + esc(T.devShort) + ' ' + l.dev + '%</span>' + (T.endNote && l.note ? '<span class="note" data-life-note="' + (W.lives.length - 1 - i) + '"></span>' : '') + '</div>').join('') + '</div>'
       : '<p class="empty">' + t('还没有。') + '</p>';
     h += '</section>';
     h += '<section class="how">' + T.howto.map((x) => '<div><b>' + esc(x[0]) + '</b>' + esc(x[1]) + '</div>').join('') + '</section></div>';
@@ -701,6 +701,31 @@
       + '</div>';
   }
 
+  // 可选 GAME.endNote = { max, clean, options(life) }，默认关闭；输入时只存值，不重渲染。
+  function noteText(value) {
+    const clean = T.endNote && T.endNote.clean;
+    const text = clean ? clean(value) : String(value || '').replace(/<[^>]*>/g, '').replace(/[<>\x00-\x1f\x7f-\x9f]/g, '');
+    return Array.from(text).slice(0, Math.min(30, T.endNote && T.endNote.max || 30)).join('');
+  }
+  function saveNote(value) {
+    if (!T.endNote || !ui.life) return;
+    const text = noteText(value);
+    if (text) ui.life.note = text; else delete ui.life.note;
+    const life = E.get().W.lives.find((l) => l.id === ui.life.id && l.born === ui.life.born && l.to === ui.life.to);
+    if (life && life !== ui.life) { if (text) life.note = text; else delete life.note; }
+    E.save();
+    const count = document.getElementById('end-note-count');
+    if (count) count.textContent = Array.from(text).length + ' / ' + (T.endNote.max || 30);
+  }
+  function endNoteView(life) {
+    if (!T.endNote) return '';
+    const opts = T.endNote.options ? T.endNote.options(life) : [];
+    return card(t('给这一世留一句话'), t('只存本机，不放进分享链接'),
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">' + opts.map((x, i) => '<button type="button" class="b" data-act="end-note-preset" data-v="' + i + '">' + esc(t(x)) + '</button>').join('') + '</div>'
+      + '<label for="end-note">' + t('留言（最多30字，可以不留）') + '</label><input id="end-note" type="text" maxlength="60" style="display:block;box-sizing:border-box;width:100%;margin-top:8px;padding:10px;font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line)">'
+      + '<span id="end-note-count" class="note" aria-live="polite"></span>', 'end-note-card');
+  }
+
   function endView() {
     const l = ui.life;
     const age = l.to - l.born;
@@ -712,6 +737,7 @@
     h += '<div class="card"><div class="big-num"><div><span>' + t('享年') + '</span><b>' + age + '</b></div><div><span>' + esc(T.devName) + '</span><b>' + l.dev + '%</b></div><div><span>' + t('做过的抉择') + '</span><b>' + mine.length + '</b></div></div></div>';
     // 游戏自己加的卡片（例如十四亿分之一的稀有度、成就、转折线）：endCards(life) 返回 HTML 片段
     if (T.endCards) h += T.endCards(l, { esc, t, card });
+    h += endNoteView(l);
     h += '<div class="card"><h3>' + esc(T.compareTitle) + '</h3><div class="compare" style="margin-top:12px"><div><b>' + esc(T.fateLabel) + '</b>' + esc(l.fateText) + '</div><div><b>' + esc(T.yourEnd) + '</b>' + esc(l.name + t('，') + l.cause + t('。')) + '</div></div></div>';
     h += '<div class="card"><h3>' + esc(T.changed) + '</h3><div style="margin-top:10px">' + (l.changes.length
       ? '<ul class="ulist">' + l.changes.map((k) => '<li class="mod">' + esc(JY.FLAGS[k] || k) + '</li>').join('') + '</ul><p style="color:var(--muted);font-size:13.5px;margin-top:10px">' + esc(t('这些改变会留在这个{w}里。下一世重生到后面的年代，还会碰到它们的后果。', { w: T.world })) + '</p>'
@@ -859,6 +885,11 @@
     if (ui.screen === 'end' && ui.review) h += reviewView();
     if (ui.feedback) h += feedbackView();
     app.innerHTML = h;
+    if (T.endNote) {
+      const input = document.getElementById('end-note');
+      if (input && ui.life) { input.value = noteText(ui.life.note); const count = document.getElementById('end-note-count'); if (count) count.textContent = Array.from(input.value).length + ' / ' + (T.endNote.max || 30); }
+      app.querySelectorAll('[data-life-note]').forEach((el) => { const life = E.get().W.lives[Number(el.dataset.lifeNote)]; el.textContent = life && life.note ? t('留言：') + noteText(life.note) : ''; });
+    }
     const rc = document.getElementById('review-cv');
     if (rc) {
       const m = ui.life.moments[ui.review.i];
@@ -880,6 +911,14 @@
   function act(a, d) {
     const { L } = E.get();
     switch (a) {
+      case 'end-note-preset': {
+        if (!T.endNote || !ui.life) break;
+        const value = (T.endNote.options ? T.endNote.options(ui.life) : [])[Number(d.v)];
+        if (value == null) break;
+        const input = document.getElementById('end-note');
+        if (input) { input.value = noteText(t(value)); saveNote(input.value); input.focus(); }
+        break;
+      }
       case 'theme': {
         const i = THEMES.findIndex((x) => x[0] === themeNow());
         const next = THEMES[(i + 1) % THEMES.length][0];
@@ -902,7 +941,7 @@
       case 'choose': if (ui.pending) choose(Number(d.i)); break;
       case 'peek': ui.peek = true; render(); break;
       case 'peek-off': ui.peek = false; render(); break;
-      case 'focus': if (L) { L.focus = d.v; ui.focusOpen = false; E.save(); render(); } break;
+      case 'focus': if (L) { L.focus = d.v; if (E.conf().onFocus) E.conf().onFocus(G, d.v); ui.focusOpen = false; E.save(); render(); } break;
       case 'focus-menu': ui.focusOpen = !ui.focusOpen; render(); break;
       case 'focus-jump': { const el = document.getElementById('focus-card'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); break; }
       case 'star': if (L && L.log[Number(d.i)]) { L.log[Number(d.i)].star = !L.log[Number(d.i)].star; E.save(); render(); } break;
@@ -942,7 +981,9 @@
     if (el.dataset.act === 'fb-bg') { if (e.target === el) act('fb-close'); return; }
     act(el.dataset.act, el.dataset);
   });
+  app.addEventListener('compositionend', (e) => { if (e.target.id === 'end-note') { saveNote(e.target.value); e.target.value = noteText(e.target.value); } });
   app.addEventListener('input', (e) => {
+    if (e.target.id === 'end-note' && !e.isComposing) { saveNote(e.target.value); const clean = noteText(e.target.value); if (e.target.value !== clean) e.target.value = clean; }
     if (e.target.id === 'share-line' && ui.share) {
       ui.share.line = e.target.value.trim();
       clearTimeout(ui.share.t);

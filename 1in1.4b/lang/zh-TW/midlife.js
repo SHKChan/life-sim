@@ -13,9 +13,9 @@
   /* ---------- 小工具 ---------- */
   const OFFICE = ['office', 'tech', 'sales'];
   const STABLE = ['civil', 'teacher', 'doctor', 'nurse', 'soldier'];
-  const LABOR = ['worker', 'rider', 'driver', 'farmer'];
-  const OWN = ['boss', 'shop', 'creator', 'freelance'];
-  const JOBT = { office: '公司職員', tech: '程式設計師', sales: '銷售', civil: '公務員', teacher: '老師', doctor: '醫生', nurse: '護士', soldier: '軍人',
+  const LABOR = ['electrician', 'welder', 'cnc', 'renovation', 'maternity', 'eldercare', 'housekeeping', 'construction', 'worker', 'rider', 'driver', 'farmer'];
+  const OWN = ['restaurant', 'beauty', 'grocery', 'mechanic', 'parcel', 'cooperative', 'livestock', 'grower', 'boss', 'shop', 'creator', 'freelance'];
+  const JOBT = { restaurant: '飯館經營者', beauty: '理髮美容師', grocery: '小超市經營者', mechanic: '汽修師傅', electrician: '電工', welder: '焊工', cnc: '數控技工', renovation: '裝修師傅', parcel: '快遞站經營者', maternity: '月嫂育兒嫂', eldercare: '養老護理員', housekeeping: '家政服務員', cooperative: '合作社經營者', livestock: '養殖戶', grower: '種植大戶', construction: '建築工人', office: '公司職員', tech: '程式設計師', sales: '銷售', civil: '公務員', teacher: '老師', doctor: '醫生', nurse: '護士', soldier: '軍人',
     worker: '工人', rider: '外賣騎手', driver: '司機', farmer: '種地', boss: '做生意', shop: '開店', creator: '做內容', freelance: '自由職業', none: '無' };
   const job = (g) => g.recall('job') || 'none';
   const cat = (g) => {
@@ -209,7 +209,7 @@
         { t: '回老家，不在外面熬了', dev: 15, cond: (g) => !atHome(g),
           fx: (g) => { backHome(g); CN.setJob(g, g.recall('hukou') === 'rural' ? 'farmer' : 'shop', g.recall('hukou') === 'rural' ? '回鄉種地' : '在老家開小賣部'); g.remember('laborRoute', 'home'); g.stat('心情', 3); }, res: '你把被褥打包，坐了一夜的車。老家的早飯還是那個味道。' },
         { t: '換個地方，去縣城開個修車鋪', dev: 15, cond: (g) => atHome(g) && job(g) !== 'farmer',
-          fx: (g) => { M = spend(g, 50000); CN.setJob(g, 'shop', '開修車鋪'); g.remember('laborRoute', 'home'); }, res: () => '租鋪面、買工具花了 ¥5 萬' + (M ? '，借了 ' + fmt(M) : '') + '。門口的招牌是你自己刷的。' },
+          fx: (g) => { M = spend(g, 50000); CN.setJob(g, 'mechanic', '開修車鋪'); g.remember('tradeOwn', true); g.remember('laborRoute', 'home'); }, res: () => '租鋪面、買工具花了 ¥5 萬' + (M ? '，借了 ' + fmt(M) : '') + '。門口的招牌是你自己刷的。' },
       ] },
     { id: 'm_35_own', age: 35, t: '生意', cond: (g) => cat(g) === 'own',
       text: (g) => '有人來找你，說現在正是擴張的好時候，問你要不要再開一家、多投一點。算下來，要 ' + fmt(SHOP[tier(g)] || 150000) + '。',
@@ -408,12 +408,12 @@
       choices: [
         { t: '哪兒也不去，接著幹', canon: true, fx: (g) => { g.stat('健康', -3); g.stat('事业', 2); g.remember('career42', 'grind'); }, res: '你還在老地方。門口賣早點的換了三撥人，都認得你。' },
         { t: (g) => '和老鄉合夥開店（出 ¥8 萬，' + CN.jobRisk('shop') + '）', dev: 15, cond: (g) => cash(g) >= 60000,
-          fx: (g) => { M = spend(g, 80000); CN.setJob(g, 'shop', '和老鄉合夥開店'); g.remember('career42', 'shop'); }, res: () => '你出了 ¥8 萬' + (M ? '，差的 ' + fmt(M) + ' 是借的' : '') + '。你們開了一家麵館，你負責後廚，他負責算賬。' },
+          fx: (g) => { M = spend(g, 80000); CN.setJob(g, 'restaurant', '和老鄉合夥開面館'); g.remember('tradeOwn', true); g.remember('career42', 'shop'); }, res: () => '你出了 ¥8 萬' + (M ? '，差的 ' + fmt(M) + ' 是借的' : '') + '。你們開了一家麵館，你負責後廚，他負責算賬。' },
         { t: (g) => '去更遠的地方（約 ' + fmt(mPay(g, job(g), 1, 6)) + '/月，一年回一次家）', dev: 15, fx: (g) => { CN.goCity(g, 1); g.stat('事业', 6); g.stat('人缘', -4); g.remember('career42', 'far'); },
           res: (g) => '你去了' + g.recall('workCity') + '。一年回一次家，' + (hasKid(g) && kAge(g) < 15 ? '孩子見你要先愣一下。' : '家裡人在車站接你，你瘦了一圈。') },
       ] },
     { id: 'm_42_own', age: 42, t: '新路子', cond: (g) => cat(g) === 'own',
-      text: '做生意的朋友都在開直播，說一晚上能賣掉你一個月的貨。',
+      text: (g) => '做了這麼多年' + (JOBT[job(g)] || '生意') + '，老客戶還在，新客卻少了。同行有人合做團購，有人守著原來的鋪面。你把這一年的賬攤開，想換個做法。',
       choices: [
         { t: '老老實實做老客戶', canon: true, fx: (g) => { g.stat('人缘', 2); g.remember('career42', 'steady'); }, res: '你的客戶大多跟了你十年。他們說，就信你。' },
         { t: '自己上鏡開直播', dev: 15, check: ['人缘', 45],
@@ -425,7 +425,7 @@
       text: '社群裡貼了招工啟事：居家養老服務員，培訓上崗，離家近。',
       choices: [
         { t: '還是在家', canon: true, fx: (g) => { g.stat('人缘', 2); g.remember('career42', 'stayhome'); }, res: '你把啟事拍下來發給了鄰居。' },
-        { t: '去報名', dev: 15, fx: (g) => { CN.setJob(g, 'worker', '養老服務員'); g.remember('career42', 'work'); }, res: '你每天去幾戶老人家裡，量血壓、陪著說話。有個老太太總把你叫成她女兒的名字。' },
+        { t: '去報名', dev: 15, fx: (g) => { CN.setJob(g, 'eldercare', '養老服務員'); g.remember('career42', 'work'); }, res: '你每天去幾戶老人家裡，量血壓、陪著說話。有個老太太總把你叫成她女兒的名字。' },
       ] },
     { id: 'm_43_career_echo', age: 43, t: '工作', auto: true, cond: (g) => !!g.recall('career42'),
       fx: (g) => { const c = g.recall('career42'); A = 0; if (c === 'far') g.stat('人缘', -2); if (c === 'live' || c === 'pivot') g.stat('事业', 3); if (c === 'remote') { A = w1(myInc(g) * 0.3); CN.earn(g, A); } },
@@ -491,9 +491,9 @@
     { id: 'm_45_checkup', age: 45, t: '體檢報告', loc: 'hospital',
       text: (g) => (cat(g) === 'labor' || cat(g) === 'own' || cat(g) === 'none' ? '社群免費體檢' : '單位體檢') + '，報告上有一行加粗的字：' + CN.pick(['甲狀腺結節，建議複查', '血壓偏高', '血糖偏高', '脂肪肝，中度']) + '。' + (g.recall('body40') === 'run' ? '醫生說幸虧你在運動，不然更糟。' : ''),
       choices: [
-        { t: '開點藥吃著', canon: true, fx: (g) => { g.stat('健康', 1); g.remember('check45', 'pills'); }, res: '藥盒子擺在餐桌上，早一粒，晚一粒。' },
-        { t: '徹底改作息', dev: 10, fx: (g) => { g.stat('健康', 6); g.stat('心情', -2); g.remember('check45', 'change'); }, res: '你戒了夜宵，十一點前睡覺。頭一個月，你天天餓著入睡。' },
-        { t: '不當回事', dev: 10, fx: (g) => { g.stat('健康', -4); g.remember('check45', 'ignore'); }, res: '你說誰還沒點毛病。報告拍照存進相簿，就再沒點開過。' },
+        { t: '開點藥吃著', canon: true, fx: (g) => { g.stat('健康', 1); g.remember('check45', 'pills'); if ((g.recall('fatigue') || 0) >= 3 || g.s('健康') < 55) g.remember('chronic', 'pills'); }, res: '藥盒子擺在餐桌上，早一粒，晚一粒。' },
+        { t: '徹底改作息', dev: 10, fx: (g) => { g.stat('健康', 6); g.stat('心情', -2); g.remember('check45', 'change'); if ((g.recall('fatigue') || 0) >= 3 || g.s('健康') < 55) g.remember('chronic', 'control'); g.remember('fatigue', Math.max(0, (g.recall('fatigue') || 0) - 2)); }, res: '你戒了夜宵，十一點前睡覺。頭一個月，你天天餓著入睡。' },
+        { t: '不當回事', dev: 10, fx: (g) => { g.stat('健康', -4); g.remember('check45', 'ignore'); if ((g.recall('fatigue') || 0) >= 3 || g.s('健康') < 55) g.remember('chronic', 'ignore'); }, res: '你說誰還沒點毛病。報告拍照存進相簿，就再沒點開過。' },
       ] },
     { id: 'm_46_house_echo', age: 46, t: '家', auto: true, cond: (g) => !!g.recall('house44'),
       fx: (g) => {
@@ -618,7 +618,7 @@
         kid: '孩子搬進了新房，給你留了一間。你去住了兩天，就想回自己家。',
       }[g.recall('nest')]) },
     { id: 'm_55_ill', age: 55, t: '病', loc: 'hospital', cond: (g) => g.s('健康') < 45,
-      text: (g) => '一次檢查，醫生讓家屬單獨進去。' + (g.recall('check45') === 'ignore' ? '十年前那張沒當回事的報告，你又想起來了。' : '') + '是要動手術的病。醫保報完，自己大概要掏 ' + fmt(g.recall('hukou') === 'rural' ? 60000 : 90000) + '。',
+      text: (g) => '一次檢查，醫生讓家屬單獨進去。' + (g.recall('check45') === 'ignore' ? '十年前那張沒當回事的報告，你又想起來了。' : '') + (g.recall('chronic') === 'ignore' ? '這些年沒有管的血壓血糖，如今也得一起治。' : g.recall('chronic') ? '這些年規律複查的記錄，醫生也一頁頁看過。' : '') + '是要動手術的病。醫保報完，自己大概要掏 ' + fmt(g.recall('hukou') === 'rural' ? 60000 : 90000) + '。',
       choices: [
         { t: '去大醫院做手術', canon: true, check: ['健康', 0], // 健康 15 以上成功率 95%
           fx: (g) => { A = g.recall('hukou') === 'rural' ? 60000 : 90000; M = spend(g, A); g.stat('健康', 15); g.remember('ill55', 'surgery'); },

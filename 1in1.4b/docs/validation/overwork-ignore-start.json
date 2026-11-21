@@ -1,0 +1,22 @@
+[
+  {
+    "choice": "canon",
+    "focus": "work",
+    "n": 80,
+    "warning": "ignore",
+    "earlyCauses": {
+      "过劳猝死": 71,
+      "久病不起，在医院去世": 3
+    },
+    "age": 39,
+    "early": 92.5,
+    "health45": 42,
+    "knowledge60": 87,
+    "career": 68,
+    "net": 673724,
+    "asked": 21.94,
+    "wishes": 0.68,
+    "wish2": 7.5,
+    "wish3": 1.3
+  }
+]

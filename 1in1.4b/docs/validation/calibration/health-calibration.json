@@ -1,0 +1,58 @@
+[
+  {
+    "choice": "canon",
+    "focus": "def",
+    "n": 80,
+    "earlyCauses": {
+      "久病不起，在医院去世": 2
+    },
+    "age": 93,
+    "early": 2.5,
+    "health45": 65,
+    "knowledge60": 85,
+    "career": 41,
+    "net": 3512278,
+    "asked": 36.15,
+    "wishes": 1.5,
+    "wish2": 55,
+    "wish3": 13.8
+  },
+  {
+    "choice": "canon",
+    "focus": "work",
+    "n": 80,
+    "earlyCauses": {
+      "手术后没能醒过来": 4,
+      "久病不起，在医院去世": 1
+    },
+    "age": 83,
+    "early": 6.3,
+    "health45": 53,
+    "knowledge60": 82,
+    "career": 84,
+    "net": 3773802,
+    "asked": 36.06,
+    "wishes": 1.65,
+    "wish2": 58.8,
+    "wish3": 12.5
+  },
+  {
+    "choice": "odd",
+    "focus": "work",
+    "n": 80,
+    "earlyCauses": {
+      "久病不起，在医院去世": 5,
+      "因病去世，走得太早": 2
+    },
+    "age": 86,
+    "early": 8.8,
+    "health45": 59,
+    "knowledge60": 83,
+    "career": 81,
+    "net": 2071754,
+    "asked": 32.03,
+    "wishes": 1.9,
+    "wish2": 67.5,
+    "wish3": 25
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "choice": "auto",
+    "focus": "def",
+    "n": 160,
+    "wishByAim": {
+      "rich": {
+        "n": 39,
+        "two": 66.7,
+        "three": 33.3
+      },
+      "proud": {
+        "n": 31,
+        "two": 93.5,
+        "three": 67.7
+      },
+      "free": {
+        "n": 49,
+        "two": 61.2,
+        "three": 14.3
+      },
+      "none": {
+        "n": 41,
+        "two": 95.1,
+        "three": 61
+      }
+    },
+    "earlyCauses": {
+      "久病不起，在医院去世": 3,
+      "手术后没能醒过来": 2
+    },
+    "age": 86,
+    "early": 3.1,
+    "health45": 53,
+    "knowledge60": 84,
+    "knowledge60p10": 76,
+    "knowledge60p90": 88,
+    "knowledgeEnd": 76,
+    "career": 87,
+    "net": 5775669,
+    "asked": 36.42,
+    "wishes": 2.14,
+    "wish2": 77.5,
+    "wish3": 41.3
+  }
+]

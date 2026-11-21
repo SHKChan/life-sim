@@ -14,7 +14,7 @@ JY.GAME = {
   langFiles: {
     en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js'],
     // 繁体：share/tools/tw.py 从简体自动生成，全部文件都有
-    'zh-TW': ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
+    'zh-TW': ['pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
   },
   intro: '今年，中国大约有九百万个孩子出生。你是其中一个。省份、城乡、家境都是随机的，按真实的人口比例来。剩下的一生，由你来过。',
   freshLine: '还没有投过胎。',
@@ -50,6 +50,7 @@ JY.GAME = {
     stats: ['健康', '学识', '心情', '人缘', '财富', '事业'],
     signedStats: [],
     healthStat: '健康',
+    hookDeathFirst: true,
     healthDeath: '久病不起，在医院去世',
     naturalDeath: '寿终正寝',
     lifespan: { base: 70, k: 0.3, rate: 0.03, decline: [[52, 1], [75, 1], [85, 1]] }, // 八十五岁以后老得更快
@@ -59,11 +60,28 @@ JY.GAME = {
     devMode: 'ratio',
     // 钱和同住的人在 data/economy.js 里算
     onStat: (g, k, d) => JY.ECON.onStat(g, k, d),
-    yearEnd: (g, age) => JY.ECON.yearEnd(g, age),
+    yearEnd: (g, age) => {
+      JY.ECON.yearEnd(g, age);
+      const L = JY.engine.get().L;
+      if (!L || L.death) return;
+      const next = JY.engine.defaultFocus(JY.byId[g.me], age + 1);
+      const manual = g.recall('focusManual');
+      if (!JY.engine.focusOptions(age + 1).some((o) => o.name === manual)) {
+        g.remember('focusManual', null);
+        L.focus = next;
+      }
+    },
+    onFocus: (g, name) => g.remember('focusManual', name),
+    defaultFocus: (c, age, opts, g) => {
+      if (age >= 23 && g.recall('job') && !['none', 'retired'].includes(g.recall('job'))
+        && ['k1', 'k2', 'k3'].some((id) => JY.byId[id] && g.alive(id) && g.ageOf(id) + age - g.age < 18)) return '陪伴家人';
+      if (age >= 55) return '锻炼身体';
+      return null;
+    },
     deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
     flavorRepeat: true,
   },
-  version: '2.0.2',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.1.0',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人
