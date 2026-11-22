@@ -202,6 +202,9 @@
       { k: 'wgk', t: '見到孫輩', ok: (g) => !!JY.byId.gk1 },
     ],
   };
+  // 仅结算精简标题；游戏过程中的原文与年龄判定保留。
+  const SHORT_WISH = {"七十歲前家底過六百萬":"攢下六百萬家底","四十歲以後不欠任何人的錢":"不欠任何人的錢","五十五歲前成為行當裡的頂尖人物":"成為行當裡的頂尖人物","五十歲前把家過得和和氣氣":"把家過得和和氣氣","六十歲時依然很開心":"依然很開心","六十五歲前走出自己的路":"走出自己的路","六十歲的時候身邊有個能說話的人":"身邊有個能說話的人","六十歲前手裡有一百五十萬":"攢下一百五十萬","六十歲前到哪兒都有朋友":"到哪兒都有朋友"};
+  const shortWish = (t) => SHORT_WISH[t] || t;
   const wishList = (g) => {
     const pool = WISHES[g.recall('aim')] || [];
     return (g.recall('wishes') || []).map((k) => pool.find((w) => w.k === k)).filter(Boolean);
@@ -279,7 +282,14 @@
     { k: 'longlife', t: '長壽', d: '活過了九十歲。', ok: (s) => s.age >= 90 },
     { k: 'plain', t: '平凡的一生', d: '上學、上班、成家、變老。大多數人都是這樣過來的。', ok: () => true },
   ];
-  const endOf = (s) => ENDS.find((e) => { try { return e.ok(s); } catch (err) { return false; } }) || ENDS[ENDS.length - 1];
+  const HINTS = {"century":"看過一個世紀","early":"短暫的光","debt":"賬本的最後一頁","tycoon":"從普通人家起步","heir":"接過家業","fall":"家底的落差","scholar":"小地方的大考場","phd":"書讀到最後","founder":"公司的第一天","remarry":"晚年的新相遇","solo":"獨自生活","dink":"兩個人的選擇","bigfam":"熱鬧的家","lie":"慢一點也能走遠","firsttier":"在遠方安家","drifter":"大城市的租約","homeward":"回家的方向","boss":"自己的小生意","creator":"鏡頭裡的工作","civil":"穩定的崗位","teacher":"講臺","medic":"醫院的燈","coder":"技術這碗飯","farmer":"土地","worker":"一雙有本事的手","investor":"投資賬本的紅字","chive":"投資交過的學費","divorced":"關係的另一章","rooted":"故鄉的路","workaholic":"工作與自己的時間","happy":"晚年的心情","longlife":"九十個春天","plain":"普通日子的分量"};
+  ENDS.forEach((e) => { e.hint = HINTS[e.k]; });
+  // 特定路线优先，寿命作为兜底；保留旧ID和已有图鉴记录。
+  const endOf = (s) => {
+    const matches = ENDS.filter((e) => { try { return e.ok(s); } catch (err) { return false; } });
+    const general = ['century', 'longlife', 'plain'];
+    return matches.find((e) => !general.includes(e.k)) || matches[0] || ENDS[ENDS.length - 1];
+  };
   // 家底超过了百分之几同样出身的人（rarity.js 的 nq：每种出身的净资产 5%–95% 分位点，19 个）
   const beat = (s) => {
     const q = JY.RARITY && JY.RARITY.nq && JY.RARITY.nq[s.family];
@@ -309,7 +319,16 @@
       al.ends = al.ends || {};
       al.gifts = al.gifts || {};
       life.newEnd = !al.ends[e.k];
-      al.ends[e.k] = (al.ends[e.k] || 0) + 1;
+      // 主结局只显示一个，符合的其他条目也收录，避免被判定顺序永久遮住。
+      life.otherEnds = [];
+      ENDS.forEach((item) => {
+        let hit = false;
+        try { hit = !!item.ok(s); } catch (err) { /* 不收录无法判定的条目 */ }
+        if (!hit || (item.k === 'plain' && e.k !== 'plain')) return;
+        const fresh = !al.ends[item.k];
+        al.ends[item.k] = (al.ends[item.k] || 0) + 1;
+        if (item.k !== e.k) life.otherEnds.push({ k: item.k, t: item.t, fresh });
+      });
       if (s.gift) al.gifts[s.gift] = (al.gifts[s.gift] || 0) + 1;
       // 这一世新解锁的天赋
       life.newGifts = GIFTS.filter((x) => x.need && (life.newAch || []).includes(x.need)).map((x) => x.t);
@@ -325,12 +344,13 @@
           + (p != null ? ' 大約 ' + (p < 1 ? '不到 1' : Math.round(p)) + '% 的人生是這個結局。' : '')
           + (l.end.beat != null ? ' 臨終時的家底，超過了 <b>' + l.end.beat + '%</b> 同樣出身的人。' : '')
           + (g ? ' 天賦：' + esc(g.t) + '。' : '') + '</p>'
+          + (l.otherEnds && l.otherEnds.length ? '<p class="note">同時收錄：' + l.otherEnds.map((x) => esc(x.t) + (x.fresh ? '（新）' : '')).join('、') + '。</p>' : '')
           + (l.seed != null ? '<p class="note">' + (l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：把這一世分享出去，朋友點開連結或掃碼，第一次投胎會生在和你同一個地方、同一個家裡。</p>' : '')
           + (l.newGifts && l.newGifts.length ? '<p class="note">解鎖了新的天賦：<b>' + esc(l.newGifts.join('、')) + '</b>。下一世抓周的時候可能擺在你面前。</p>' : ''), 'rare-card');
       }
       if (l.wish && l.wish.length) {
         const n = l.wish.filter((w) => w.ok).length;
-        h += card('十六歲寫下的心願', '做到了 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(w.t) + '</b><span>' + (w.ok ? '做到了' : '沒做到') + '</span></li>').join('') + '</ul>');
+        h += card('這一生的心願', '做到了 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + (w.ok ? '已完成' : '未完成') + '</span></li>').join('') + '</ul>');
       }
       return h;
     },
@@ -348,7 +368,7 @@
     badges(l) {
       const out = [];
       if (l.end) out.push('這一生的結局：' + l.end.t + (l.end.beat != null ? '（家底超過了 ' + l.end.beat + '% 同樣出身的人）' : ''));
-      if (l.wish && l.wish.length) out.push('十六歲寫下的三個心願，做到了 ' + l.wish.filter((w) => w.ok).length + ' 個');
+      if (l.wish && l.wish.length) out.push('這一生的心願，完成了 ' + l.wish.filter((w) => w.ok).length + ' 個');
       return out;
     },
   };

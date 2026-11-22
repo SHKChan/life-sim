@@ -7,3 +7,10 @@
   .end-note-card .card-h { display: block; }
   .end-note-card .card-h small { display: block; margin-top: 4px; text-align: left; }
 }
+
+.life-review { font-size: 1.15rem; line-height: 1.8; overflow-wrap: anywhere; }
+.ending-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+.ending-entry { margin: 0; min-width: 0; }
+.ending-entry summary { cursor: pointer; color: var(--muted); overflow-wrap: anywhere; }
+.ending-entry.unlocked summary { color: var(--fg); font-weight: 700; }
+.ending-entry summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }

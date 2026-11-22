@@ -14,7 +14,7 @@ JY.GAME = {
   langFiles: {
     en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js'],
     // 繁体：share/tools/tw.py 从简体自动生成，全部文件都有
-    'zh-TW': ['pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
+    'zh-TW': ['turning.js', 'pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
   },
   intro: '今年，中国大约有九百万个孩子出生。你是其中一个。省份、城乡、家境都是随机的，按真实的人口比例来。剩下的一生，由你来过。',
   freshLine: '还没有投过胎。',
@@ -82,7 +82,7 @@ JY.GAME = {
     flavorRepeat: true,
   },
   choiceTags: false,              // 人群标签选完再展示，避免影响决定
-  version: '2.1.2',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.1.4',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人

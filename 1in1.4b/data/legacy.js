@@ -69,6 +69,8 @@
     return String(n);
   };
   JY.oneInText = oneInText;
+  const rarityLabel = (rare) => rare.pct >= 95 ? '罕见' : rare.pct >= 75 ? '少见' : '常见';
+  JY.rarityLabel = rarityLabel;
 
   /* ---------- 成就 ---------- */
   const ACH = [
@@ -156,9 +158,9 @@
     let h = JY.FATE ? JY.FATE.endCards(l, u) : '';
     const s = l.snap || {};
     if (l.rare) {
-      h += card('这一生有多少见', l.bestEver ? '你见过的最少见的一生' : '',
-        '<div class="big-num"><div><span>大约</span><b>' + esc(oneInText(l.rare.oneIn)) + '</b><span>人里才有一个</span></div><div><span>比</span><b>' + l.rare.pct + '%</b><span>的人生更少见</span></div></div>'
-        + '<p class="note">按出身、学历、职业、婚姻、孩子、住在哪、活了多久，各自在十四亿人里的比例算的。</p>', 'rare-card');
+      h += card('这段人生有多特别', '',
+        '<div class="big-num"><div><b>' + rarityLabel(l.rare) + '</b></div></div>'
+        + '<p class="note">按游戏模拟结果比较，综合出身、学历、职业与生活经历；仅表示经历组合的常见程度。</p>', 'rare-card');
     }
     if (l.aim && l.aim.v != null && !l.wish) {
       h += card('十六岁的志向', esc(AIM_T[l.aim.k] || ''), '<div class="aim-bar"><i style="width:' + l.aim.v + '%"></i></div><p class="note">达成了 <b>' + l.aim.v + '%</b>。'
@@ -199,7 +201,7 @@
       + row('职业', Object.keys(al.jobs).length, Object.keys(JOB_T).length - 1)
       + row('成就', got.length, ACH.length)
       + (JY.FATE ? JY.FATE.homeRows(al, row) : '')
-      + (al.best ? '<p class="note">最少见的一生：' + esc(al.best.name) + '（' + esc(al.best.where || '') + '），大约 ' + esc(oneInText(al.best.oneIn)) + ' 人里才有一个。</p>' : '')
+      + (al.best ? '<p class="note">最少见的一生：' + esc(al.best.name) + '（' + esc(al.best.where || '') + '）。按游戏模拟结果比较。</p>' : '')
       + '<div class="ach-grid">' + ACH.map((a) => '<span class="' + (al.ach[a.id] ? 'on' : '') + '" title="' + esc(al.ach[a.id] ? a.d : '还没解锁') + '">' + esc(al.ach[a.id] ? a.t : '？？？') + '</span>').join('') + '</div>'
       + '</div></section>';
   };
@@ -207,7 +209,7 @@
   /* ---------- 分享卡上的几行 ---------- */
   G.share.badges = (l) => {
     const out = JY.FATE ? JY.FATE.badges(l) : [];
-    if (l.rare) out.push('大约 ' + oneInText(l.rare.oneIn) + ' 人里才有一个这样的人生（比 ' + l.rare.pct + '% 的人生更少见）');
+    if (l.rare) out.push('这段人生：' + rarityLabel(l.rare) + '（按游戏模拟结果比较）');
     if (l.ach && l.ach.length) out.push('解锁成就：' + l.ach.slice(0, 4).map((id) => (ACH.find((a) => a.id === id) || {}).t).join('、'));
     if (l.aim && l.aim.v != null && !l.wish) out.push('十六岁的志向“' + AIM_T[l.aim.k] + '”，达成了 ' + l.aim.v + '%');
     return out;
