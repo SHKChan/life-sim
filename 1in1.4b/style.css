@@ -14,3 +14,20 @@
 .ending-entry summary { cursor: pointer; color: var(--muted); overflow-wrap: anywhere; }
 .ending-entry.unlocked summary { color: var(--fg); font-weight: 700; }
 .ending-entry summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.ending-hints { margin-top: 16px; }
+.ending-hints > summary { cursor: pointer; color: var(--muted); }
+.ending-hints > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+
+.end-details > summary { cursor: pointer; font-weight: 700; color: var(--fg); padding: 4px 0; }
+.end-details > summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.end-details[open] > summary { margin-bottom: 16px; }
+.end-details > .card { padding: 14px 0; border: 0; box-shadow: none; }
+
+.echo-options { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; min-width: 0; }
+.echo-legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.echo-option { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.echo-option input { margin-top: 5px; accent-color: var(--brand); flex-shrink: 0; }
+.echo-option span { min-width: 0; overflow-wrap: anywhere; }
+.echo-option small { display: block; margin-top: 4px; color: var(--soft); }
+.echo-option:has(input:checked) { border-color: var(--brand); }
+.echo-option:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }

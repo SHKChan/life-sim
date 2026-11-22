@@ -158,11 +158,7 @@
     const { esc, card } = u;
     let h = JY.FATE ? JY.FATE.endCards(l, u) : '';
     const s = l.snap || {};
-    if (l.rare) {
-      h += card('這段人生有多特別', '',
-        '<div class="big-num"><div><b>' + rarityLabel(l.rare) + '</b></div></div>'
-        + '<p class="note">按遊戲模擬結果比較，綜合出身、學歷、職業與生活經歷；僅表示經歷組合的常見程度。</p>', 'rare-card');
-    }
+    if (l.fresh && l.fresh.length) h += card('人生圖鑑 · 新收集', '', '<p class="note">' + esc(l.fresh.join('、')) + '</p>');
     if (l.aim && l.aim.v != null && !l.wish) {
       h += card('十六歲的志向', esc(AIM_T[l.aim.k] || ''), '<div class="aim-bar"><i style="width:' + l.aim.v + '%"></i></div><p class="note">達成了 <b>' + l.aim.v + '%</b>。'
         + esc({ rich: '臨終時的家底 ' + fmt(s.net) + '。', proud: '學歷、事業和人緣一起算。', free: '心情和“走自己的路”一起算。', none: '心情和人緣一起算。' }[l.aim.k] || '') + '</p>');
@@ -174,16 +170,14 @@
         return '<li class="' + ((l.newAch || []).includes(id) ? 'new' : '') + '"><b>' + esc(a.t) + '</b><span>' + esc(a.d) + (p != null ? ' · ' + (p < 1 ? '不到 1' : Math.round(p)) + '% 的人生有' : '') + '</span>' + ((l.newAch || []).includes(id) ? '<em>新</em>' : '') + '</li>';
       }).join('') + '</ul>');
     }
-    // 转折线：自己做的大事，一步一步走到这里
-    const steps = (l.picks || []).filter((p) => p.major && !p.auto);
-    if (steps.length) {
-      h += card('轉折線', '你親手做的大事', '<ol class="turns">' + steps.slice(0, 30).map((p) => '<li class="' + (!p.canon && p.ok ? 'mod' : !p.ok ? 'fail' : '') + '"><span>' + p.age + ' 歲</span><b>' + esc(p.t) + '</b>' + esc(p.c) + (p.check ? (p.ok ? '（成了）' : '（沒成）') : '') + '</li>').join('')
-        + '<li class="fin"><span>' + (l.to - l.born) + ' 歲</span><b>' + esc(l.cause) + '</b>' + esc([s.edu && EDU_T[s.edu], s.lastJob && JOB_T[s.lastJob], l.info && l.info['婚姻'], l.info && l.info['住处']].filter(Boolean).join(' · ')) + '</li></ol>');
-    }
     if (s.finGain || s.paAcct) {
       h += card('一輩子的理財', '', '<p class="note">' + (s.finGain ? '理財一共' + (s.finGain >= 0 ? '賺了 ' : '虧了 ') + esc(fmt(Math.abs(s.finGain))) + '。' : '') + (s.hyBlown ? '碰上過一次暴雷，虧了 ' + esc(fmt(s.hyBlown)) + '。' : '') + (s.paAcct ? '個人養老金賬戶攢了 ' + esc(fmt(s.paAcct)) + '。' : '') + '臨終時的家底：' + esc(fmt(s.net)) + '。</p>');
     }
-    if (l.fresh && l.fresh.length) h += card('人生圖鑑 · 新收集', '', '<p class="note">' + esc(l.fresh.join('、')) + '</p>');
+    if (l.rare) {
+      h += card('這段人生有多特別', '',
+        '<div class="big-num"><div><b>' + rarityLabel(l.rare) + '</b></div></div>'
+        + '<p class="note">按遊戲模擬結果比較，不代表人生好壞。</p>', 'rare-card');
+    }
     return h;
   };
 

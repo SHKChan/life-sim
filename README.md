@@ -1,20 +1,30 @@
 # 浮生录
 
-人生模拟器合集。选一个背景，投一次胎，从出生活到离世。玩法借鉴 *1 in 8 Billion*，同一套引擎，不同的世界。
+三个纯静态文字游戏，存档保存在浏览器本地。[进入大厅](https://www.vibe-game.com/life-sim/)。
 
-**线上地址：https://www.vibe-game.com/life-sim/**（Vibe Game 系列的一部分，总页面 https://www.vibe-game.com/）
+| 游戏 | 玩法 | 开发入口 |
+|---|---|---|
+| [十四亿分之一](https://www.vibe-game.com/life-sim/1in1.4b/) | 2026年随机出生，经历工作、家庭与养老，收集人生结局 | [README](1in1.4b/README.md) · [规范](1in1.4b/docs/SPEC.md) |
+| [江湖一梦](https://www.vibe-game.com/life-sim/jianghuyimeng/) | 重生成射雕三部曲人物，改命影响同一个江湖的下一世 | [README](jianghuyimeng/README.md) · [规范](jianghuyimeng/docs/SPEC.md) |
+| [群侠](https://www.vibe-game.com/life-sim/qunxia/) | 无名小卒自由游历、拜师、战斗，收集十四件信物 | [README](qunxia/README.md) · [规范](qunxia/docs/SPEC.md) |
 
-| 游戏 | 线上地址 | 目录 | 说明 |
-|---|---|---|---|
-| 十四亿分之一 | https://www.vibe-game.com/life-sim/1in1.4b/ | `1in1.4b/` | 按真实人口比例随机投胎到中国某个省市、某种家庭，2026 年出生，过完普通人的一生。有真实的钱、房子、和谁住在一起 |
-| 江湖一梦 | https://www.vibe-game.com/life-sim/jianghuyimeng/ | `jianghuyimeng/` | 射雕三部曲放进同一个江湖，重生成书中人物，改写原著里的命运 |
-| 群侠 | https://www.vibe-game.com/life-sim/qunxia/ | `qunxia/` | 文字武侠 RPG：做一个无名小卒，自由游历江湖、拜师学艺、招募队友、集齐信物 |
+## 本地与开发
 
-- 语言：暂时只开中文（`share/i18n.js` 的 `LANG_OPEN`）。英日西的界面词表和剧情翻译都还在，以后再开放。
-- 主题：暗、灰、白三种。手机、电脑都能玩。
-- 试玩（本地）：用浏览器打开根目录的 `index.html`（大厅），或者直接打开某个游戏目录里的 `index.html`。不需要服务器，存档在浏览器里。
-- 部署：纯静态网站，推送到 `main` 后 Cloudflare 自动部署（Build command `node tools/build.js`，部署规则见 [vibe-game 的 GUIDE.md](https://github.com/SHKChan/vibe-game/blob/main/docs/GUIDE.md)）。
-- 版本：每个游戏的版本号显示在全站顶栏（`game.js` 的 `version`，打包时写进页面）；发布时打 Git 标签（例如 `1in1.4b-v1.5.0`、`jianghuyimeng-v1.3.0`），要回滚就回到对应标签。
-- 开发：先读 `CLAUDE.md`（给开发者和 AI 助手的说明），写剧情前读各游戏的 `docs/SPEC.md`。全系列的约定在 [vibe-game 仓库的 docs/GUIDE.md](https://github.com/SHKChan/vibe-game/blob/main/docs/GUIDE.md)。
-- 改完数据在根目录跑 `node share/tools/simulate.js <游戏目录> 40`，必须输出“没有发现问题”。
-- 问题反馈：点顶栏或游戏里的“反馈”，或者直接到 [GitHub Issues](https://github.com/SHKChan/life-sim/issues) 提。
+用Chrome直接打开根目录或游戏目录的 `index.html`，不需要服务器。前两个游戏共用 `share/` 引擎与界面；群侠有独立引擎和存档，只复用部分公共资源。
+
+开发前读 [CLAUDE.md](CLAUDE.md) 和对应游戏规范。跨仓库的部署、顶栏、画风等规则以 [系列指南](../vibe-game/docs/GUIDE.md) 为准；本地没有时读取[线上版本](https://raw.githubusercontent.com/SHKChan/vibe-game/main/docs/GUIDE.md)。
+
+在仓库根目录运行：
+
+```powershell
+node share/tools/simulate.js 1in1.4b 40
+node share/tools/simulate.js jianghuyimeng 40
+node qunxia/tools/playtest.js 300
+node tools/build.js
+```
+
+测试必须输出“没有发现问题”。截图和日志放各游戏的 `docs/validation/`，Git忽略生成产物；长期基线另行说明。发布变更见 [CHANGELOG.md](CHANGELOG.md)。
+
+## 部署与反馈
+
+`node tools/build.js` 输出 `dist/life-sim/`。推送 `main` 会触发Cloudflare部署，三个游戏版本号均取自各自 `game.js`。正式站暂时只开中文，支持暗、灰、白主题及手机布局。反馈优先使用顶栏或游戏内入口。

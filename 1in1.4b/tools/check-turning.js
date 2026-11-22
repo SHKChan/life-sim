@@ -12,14 +12,18 @@ function boot() {
 for (let i = 0; i < 6; i++) for (const success of [true, false]) {
   const ctx = boot(), J = ctx.JY, E = J.engine, g = E.G, L = E.get().L, route = J.TURNING.ROUTES[i];
   L.year = J.byId[L.cid].born + route.age; E.get().W.year = L.year;
-  g.remember('money0', true); g.remember('seed', i % 3); g.remember('job', 'office'); g.remember('cash', route.fee - 1);
+  const jobs = ['electrician', 'sales', 'office', 'nurse', 'teacher', 'office'];
+  g.remember('money0', true); g.remember('seed', (i + 1) % 3); g.remember('job', jobs[i]);
+  L.mem.job.y -= 10; L.mem.money0.y -= 15; L.st['事业'] = 60;
+  if (i === 5) g.remember('hobby55', 'art');
+  g.remember('cash', route.fee - 1);
   const n = J.LIFE_NODES.find((n) => n.id === 't_rewrite_' + route.k);
   assert(n.cond(g)); assert(!E.choices(n).some((o) => o.i === 1)); assert.equal(E.choices(n).length, 2);
   g.remember('cash', route.fee + 50000); const before = J.CN.cash(g);
   L.queue = [n.id]; ctx.Math.random = () => success ? 0 : 0.99999;
   E.choose(1);
   assert.equal(J.CN.cash(g), before - route.fee); assert.equal(g.recall('rewrite').ok, success);
-  assert.equal(g.recall('job'), success ? route.job : 'office');
+  assert.equal(g.recall('job'), success ? route.job : jobs[i]);
   assert(J.TURNING.ROUTES.every((r, j) => !J.TURNING.eligible(g, r, j)));
   E.save(); E.load(); assert.equal(E.G.recall('rewrite').ok, success);
   const echo = J.LIFE_NODES.find((x) => x.id === n.id + '_echo');
@@ -29,7 +33,14 @@ for (let i = 0; i < 6; i++) for (const success of [true, false]) {
   life.note = '认真生活'; assert(J.GAME.share.badges(life)[0].includes(life.note));
 }
 const { JY: J } = boot();
+const gate = J.engine.G, state = J.engine.get().L;
+gate.remember('job', 'farmer'); state.st['事业'] = 20;
+assert(!J.TURNING.eligible(gate, J.TURNING.ROUTES[0]));
+gate.remember('craft', 'electric'); assert(J.TURNING.eligible(gate, J.TURNING.ROUTES[0]));
+state.done.t_rewrite_parcel = 1; state.done.t_rewrite_remote = 1;
+assert(!J.TURNING.eligible(gate, J.TURNING.ROUTES[0]));
+assert(J.GAME.endDetailsLabel);
 const sample = { age: 101, net: 100000, family: 'worker', hukou: 'rural', edu: 'phd', st: {} };
 assert.equal(J.FATE.endOf(sample).k, 'phd');
 assert(J.FATE.ENDS.every((e) => e.hint));
-console.log('通过：六条路线成功/失败、等额成本、现金边界、一次限制、存档重读、回响、评语分享和结局优先级。');
+console.log('通过：六条路线成功/失败、等额成本、现金边界、一次限制、存档重读、回响、经历门槛、两次邀请限制、评语分享和结局优先级。');

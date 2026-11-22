@@ -9,13 +9,14 @@ JY.GAME = {
   random: true,                     // 每一世随机投胎，不从名单里挑
   // 1× 时一年 12 秒（浮生录默认一分钟）：一生八十多年，1× 约二十分钟，2× 十分钟。大事停下来问，小事顺其自然（data/spine.js）
   yearMs: 12000,
+  endDetailsLabel: '展開完整人生記錄',
   // 有剧情翻译的语言（lang/<语言>/）。网站上只开中文（share/i18n.js），itch 版打开语言切换。
   // langFiles：已经翻好的数据文件，没列出的照旧载入中文原文（翻译一个文件，加一个）
   langs: ['en', 'zh-TW'],
   langFiles: {
     en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js'],
     // 繁体：share/tools/tw.py 从简体自动生成，全部文件都有
-    'zh-TW': ['turning.js', 'pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
+    'zh-TW': ['echo.js', 'turning.js', 'pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
   },
   intro: '今年，中國大約有九百萬個孩子出生。你是其中一個。省份、城鄉、家境都是隨機的，按真實的人口比例來。剩下的一生，由你來過。',
   freshLine: '還沒有投過胎。',
@@ -83,7 +84,7 @@ JY.GAME = {
     flavorRepeat: true,
   },
   choiceTags: false,              // 人群标签选完再展示，避免影响决定
-  version: '2.1.4',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.1.8',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人
@@ -148,25 +149,36 @@ JY.GAME = {
   },
   // 分享卡和文字总结
   share: {
+    // 分享卡按人生结局组织；旧记录没有结局时不补算、不虚构。
+    story: (l) => {
+      const place = l.deathLoc === '家' ? '家中' : l.deathLoc;
+      const natural = l.cause === '壽終正寢';
+      const death = natural ? (l.to - l.born >= 80 ? '壽終正寢' + (place ? '於' + place : '') : (place ? '在' + place : '') + '安然離世')
+        : [l.cause, place ? '卒於' + place : ''].filter(Boolean).join(' · ');
+      return { end: l.end, review: l.review, death,
+        badges: (JY.GAME.share.badges ? JY.GAME.share.badges(l) : []).filter((s) => !s.startsWith('這一生的結局：') && !s.startsWith('評語：')) };
+    },
     sub: (l) => [l.book, l.sex, l.info && l.info['户籍']].filter(Boolean).join(' · '),
     fields: (l) => [
       ['出生於', l.birthplace || ''],
       ['学历', (l.info && l.info['学历']) || '無'],
       ['职业', (l.info && l.info['职业'] === '退休' && l.snap && JY.JOB_T && JY.JOB_T[l.snap.lastJob] ? '退休前：' + JY.JOB_T[l.snap.lastJob] : (l.info && l.info['职业']) || '無')],
-      ['結局', l.cause, true],
     ],
     summary: (l) => {
       const age = l.to - l.born;
       const info = l.info || {};
+      const story = JY.GAME.share.story(l);
       const out = [];
       out.push('【十四億分之一】這一世，我投胎成了' + l.birthplace + '的' + l.name + '。');
-      out.push(l.born + '—' + l.to + ' 年，享年 ' + age + '，' + l.cause + '。');
+      out.push(l.born + '—' + l.to + ' 年，享年 ' + age + '，' + story.death + '。');
+      if (l.end) out.push('這一生的結局：' + l.end.t + '。' + (l.end.d || ''));
+      if (l.review) out.push('評語：' + l.review);
       const bits = [info['学历'], info['职业'], info['婚姻'], info['住处']].filter(Boolean);
       if (bits.length) out.push('這一生：' + bits.join('，') + '。');
       out.push('和我一樣出身的大多數人：' + l.fateText);
       out.push('與眾不同 ' + l.dev + '%，親手做過 ' + l.picks.filter((p) => !p.auto).length + ' 個大抉擇。臨終一句：“' + l.words + '”');
       // 稀有度、成就、志向（data/legacy.js 的 share.badges）
-      if (JY.GAME.share.badges) out.push(...JY.GAME.share.badges(l));
+      out.push(...story.badges);
       return out;
     },
   },

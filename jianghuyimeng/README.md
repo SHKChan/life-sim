@@ -1,32 +1,26 @@
 # 江湖一梦
 
-射雕三部曲同一个江湖里的人生模拟。玩法借鉴 *1 in 8 Billion*：重生成书里有名有姓的一个人，从出生活到命终，在原著大事上做选择。改掉的命运会留在这个江湖里，下一世重生到后面的年代还会遇到。
+射雕三部曲共用一个江湖的人生模拟。重生成书中人物，在大事上做选择；改掉的命运会留给这个江湖的后世。
 
-- 时间一年一年地走，1× 时一年约 1 分钟，可以开到 16×（一年约 4 秒），或者直接跳到下一个抉择。
-- 抉择用弹框，2–4 个选项。每个选择都会在后面留下痕迹：这一世后面的剧情变了、某个人活下来或死了，或者下一世换个人重生时还会碰到。
+[在线游玩](https://www.vibe-game.com/life-sim/jianghuyimeng/)。本地直接打开 `index.html`，存档保存在浏览器。默认十岁醒来，也可勾选从出生开始；后世受当前江湖纪年限制。1×有事的一年约一分钟，纯闲笔年20秒，可加速或跳到下一个抉择。
 
-## 试玩
+## 开发入口
 
-用浏览器直接打开本目录的 `index.html`，不需要服务器。存档在浏览器本地。
+先读根目录 [CLAUDE.md](../CLAUDE.md)，再读 [docs/SPEC.md](docs/SPEC.md)。纪年、人物格式、关系、跨世改命和结局规则集中在SPEC。早期可玩性任务的实现索引见 [PLAYABILITY-TASKS.md](docs/PLAYABILITY-TASKS.md)，不再作为待办重做。
 
-## 本目录
+- `game.js`：设定、版本与界面文案；`config.js`：部署配置。
+- `data/world.js`、`relations.js`：世界、标记和人物关系；三部书文件：人物剧情。
+- 心愿、图鉴、跨世任务、信物、判定提示和险境各有独立数据文件；加载顺序以 `index.html` 为准。
+- 引擎和界面在 `../share/`，这里不复制引擎。
 
-| 路径 | 内容 |
-|---|---|
-| `index.html` | 游戏页面，引用 `../share/` 的共用代码 |
-| `config.js` | 部署配置：网址、站名、字体 |
-| `game.js` | 游戏设定：标题、界面用词、书名颜色、分享文案 |
-| `data/world.js` | 年代、地点、年度重心、人生关口、共用人物、通用奇遇、闲笔、改命标记说明 |
-| `data/shediao.js` `data/shendiao.js` `data/yitian.js` | 三部书的人物、剧情节点、世界事件、奇遇、闲笔 |
-| `docs/SPEC.md` | 内容规范：时间线、数据格式、写作要求 |
-| `docs/ref/` | 设计参考截图 |
+## 检查
 
-## 常用命令（在仓库根目录执行）
+在仓库根目录执行：
 
-```bash
-node share/tools/simulate.js jianghuyimeng 40                       # 检查全部数据（必须“没有发现问题”）
-node share/tools/consequence.js jianghuyimeng guojing --list         # 看郭靖每个选项有没有后果
-SIM_DATA=shediao node share/tools/simulate.js jianghuyimeng 40      # 只测射雕
-node share/tools/shot.js jianghuyimeng guojing-4-dark out.png       # 截图
-node share/tools/build.js jianghuyimeng                             # 打包到 dist/
+```powershell
+node share/tools/simulate.js jianghuyimeng 40
+node share/tools/consequence.js jianghuyimeng guojing --list
+node tools/build.js
 ```
+
+模拟必须输出“没有发现问题”。跨世专属分支还要单独设状态检查。界面用Chrome或内置浏览器验收桌面和390px；截图工具用法见 `share/tools/shot.js` 文件头，输出放 `jianghuyimeng/docs/validation/`（先创建目录，产物不提交）。

@@ -345,12 +345,12 @@
           + (l.end.beat != null ? ' 臨終時的家底，超過了 <b>' + l.end.beat + '%</b> 同樣出身的人。' : '')
           + (g ? ' 天賦：' + esc(g.t) + '。' : '') + '</p>'
           + (l.otherEnds && l.otherEnds.length ? '<p class="note">同時收錄：' + l.otherEnds.map((x) => esc(x.t) + (x.fresh ? '（新）' : '')).join('、') + '。</p>' : '')
-          + (l.seed != null ? '<p class="note">' + (l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：把這一世分享出去，朋友點開連結或掃碼，第一次投胎會生在和你同一個地方、同一個家裡。</p>' : '')
+          + (l.seed != null ? '<p class="note">' + (l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：分享同一起點，看看朋友怎麼活。</p>' : '')
           + (l.newGifts && l.newGifts.length ? '<p class="note">解鎖了新的天賦：<b>' + esc(l.newGifts.join('、')) + '</b>。下一世抓周的時候可能擺在你面前。</p>' : ''), 'rare-card');
       }
       if (l.wish && l.wish.length) {
         const n = l.wish.filter((w) => w.ok).length;
-        h += card('這一生的心願', '做到了 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + (w.ok ? '已完成' : '未完成') + '</span></li>').join('') + '</ul>');
+        h += card('這一生的心願', '完成 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + (w.ok ? '已完成' : '未完成') + '</span></li>').join('') + '</ul>');
       }
       return h;
     },

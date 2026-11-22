@@ -8,7 +8,7 @@
   const t = JY.t || ((x, v) => (v ? x.replace(/\{(\w+)\}/g, (m, k) => v[k]) : x));
   // 游戏用词按当前语言覆盖（JY.GAME.i18n.<语言>），同 ui.js
   const GAME = Object.assign({}, JY.GAME || {}, (JY.GAME && JY.GAME.i18n && JY.GAME.i18n[JY.LANG]) || {});
-  // 分享卡和文字总结的用词、字段可以由 GAME.share 覆盖：sub(life) 姓名上方的小字，fields(life) 四个字段，summary(life) 文字总结（不含链接）
+  // GAME.share：sub/fields/summary 覆盖用词；可选 story(life) 返回 end/review/death/badges，突出人生结局。
   const SH = GAME.share || {};
   const CANON = GAME.canon || t('原著');
   const DEV = GAME.devName || t('改命度');
@@ -80,6 +80,7 @@
     c.setTransform(S, 0, 0, S, 0, 0);
     const accent = ACCENT[life.book] || GAME.brand || '#a3354c';
     const age = life.to - life.born;
+    const story = SH.story ? SH.story(life) : null;
 
     c.fillStyle = PAPER;
     c.fillRect(0, 0, Wd, Ht);
@@ -127,7 +128,7 @@
     c.fillText(YEAR + ' ' + life.born + ' — ' + life.to + ' · ' + t('享年 {n}', { n: age }), 164, y + 118);
     c.font = '13px ' + F_BODY;
     c.fillStyle = MUTED;
-    c.fillText(t('卒于{y}', { y: life.deathLoc || '' }), 164, y + 142);
+    wrap(c, story ? story.death : t('卒于{y}', { y: life.deathLoc || '' }), 164, y + 142, 406, 18, 2);
 
     // 字段
     y = 290;
@@ -149,8 +150,26 @@
       wrap(c, f[1], x, yy + 22, 254, 20, 2);
     });
 
+    y = story ? 290 + Math.ceil(fields.length / 2) * 64 : 440;
+    if (story) {
+      if (story.end) {
+        c.fillStyle = MUTED;
+        c.font = '12px ' + F_BODY;
+        c.fillText(t('这一生的结局'), 30, y);
+        c.fillStyle = accent;
+        c.font = '900 32px ' + F_HEAD;
+        y += 38 + wrap(c, story.end.t, 30, y + 38, 540, 40, 2);
+        c.fillStyle = INK;
+        c.font = '14px ' + F_BODY;
+        y += wrap(c, story.end.d, 30, y, 540, 22, 3) + 14;
+      }
+      if (story.review) {
+        c.fillStyle = INK;
+        c.font = '14px ' + F_BODY;
+        y += wrap(c, story.review, 30, y + 8, 540, 23, 3) + 22;
+      }
+    }
     // 一句话
-    y = 440;
     const quote = line || life.words;
     if (quote) {
       c.fillStyle = INK;
@@ -173,19 +192,19 @@
       c.fillStyle = MARK[k];
       c.fillRect(30 + (a % cols) * (cell + gap), y + 12 + Math.floor(a / cols) * (cell + gap), cell, cell);
     }
-    c.fillStyle = accent;
-    c.font = '900 84px ' + F_HEAD;
-    c.fillText(life.dev + '%', 300, y + 92);
+    c.fillStyle = story ? MUTED : accent;
+    c.font = (story ? '14px ' + F_BODY : '900 84px ' + F_HEAD);
+    c.fillText(story ? DEV + ' ' + life.dev + '%' : life.dev + '%', 304, y + (story ? 32 : 92));
     c.fillStyle = INK;
     c.font = '700 14px ' + F_BODY;
-    c.fillText(DEV, 304, y + 120);
+    if (!story) c.fillText(DEV, 304, y + 120);
     c.font = '12.5px ' + F_BODY;
     c.fillStyle = MUTED;
-    c.fillText(t('做过 {n} 个抉择', { n: life.picks.filter((p) => !p.auto).length }), 304, y + 142);
-    c.fillText(FATE + t('：'), 304, y + 166);
-    const fateH = wrap(c, life.fateText, 304, y + 186, 266, 18, 5);
+    c.fillText(t('做过 {n} 个抉择', { n: life.picks.filter((p) => !p.auto).length }), 304, y + (story ? 58 : 142));
+    if (!story) c.fillText(FATE + t('：'), 304, y + 166);
+    const fateH = story ? 0 : wrap(c, life.fateText, 304, y + 186, 266, 18, 5);
     const mapBottom = y + 12 + Math.ceil(span / cols) * (cell + gap);
-    y = Math.max(mapBottom, y + 186 + fateH) + 30;
+    y = Math.max(mapBottom, y + (story ? 58 : 186 + fateH)) + 30;
 
     // 世界因我而变
     if (life.changes.length) {
@@ -197,7 +216,7 @@
       y += 22 + wrap(c, life.changes.slice(0, 4).map((k) => JY.FLAGS[k] || k).join(t('；')), 30, y + 22, 540, 20, 3);
     }
     // 游戏自己加的几行（例如十四亿分之一的稀有度、成就）：share.badges(life) 返回文字数组
-    const badges = SH.badges ? SH.badges(life) : [];
+    const badges = story ? story.badges : SH.badges ? SH.badges(life) : [];
     if (badges.length) {
       c.fillStyle = accent;
       c.fillRect(30, y - 4, 3, badges.length * 22 + 2);

@@ -739,6 +739,7 @@
     // 游戏自己加的卡片（例如十四亿分之一的稀有度、成就、转折线）：endCards(life) 返回 HTML 片段
     if (T.endCards) h += T.endCards(l, { esc, t, card });
     h += endNoteView(l);
+    if (T.endDetailsLabel) h += '<details class="card end-details"><summary>' + esc(T.endDetailsLabel) + '</summary>';
     h += '<div class="card"><h3>' + esc(T.compareTitle) + '</h3><div class="compare" style="margin-top:12px"><div><b>' + esc(T.fateLabel) + '</b>' + esc(l.fateText) + '</div><div><b>' + esc(T.yourEnd) + '</b>' + esc(l.name + t('，') + l.cause + t('。')) + '</div></div></div>';
     h += '<div class="card"><h3>' + esc(T.changed) + '</h3><div style="margin-top:10px">' + (l.changes.length
       ? '<ul class="ulist">' + l.changes.map((k) => '<li class="mod">' + esc(JY.FLAGS[k] || k) + '</li>').join('') + '</ul><p style="color:var(--muted);font-size:13.5px;margin-top:10px">' + esc(t('这些改变会留在这个{w}里。下一世重生到后面的年代，还会碰到它们的后果。', { w: T.world })) + '</p>'
@@ -747,6 +748,7 @@
     if (l.answers.length) h += '<div class="card"><h3>' + esc(T.pauseTag) + '</h3><ul class="ulist" style="margin-top:10px">' + l.answers.map((a) => '<li>' + esc(ageText(a.age) + ' · ' + a.q + ' ' + a.a) + '</li>').join('') + '</ul></div>';
     h += '<div class="card"><h3>' + esc(T.peersTitle) + '</h3><div class="rows" style="margin-top:10px">' + l.peers.map((p) => '<div class="row"><span class="nm">' + esc(p.name) + '</span><span class="v"></span><span class="n' + (p.st.dead ? ' dead' : '') + '">' + esc(p.st.t) + '</span></div>').join('') + '</div></div>';
     h += card(t('人生图'), t('一格一年'), lifeMap(l.born, l.from, l.to, -9999, l.marks));
+    if (T.endDetailsLabel) h += '</details>';
     h += '<div class="end-btns"><button class="b primary big" id="e-share" data-act="share">' + t('分享这一生') + '</button>'
       + '<button class="b big" id="e-review" data-act="review">' + t('再看一遍') + '</button>'
       + '<button class="b big" id="e-home" data-act="home">' + t('再入轮回') + '</button><button class="b big" id="e-chron" data-act="drawer">' + esc(T.chronicle) + '</button></div>';

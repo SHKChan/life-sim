@@ -1,3 +1,6 @@
 dist/
 node_modules/
 .wrangler/
+
+# Generated test logs, screenshots and simulation results
+**/docs/validation/

@@ -208,12 +208,12 @@
         return who + '打电话来，说' + (c ? c + '的' : '城里的') + '房子有空房间，' + gk + '让你' + (hasSp(g) ? '们' : '') + '过去一起住。';
       },
       choices: [
-        { t: '收拾东西，搬过去', canon: true,
+        { t: '搬去孩子家', canon: true,
           fx: (g) => { if (!g.recall('kidCity')) g.remember('kidCity', g.recall('workCity') && g.rnd() < 0.5 ? g.recall('workCity') : CN.pick(['北京', '上海', '深圳', '杭州', '成都', '武汉', '南京', '西安'])); toKids(g); g.stat('人缘', 3); g.stat('心情', -1); },
           res: (g) => (g.recall('kidCity') === '国外' ? '你带了两箱衣服，一袋老家的米。下了飞机，满街的字你一个也不认识。' : '你带了两箱衣服，一袋老家的米。新家很干净，你一时不知道该把手放哪儿。') },
-        { t: '不去，留在自己家', dev: 10, fx: (g) => { g.remember('liveWith', 'alone'); g.stat('心情', 2); stayHome(g); },
+        { t: '留在自己家', dev: 10, fx: (g) => { g.remember('liveWith', 'alone'); g.stat('心情', 2); stayHome(g); },
           res: (g) => (CN.alone(g) ? '你说你住惯了。挂了电话，屋里很安静。' : '你说你们住惯了。挂了电话，' + spName(g) + '说，这样也好，各过各的，见面才亲。') },
-        { t: '谁也不跟，回老家去', dev: 20, cond: (g) => g.recall('house') !== 'hometown', fx: (g) => { g.remember('liveWith', 'hometown'); g.info('住处', '回了老家'); stayHome(g); }, res: '老家的房子落满了灰。你扫了一整天，夜里听见了几十年没听过的虫叫。' },
+        { t: '回老家住', dev: 20, cond: (g) => g.recall('house') !== 'hometown', fx: (g) => { g.remember('liveWith', 'hometown'); g.info('住处', '回了老家'); stayHome(g); }, res: '老家的房子落满了灰。你扫了一整天，夜里听见了几十年没听过的虫叫。' },
       ] },
     { id: 'o_where_nokid', age: 66, t: '往后住哪儿', loc: 'home',
       cond: (g) => !hasKid(g),
@@ -437,10 +437,10 @@
         return '白天家里人都出门了。有些事你一个人做不动了：拧瓶盖，换灯泡，弯腰捡东西。';
       },
       choices: [
-        { t: '请一台能护理的陪护机器人', canon: true, fx: (g) => { spend(g, 40000); g.stat('健康', 3); g.remember('robot', 'home'); }, res: () => (paid >= 40000 ? '花了 ' + CN.fmt(paid) + '。' : '钱不够，社区补贴了一部分。') + '它会在你起夜时把灯打开，会在你说话时回话。' },
-        { t: '住进养老院，每月 ¥5,000', dev: 15, cond: (g) => canNursing(g), fx: (g) => { toNursing(g); g.stat('人缘', 2); }, res: (g) => '你挑了一家离老房子不远的。窗户朝南。' + (hasSp(g) ? spName(g) + '跟你住一间。' : '') },
+        { t: '买陪护机器人', canon: true, fx: (g) => { spend(g, 40000); g.stat('健康', 3); g.remember('robot', 'home'); }, res: () => (paid >= 40000 ? '花了 ' + CN.fmt(paid) + '。' : '钱不够，社区补贴了一部分。') + '它会在你起夜时把灯打开，会在你说话时回话。' },
+        { t: '住养老院', dev: 15, cond: (g) => canNursing(g), fx: (g) => { toNursing(g); g.stat('人缘', 2); }, res: (g) => '你挑了一家离老房子不远的。窗户朝南。' + (hasSp(g) ? spName(g) + '跟你住一间。' : '') },
         { t: '搬去和孩子住', dev: 10, cond: (g) => hasKid(g) && lw(g) !== 'kids', fx: (g) => { toKids(g); }, res: '孩子把书房腾出来给你。你听见他们夫妻俩小声商量过。' },
-        { t: '就这样过，不添麻烦', dev: 10, fx: (g) => { g.remember('robot', 'none'); g.stat('心情', 2); }, res: (g) => (lw(g) === 'kids' ? '你说你还能动。孩子在你屋里装了扶手和夜灯。' : '你说这屋子里的每样东西你都知道在哪儿。这就够了。') },
+        { t: '继续自己照顾自己', dev: 10, fx: (g) => { g.remember('robot', 'none'); g.stat('心情', 2); }, res: (g) => (lw(g) === 'kids' ? '你说你还能动。孩子在你屋里装了扶手和夜灯。' : '你说这屋子里的每样东西你都知道在哪儿。这就够了。') },
       ] },
 
     /* ================= 77 岁 ================= */

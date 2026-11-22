@@ -75,12 +75,14 @@
   });
   const job = (l) => (JY.JOB_T && l.snap && JY.JOB_T[l.snap.lastJob]) || '';
   G.share = Object.assign(G.share, {
+    story: (l) => ({ end: l.end, review: l.review,
+      death: l.cause === G.engine.naturalDeath ? (l.to - l.born >= 80 ? 'Died peacefully of old age' : 'Passed away peacefully') + (l.deathLoc ? ' · ' + l.deathLoc : '') : [l.cause, l.deathLoc].filter(Boolean).join(' · '),
+      badges: (G.share.badges ? G.share.badges(l) : []).filter((s) => !s.startsWith('这一生的结局：') && !s.startsWith('评语：') && !s.startsWith('Ending:')) }),
     sub: (l) => [BOOK_EN[l.book] || l.book, JY.t(l.sex), l.info && l.info['户籍']].filter(Boolean).join(' · '),
     fields: (l) => [
       ['Born in', l.birthplace || ''],
       ['Education', (l.info && l.info['学历']) || 'none'],
       ['Work', (l.info && /retired/i.test(l.info['职业'] || '') && job(l) ? 'Retired; was ' + job(l) : (l.info && l.info['职业']) || 'none')],
-      ['How it ended', l.cause, true],
     ],
     summary: (l) => {
       const age = l.to - l.born;

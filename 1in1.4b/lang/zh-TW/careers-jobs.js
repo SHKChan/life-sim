@@ -24,7 +24,8 @@
     CN.pay(g, Math.min(have, fee));
   };
   const entry = (own, cost) => ({
-    t: (g) => (own ? '自己做' : '培訓後做') + title(g, own) + '（' + CN.fmt(cost) + '，' + CN.jobLine(g, pick(g, own)) + '；本錢不夠要借）', dev: 15,
+    t: (g) => (own ? '自己做' : '培訓後做') + title(g, own), dev: 15,
+    hint: (g) => '成功花 ' + CN.fmt(cost) + '，失敗花 ' + CN.fmt(Math.round(cost / 3)) + '；不夠要借。做成後' + CN.jobLine(g, pick(g, own)) + '。',
     check: [own ? '事业' : '学识', own ? 42 : 35],
     fx: (g) => { spend(g, cost); set(g, own); g.remember('tradeEntry', pick(g, own)); g.stat('事业', 2); },
     res: (g) => '你從' + title(g, own) + '做起。第一筆賬記在新本子上，收入要靠每天的活慢慢攢。',

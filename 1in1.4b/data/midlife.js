@@ -676,7 +676,7 @@
       text: (g) => '六十岁了。离退休还有五年，你开始想以后的日子在哪里过。' + (hasKid(g) && g.recall('kidCity') ? kn(g) + '在' + g.recall('kidCity') + '。' : '') + (hv(g) ? '你的房子现在值 ' + fmt(hv(g) * 1e4) + '。' : ''),
       choices: [
         { t: '就在现在住的地方', canon: true, fx: (g) => { g.stat('心情', 2); g.remember('plan60', 'stay'); }, res: '你熟悉这里的每一个菜摊。' },
-        { t: '回老家，把老房子修一修', dev: 15, cond: (g) => !atHome(g) && !['sold', 'gave'].includes(g.recall('oldHouse')),
+        { t: '修好老房，回乡住', dev: 15, cond: (g) => !atHome(g) && !['sold', 'gave'].includes(g.recall('oldHouse')),
           fx: (g) => {
             A = 100000; spend(g, A);
             if (!hv(g)) settleOld(g, oldVal(g));
@@ -694,10 +694,10 @@
             g.stat('人缘', 3); g.remember('plan60', 'kid');
           },
           res: (g) => (M === 'buy' ? '你卖了老房子，在' + g.recall('kidCity') + '买了一套小两居，离孩子走路十五分钟。' : '你在' + g.recall('kidCity') + '租了一套离孩子不远的房子，走路十五分钟。') },
-        { t: '换套小房子，手头宽裕些', dev: 10, cond: (g) => house(g) === 'own' && hv(g) >= 40,
+        { t: '换小房，留些积蓄', dev: 10, cond: (g) => house(g) === 'own' && hv(g) >= 40,
           fx: (g) => { const p = Math.round(hv(g) * 0.5); CN.sellHouse(g); CN.buyHouse(g, { price: p, down: 1 }); A = p * 1e4; g.remember('plan60', 'down'); },
           res: () => '大房子卖了，换了一套小的，差价 ' + fmt(A) + ' 存了起来。楼层低，有电梯，以后腿脚不好也不怕。' },
-        { t: '退休以后，冬天去南方过', dev: 10, cond: (g) => !(house(g) === 'own' && hv(g) >= 40),
+        { t: '冬天去南方住', dev: 10, cond: (g) => !(house(g) === 'own' && hv(g) >= 40),
           fx: (g) => { g.stat('心情', 3); g.remember('plan60', 'south'); }, res: '你在手机上看了好几个海边小城的房租，收藏了一个又一个。' },
       ] },
     { id: 'm_61_plan_echo', age: 61, t: '新的日子', auto: true, cond: (g) => !!g.recall('plan60'),
