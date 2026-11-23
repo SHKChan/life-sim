@@ -116,6 +116,14 @@ for s, e, q, body in scan(open(os.path.join(gdir, 'data', 'world.js'), encoding=
     if CJK.search(body) and len(body) < 80:
         dic.setdefault(body, CC.convert(body))
 dic = {k: v for k, v in dic.items() if k != v}
+# 保留其他游戏和旧界面的键及人工译文。
+old_path = os.path.join(repo, 'share', 'lang.zh-TW.js')
+if os.path.exists(old_path):
+    old_src = open(old_path, encoding='utf-8').read()
+    old_match = re.search(r"JY\.addI18n\('zh-TW', (\{[\s\S]*?\})\);", old_src)
+    if not old_match:
+        raise ValueError('无法读取原繁体词表，停止以免丢失旧译文')
+    dic.update(json.loads(old_match.group(1)))
 js = ('/* 繁体中文界面词表，由 share/tools/tw.py 生成，不要手改。 */\n(function () {\n  \'use strict\';\n'
       '  const JY = window.JY;\n  if (!JY || !JY.addI18n) return;\n  JY.addI18n(\'zh-TW\', ' + json.dumps(dic, ensure_ascii=False, indent=0) + ');\n})();\n')
 open(os.path.join(repo, 'share', 'lang.zh-TW.js'), 'w', encoding='utf-8').write(js)

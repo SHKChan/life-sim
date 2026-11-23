@@ -105,6 +105,32 @@
     return CN.youHh(g);
   };
 
+  // 中年的家庭记忆有明确对象，不能套给再婚伴侣或另一个孩子。
+  const partnerMemory = (g) => {
+    if (partner(g) !== 'sp') return '';
+    return ({ talk: '你们还留着饭后慢慢说话的习惯，累了就先说累了。', space: '各自喜欢的事还留着。你们会问对方今天有没有什么新鲜事。', busy: '有时又聊成了账单和家务。你把手机放下，补问了一句今天过得怎么样。' })[g.recall('familyPartner')] || '';
+  };
+  const kidMemory = (g, visit) => {
+    if (!JY.byId.k1 || !g.alive('k1')) return '';
+    const k = g.name('k1');
+    if (visit && g.recall('familyTeen') === 'listen') return '你和' + k + '说话，仍会等对方讲完。轮到你拿不定主意，也试着先讲出来。';
+    if (visit && g.recall('familyTeen') === 'later') return '你想起那张没交的社团报名表。这回和' + k + '聊起一件小事，你没再说等忙完。';
+    const work = g.recall('familyWork');
+    if (work === 'budget') return '说起往后的照应，' + k + '先问你怎么打算。你们像当年算第一份工资那样，把事情一项项列下来。';
+    if (work === 'support') return '你提起当年那笔周转的钱，' + k + '还记得转账上那句“吃好点”。这回你也把自己的难处说了一点。';
+    if (work === 'alone') return '你问' + k + '最近有没有难处，没再说年轻人都这样。那边停了一会儿，慢慢讲了几句。';
+    if (g.recall('familyTeen') === 'listen') return '你和' + k + '说话，仍会等对方讲完。轮到你拿不定主意，也试着先讲出来。';
+    if (g.recall('familyTeen') === 'later') return '你想起那张没交的社团报名表。这回和' + k + '聊起一件小事，你没再说等忙完。';
+    return '';
+  };
+  const siblingMemory = (g) => {
+    const id = ['sib0', 'sib1'].find((x) => JY.byId[x] && g.alive(x));
+    // 原照护对象无法辨认时，只在唯一健在手足的家庭中续接。
+    if (!id || ['sib0', 'sib1'].filter((x) => !!JY.byId[x]).length !== 1) return '';
+    const n = g.name(id);
+    return ({ share: n + '发来生日问候，又问起你的复查日期。你们还会把要紧的事摊开商量。', time: n + '打来电话，说这回换你歇歇。有些相互替班的日子，你们都还记得。', apart: '你给' + n + '发了张生日照。过去只转收据的聊天里，慢慢又有了家常。' })[g.recall('familySibling')] || '';
+  };
+
   JY.addFlags({
     donatedHouse: '把家产留给了老家的学校，那里后来多了一间图书室',
     oldStoryteller: '晚年给村里的孩子讲了很多年的老故事',
@@ -295,7 +321,7 @@
         else if (hasKid(g)) bits.push(kidName(g) + '订了一个蛋糕');
         if (lw(g) === 'nursing') bits.push('养老社区给这个月过生日的人一起办了一场');
         if (!bits.length) bits.push('楼下的老邻居拎来一块小蛋糕，你们俩插了一根蜡烛');
-        return '七十岁生日。' + bits.join('，') + '。';
+        return '七十岁生日。' + bits.join('，') + '。' + partnerMemory(g) + siblingMemory(g);
       } },
     { id: 'o_rehire_end', age: 70, t: '交了工牌', auto: true,
       cond: (g) => g.recall('afterRetire') === 'rehire',
@@ -509,6 +535,8 @@
     /* ================= 79 岁 ================= */
     { id: 'o_look_back_work', age: 79, t: '想起干活的那些年', auto: true,
       text: (g) => {
+        const memory = CN.careerMemory && CN.careerMemory(g);
+        if (memory) return memory;
         const j = g.recall('preJob');
         const c = g.recall('workCity');
         const at = c ? '在' + c : '';
@@ -864,6 +892,18 @@
    * afterWidow 'alone'|'kids'|'nursing'|'remarry'；remarried（晚年再婚，老伴 id sp2，和你同住）；lastCall
    */
   // 退休以后的日子（读 retired）
+  // 续接现有节点，不增加停问、费用或亲密度。
+  [
+    ['o_spcare_echo', (g) => partnerMemory(g)],
+    ['o_care_plan', (g) => kidMemory(g)],
+    ['o_care_echo', (g) => kidMemory(g)],
+    ['o_kids_visit', (g) => kidMemory(g, true)],
+  ].forEach(([id, tail]) => {
+    const n = JY.LIFE_NODES.find((x) => x.id === id);
+    const text = n.text;
+    n.text = (g) => (typeof text === 'function' ? text(g) : text) + tail(g);
+  });
+
   JY.addFlavor('any', [
     { t: '退休以后，你每天醒得比上班时还早。', cond: (g) => g.recall('retired') === true && g.age < 80 },
     { t: '你翻出以前上班的工牌看了一会儿，又放回抽屉。', cond: (g) => g.recall('retired') === true },

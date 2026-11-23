@@ -32,6 +32,60 @@
   const byId = (id) => JY.LIFE_NODES.find((n) => n.id === id) || JY.ENCOUNTERS.find((n) => n.id === id);
   JY.LIFE_NODES.concat(JY.ENCOUNTERS).forEach((n) => { if (SET.has(n.id)) n.major = true; });
 
+  // 这些节点原先会被当作小事，但能改变学历、职业、婚姻、生育、住所或长期支出。
+  const PERSONAL = [
+    'c_follow_parents', 'y_repeat_college', 'y_army_back', 'y_work20', 'y_abroad', 'y_steady24',
+    'y_grad_out', 'y_marry27', 'y_phd_out', 'y_marry29', 'y_parents29', 'y_promo29',
+    'y_backwork31', 'y_kid31', 'y_marry32', 'y_single32', 'y_ivf33', 'y_debt33', 'y_credit22',
+    'm_37_kid2', 'm_38_single', 'm_40_nokid', 'm_47_land',
+    'o_after_retire', 'o_retire_plain', 'o_back_home', 'o_grandcare',
+    'e_m_parent_ill', 'e_m_sp_ill', 'e_m_pa_bill', 'e_m_kid_school', 'e_m_kid_move',
+    'e_m_kid_gaokao', 'e_m_kid_city', 'e_m_kid_wed', 'e_m_oldhouse',
+    'e_m_ladder', 'e_m_ladder2', 'e_m_biz', 'e_m_consult',
+    'e_ai_layoff', 'e_rent_offer', 'e_village_coop', 'e_o_after_widow',
+    'e_family_no_wedding', 'e_family_sibling', 'e_m_kid_teen',
+    'e_invest', 'e_robot_buy', 'e_friend_borrow', 'o_sp_sick', 'o_fall', 'e_o_last_hospital',
+  ];
+  PERSONAL.forEach((id) => { const n = byId(id); if (n) n.major = true; });
+
+  // 明确选择不要孩子后，不再由四十岁的通用节点推翻。
+  const noKid = byId('m_40_nokid');
+  if (noKid) {
+    const cond = noKid.cond;
+    noKid.cond = (g) => g.recall('kidPlan') !== 'dink' && g.recall('nokid') !== 'dink' && (!cond || cond(g));
+  }
+
+  // 只给少量同一领域的小事续接明确的手选；不从自动经历反推人格。
+  const FOLLOW = {
+    e_family_teen_repair: [
+      { id: 'e_m_kid_teen', key: 'kidBond', map: { close: 0, loose: 1 } },
+    ],
+    e_family_partner: [
+      { id: 'y_crisis31', key: 'fight', map: { talk: 0, cold: 2 } },
+      { id: 'm_38_marriage', key: 'marriage', map: { mended: 0, cold: 2 } },
+    ],
+    m_58_work: [
+      { id: 'm_42_office', key: 'career42', map: { mid: 0, pivot: 2, home: 1 } },
+      { id: 'm_42_stable', key: 'career42', map: { steady: 1, remote: 2 } },
+      { id: 'm_42_labor', key: 'career42', map: { grind: 0, far: 2 } },
+      { id: 'm_47_ai', key: 'ai47', map: { hold: 0, learn: 2, out: 1 } },
+    ],
+  };
+  JY.GAME.engine.autoChoice = (n, g, opts) => {
+    const rules = FOLLOW[n.id];
+    if (!rules) return;
+    const picks = JY.engine.get().L.picks || [];
+    for (let p = picks.length - 1; p >= 0; p--) {
+      if (picks[p].auto) continue;
+      const rule = rules.find((r) => r.id === picks[p].id);
+      if (!rule) continue;
+      if (picks[p].check && !picks[p].ok) return;
+      const i = rule.map[g.recall(rule.key)];
+      // 最近一次明确决定没有对应选项时回退，不翻旧账覆盖它。
+      return opts.some((o) => o.i === i) ? i : undefined;
+    }
+  };
+
   /* stake：这一步决定什么；hints：按选项在 choices 里的位置（下标），写代价和好处 */
   const PATCH = {
     c_xiaoshengchu: { stake: '初中的好壞，三年後決定中考能考成什麼樣。', hints: { 1: '考上了，學識和中考都往上走一截' , 2: '一年學費好幾萬，家裡要掏' } },
@@ -103,7 +157,9 @@
    *   人生主干（major）总要问；意外带判定或会出人命的，离上一次亲自选的意外隔十二年以上才问；其余自动选。 */
   const big = (n) => (n.choices || []).some((c) => c.check || c.fatal);
   JY.GAME.engine.minor = (n, g) => {
-    if (n.major) return false;
+    if (n.major || (n.choices || []).some((c) => c.fatal)) return false;
+    // 普通生日可顺其自然；一旦有大额买车选项就必须亲选。
+    if (n.id === 'm_40_body' && JY.engine.choices(n).some((o) => o.i === 2)) return false;
     if (!JY.ENCOUNTERS.includes(n) || !big(n)) return true;
     const L = JY.engine.get().L;
     const last = L.picks.filter((p) => p.enc && !p.auto).map((p) => p.age).pop();

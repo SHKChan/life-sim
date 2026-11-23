@@ -2,13 +2,17 @@
 (function () {
   'use strict';
   const JY = window.JY, CN = JY.CN;
+  CN.careerMemories.teacher = {
+    steady: '五十岁时，你仍会问清作业本上空着的那一题。如今有人带着孩子来问读书的事，你先听孩子自己说，不急着替他选路。',
+    learn: '五十岁时，你听过年轻老师试讲。如今偶尔受邀回去看课，带的是改过的作业册，听完也会把新办法记下来。',
+  };
   const lines = [
     { job: 'teacher', title: '最后一排的作业本',
       text: '班里一个孩子总交白卷。教研组催你交公开课材料，孩子的家长只说工作忙。你把那本空作业本留在了桌上。',
       a: '先问清孩子卡在哪里', b: '跟教研组磨一套分层作业',
       ar: '你发现他连前一年的题都没跟上。每天放学多留十分钟，从那里补起。', br: '你和同事改了几轮题。有人觉得麻烦，试了一个学期，终于少了几本白卷。',
       a40: '一届届学生换过去。有人回来看你，说起的总是当年放学后那十分钟。', b40: '你把试过的作业装订成册，新老师来带班，先借这本看。',
-      a50: '五十岁了，批改作业要戴老花镜。碰到空白处，你还是会把孩子叫来问一句。', b50: '教研会开完，你留下来听年轻老师试讲。黑板擦落下的粉，你顺手接住。' },
+      a50: '五十岁了，批改作业要戴老花镜。碰到空白处，你还是会把孩子叫来问一句。有人毕业后带着自己的孩子回来，想请你先听听孩子的难处。', b50: '教研会开完，你留下来听年轻老师试讲。后来几次新课试教，都先把作业册送来请你一起改。' },
     { job: 'doctor', title: '交班之前',
       text: '清早交班，一个病人的复查指标还没出来。家属攥着缴费单追着问，你的夜班已经上了十二个小时。',
       a: '把病情和下一步写清楚再交班', b: '报名科里的病例讨论，补这一类经验',
@@ -70,6 +74,6 @@
       fx: (g) => { const r = g.recall('service30'); if (r && r.job === x.job) g.stat(r.route === 'learn' ? '事业' : '人缘', 3); } },
     { id: 'i_' + x.job + '_50', age: 50, t: '换个做法', auto: true, echoOf: 'i_' + x.job + '_30', cond: (g) => g.recall('job') === x.job,
       text: (g) => { const r = g.recall('service30'); return r && r.job === x.job && r.route === 'learn' ? x.b50 : x.a50; },
-      fx: (g) => { const r = g.recall('service30'); if (r && r.job === x.job) g.stat(r.route === 'learn' ? '事业' : '心情', 2); } },
+      fx: (g) => { const r = g.recall('service30'); if (r && r.job === x.job) { if (x.job === 'teacher') g.remember('career50', { job: x.job, route: r.route }); g.stat(r.route === 'learn' ? '事业' : '心情', 2); } } },
   ]));
 })();

@@ -11,6 +11,25 @@
   const sibling = (g) => ['sib0', 'sib1'].find((id) => !!JY.byId[id] && g.alive(id));
   const hasCash = (g, x) => Math.max(0, CN.cash(g)) >= x;
 
+  // 住所只解释眼前日子，不再收取一次房租或照护费。
+  CN.homeLifeContext = (g) => {
+    if (['nursing', 'dorm'].includes(g.recall('hhPlace'))) return '';
+    if (['fa', 'mo'].some((id) => JY.byId[id] && g.alive(id) && CN.livesWith(g, id))) return '老人也在这屋里住，饭点和休息的时间要一起商量，谁出门前都多问一句。';
+    const house = g.recall('house');
+    const back = house === 'hometown' || g.recall('liveWith') === 'hometown'
+      || (g.recall('backHome') && [g.recall('city'), g.recall('homeCap')].includes(g.recall('workCity')));
+    if (back) return '回到老家住下以后，家里的事近了，自己的安排也要重新留出空当。';
+    if (g.recall('tier') <= 2 && house === 'rent') return '住处还租着，屋里的东西照样按自己的习惯摆，手头的钱也给房租和急用各留一份。';
+    if (g.recall('tier') >= 3 && ['own', 'mortgage'].includes(house)) return house === 'mortgage' ? '这座小城的家安顿下来，还款日仍记在本子上，留给家里的时间也得一起算。' : '这座小城的家住惯了，少了一笔还款，家里的安排仍要一件件商量。';
+    return '';
+  };
+  ['m_46_house_echo', 'm_52_care_echo', 'm_61_plan_echo'].forEach((id) => {
+    const n = JY.LIFE_NODES.find((x) => x.id === id);
+    if (!n) return;
+    const text = n.text;
+    n.text = (g) => (typeof text === 'function' ? text(g) : text || '') + CN.homeLifeContext(g);
+  });
+
   // 真正不婚的支线：不再接“孩子想结婚”和第一胎孙辈。二孩原有的成长不受影响。
   ['e_m_kid_wed', 'o_gk_born'].forEach((id) => {
     const n = JY.ENCOUNTERS.concat(JY.LIFE_NODES).find((n) => n.id === id);

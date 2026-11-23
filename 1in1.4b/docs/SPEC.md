@@ -242,6 +242,14 @@ JY.addLifeNodes([
 
 ## v2.0：节奏与财务约定
 
+### 自动小事与亲自决定的边界
+
+- `engine.autoChoice(n, g, opts)` 是可选钩子，仅用于小抉择；返回当前可见、非致命选项的原下标。未配置或返回无效下标时沿用原自动逻辑，不影响其他游戏。
+- 本游戏先在夫妻晚饭、青春期沟通和58岁工作安排三个小事中，读取同领域最近的手动选择及其已有记忆。自动经历不反推人格，无依据时回退；不新增存档字段。
+- 婚姻、生育、职业主路、迁居、长期照护及重大支出节点由 `spine.js` 的 `PERSONAL` 列表补为重大决定。致命风险无论间隔多久均须停问。
+- 明确 `kidPlan=dink` 或 `nokid=dink` 后，`m_40_nokid` 不再触发；旧档无这些值时沿用原条件。
+- 停问约25–35次仍为内容设计目标，不作为强制截断；不能为达标代选重大决定。比较报告必须同时检查同年多次停问和各节点分布。
+
 - `yearMs: 12000`：1× 一年12秒。大事标 `major: true`，写清 `stake` 与选项 `hint`；其余小事顺其自然，不算玩家抉择。重大意外的停问间隔见 `spine.js`。
 - 回响用 `echoOf` 引用原节点，不另起一套任务系统。选项标题写行动，费用、风险和失败后果写在说明里。
 - `finance.js` 管行情、分仓、定投、养老金和高息理财；`tech.js` 管科技亲历。新增文件的加载顺序以 `index.html` 为准。
@@ -302,6 +310,15 @@ JY.addLifeNodes([
 | `injury` | claim / settle / bear | 工伤选择、三年回响 |
 
 ## 行业、旅行、家庭与宠物
+
+### 第二批关系与职业试点
+
+- 家庭记忆在 `o_seventy`、`o_spcare_echo`、`o_care_plan`、`o_care_echo`、`o_kids_visit` 继续读取。夫妻只续接健在原配 `sp`，亲子记忆只属于健在 `k1`；手足无法辨认对象时不猜测。
+- 饭馆、汽修的守成／学习／少接活，以及教师、建筑的两条路线在40、50岁反馈后，由 `CN.careerMemory(g)` 进入已有79岁工作回顾。`career50={job,route}` 仅在四个试点真实触发50岁回响且有原路线记忆时记录；缺失时保留原回顾。
+- `CN.homeLifeContext(g)` 在原46岁住房、52岁父母照护、61岁退休回响读取当前住房和同住状态；养老院、宿舍不套用原住所。函数只读，不再次收取房租或照护费。
+- `focusRun={name,n,y}` 为本世可选记忆：23岁起年终记录实际重心、连续年数和最后结算年份；同年不重复累计，重心变化或跨年缺口重置。旧档从更新后的第一次结算记一年，不补造过去。
+- 连续三年及以上且仍采用该重心时，`CN.focusMemory(g)` 在原十年小结和疲劳回响呈现工作、陪伴、锻炼或休息的生活痕迹。只增加文字，不增加费用、健康效果、日志条数或停问。
+- 定向检查为 `tools/check-batch2-family.js`、`check-batch2-careers.js`、`check-batch2-life.js`。本批没有解决P0停问预算问题，不能将文字深化作为节奏达标证据。
 
 - 行业文件：`careers-small.js` 管餐饮、理发、零售、维修和技工；`careers-service.js` 管教育医疗、运输和照护；`careers-land.js` 管农业与工地；`careers-jobs.js` 接入原有升学、就业、创业和转行节点。行业30/40/50岁经历复用原职业与记忆。
 - `job` 还包括 `restaurant`、`beauty`、`grocery`、`mechanic`、`electrician`、`welder`、`cnc`、`renovation`、`parcel`、`maternity`、`eldercare`、`housekeeping`、`cooperative`、`livestock`、`grower`、`construction`。收入基数以代码为准。

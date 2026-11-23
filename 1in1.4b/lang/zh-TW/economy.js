@@ -399,6 +399,20 @@
     return out;
   }
 
+  // 只计算更新后实际经过的连续年份，旧档不追补习惯。
+  CN.focusMemory = (g) => {
+    const r = g.recall('focusRun');
+    if (!r || r.name !== g.focus || r.n < 3 || r.y < g.Y - 1 || r.y > g.Y) return '';
+    if (r.name === '埋头工作') return '連著幾年把時間留給工作，你翻日曆時，先看哪天還能歇一歇。';
+    if (r.name === '锻炼身体') return '連著幾年留出活動身體的時間，你知道哪段路好走，也知道累了該在哪裡停。';
+    if (r.name === '躺平休息') return '連著幾年把日子放慢，你給自己留著不趕時間的一頓飯。';
+    if (r.name === '陪伴家人') {
+      const ids = ['sp', 'sp2', 'k1', 'k2', 'k3', 'fa', 'mo'].filter((id) => JY.byId[id] && g.alive(id) && CN.livesWith(g, id));
+      return ids.length ? '這些年你常留在家裡，知道同住的人什麼時候吃飯、什麼時候想安靜一會兒。' : '這些年你常把時間留給家裡，如今同住的人少了，你也給自己的晚飯多留一會兒。';
+    }
+    return '';
+  };
+
   /* 年度小结：这一年要是没什么事，写一行“家里怎么样” */
   function summary(g, age) {
     const L = L_();
@@ -415,7 +429,7 @@
       if (V.debt(g)) t += '，還欠 ' + CN.fmt(V.debt(g) * 1e4);
       t += '。';
     }
-    return t;
+    return t + (decade ? CN.focusMemory(g) : '');
   }
 
   /* ---------- 宠物 ----------
@@ -609,6 +623,10 @@
     },
     oddsMod: (g, chk) => (CN.giftOdds ? CN.giftOdds(g, chk) : 0),
     yearEnd: (g, age) => {
+      if (age >= 23) {
+        const r = g.recall('focusRun');
+        if (!r || r.y !== g.Y) g.remember('focusRun', { name: g.focus, n: r && r.name === g.focus && r.y === g.Y - 1 ? r.n + 1 : 1, y: g.Y });
+      }
       reconcile(g, age).forEach((t) => g.log(t, 'auto'));
       pets(g).forEach((t) => g.log(t, 'auto'));
       overwork(g, age);

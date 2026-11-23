@@ -412,6 +412,12 @@
     let opts = E.choices(n);
     const safe = opts.filter((o) => !o.ch.fatal);
     if (safe.length) opts = safe;
+    // 可选的小事选法只接收当前可见且非致命的选项；未配置或返回无效下标时沿用原逻辑。
+    const autoChoice = CONF().autoChoice;
+    if (autoChoice && E.isMinor(n)) {
+      const i = autoChoice(n, G, safe);
+      if (safe.some((o) => o.i === i)) return i;
+    }
     const mine = L.picks.filter((p) => !p.auto);
     const odd = mine.length ? mine.filter((p) => !p.canon).length / mine.length : 0.2;
     const canon = opts.filter((o) => o.ch.canon), other = opts.filter((o) => !o.ch.canon);

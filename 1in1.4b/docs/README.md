@@ -24,3 +24,7 @@ node 1in1.4b/tools/compare.js 80 1in1.4b/docs/validation/current-compare.json
 `compare.js` 的默认策略会先选固定志向。检查整体心愿达成率时，还需用 `COMPARE_STYLE=auto` 的真实自动选法，并查看输出里的 `wishByAim`；PowerShell 用 `$env:COMPARE_STYLE = 'auto'` 设置，结束后移除该环境变量。
 
 提交新基线时，应另存带版本的文件，并记录提交、样本数、种子、策略、环境变量和统计口径。普通测试输出留在 `validation/`，无需提交。
+
+`compare.js` 的 `pace` 字段提供停问中位数/P90、年龄段、同年连续停问、自动小事与回响统计，以及80岁以上人生的单列统计。`echoLogs` 是回响日志数，`echoesWithChoiceSource` 是已完成且存在选择来源的回响节点数；二者均不等于经人工确认的有效因果链数。原有JSON数组保持兼容，输出路径另附 `.meta.json`，记录运行开始时的提交、工作区、脚本哈希、种子、环境与口径。运行期间每世使用同一份已缓存源码。
+
+定向检查：`node 1in1.4b/tools/check-p0-metrics.js`、`node 1in1.4b/tools/check-p0.js`。

@@ -15,7 +15,13 @@
       ] },
     { id: 'e_h_overwork_echo', y: Y, minAge: 31, maxAge: 64, auto: true, always: true, t: '三年以後', echoOf: 'e_h_overwork_warn',
       cond: (g) => !!g.recall('fatigueWarn') && g.since('fatigueWarn') >= 3,
-      text: (g) => ({ rest: '你記得那一個月的長覺。忙起來時，也開始知道給自己留一天空。', change: '輕崗做了三年，收入少一些，複查單上的箭頭也少了。', ignore: '當年的藥盒換了幾個，夜裡的心慌還在。醫生又問，你到底什麼時候歇一歇。' }[g.recall('fatigueWarn')]),
+      text: (g) => {
+        const way = g.recall('fatigueWarn'), tired = (g.recall('fatigue') || 0) >= 6;
+        const t = way === 'ignore' ? (tired ? '當年的藥盒換了幾個，醫生又問，你到底什麼時候歇一歇。' : '當年你說還能扛。後來生活慢了一些，你複診時也說起了作息的變化。')
+          : way === 'change' ? (g.recall('lightDuty') ? '換到輕崗以後，你開始留意收工時的天色。身體還得慢慢照顧。' : '當年換崗的事，你複查時又提了一遍。後來工作變過，醫生仍讓你留意休息。')
+          : tired ? '你記得那一個月的長覺。最近又忙起來，複查時你把這一年的安排講給醫生聽。' : '你記得那一個月的長覺。忙起來時，也開始知道給自己留一天空。';
+        return t + (CN.focusMemory ? CN.focusMemory(g) : '');
+      },
       fx: (g) => g.stat('健康', g.recall('fatigueWarn') === 'ignore' ? -2 : 2) },
     { id: 'e_h_injury', y: Y, minAge: 22, maxAge: 50, t: '停工的那幾天', loc: 'hospital',
       cond: (g) => ['worker', 'rider', 'driver', 'electrician', 'welder', 'cnc', 'renovation', 'mechanic', 'construction'].includes(g.recall('job')) && !g.recall('injury'),

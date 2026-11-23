@@ -3,6 +3,10 @@
 (function () {
   'use strict';
   const JY = window.JY, CN = JY.CN;
+  CN.careerMemories.construction = {
+    steady: '五十歲時，你把高處的活讓開，在地面教新人收尾。如今鄰居修小院，你坐在一旁提醒工具怎麼擺，不再往架子上爬。',
+    learn: '五十歲時，你拿著圖紙做過驗收檢查。如今有人翻修舊屋請你看看，你把尺寸逐一記下，涉及結構的仍讓他們找專業人員。',
+  };
   const lines = [
     { job: 'cooperative', title: '曬場上的秤',
       text: '合作社收糧，幾戶人家對水分和斤兩有意見。買家在等整車發貨，你拿著兩張差了不少的過秤單。',
@@ -33,7 +37,7 @@
       a: '先檢查，等穩妥再上去', b: '學測量和放線，往技術崗走',
       ar: '你把鬆動的扣件指出來。工頭嘟囔幾句，還是讓人重緊了一遍。', br: '你收工後跟技術員學看圖，白天照樣做原來的活。褲兜裡多了一本小冊子。',
       a40: '新來的小工跟著你上樓。你先看他的安全帶，再教他把工具繫好。', b40: '你開始拿著圖紙放線。誤差得重新核，活輕一點，心裡要更細。',
-      a50: '膝蓋不如從前，你少上高處，多做地面的收尾。工資條上的日子，一個個對得清楚。', b50: '五十歲，你帶人做驗收前的檢查。最後一處尺寸核好，才收起捲尺。' },
+      a50: '膝蓋不如從前，你少上高處，多做地面的收尾。新來的小工先跟你學怎樣把工具和材料收穩，工資條上的日子也一個個對清楚。', b50: '五十歲，你帶人做驗收前的檢查。圖紙上每處改動都要留底，最後一處尺寸核好，才收起捲尺。' },
   ];
   CN.TRADE_JOBS = (CN.TRADE_JOBS || []).concat(lines.map((x) => x.job));
   lines.forEach((x) => JY.addLifeNodes([
@@ -47,6 +51,6 @@
       fx: (g) => { const r = g.recall('land30'); if (r && r.job === x.job) g.stat(r.route === 'learn' ? '事业' : '人缘', 3); } },
     { id: 'i_' + x.job + '_50', age: 50, t: '地上的年頭', auto: true, echoOf: 'i_' + x.job + '_30', cond: (g) => g.recall('job') === x.job,
       text: (g) => { const r = g.recall('land30'); return r && r.job === x.job && r.route === 'learn' ? x.b50 : x.a50; },
-      fx: (g) => { const r = g.recall('land30'); if (r && r.job === x.job) g.stat(r.route === 'learn' ? '事业' : '心情', 2); } },
+      fx: (g) => { const r = g.recall('land30'); if (r && r.job === x.job) { if (x.job === 'construction') g.remember('career50', { job: x.job, route: r.route }); g.stat(r.route === 'learn' ? '事业' : '心情', 2); } } },
   ]));
 })();
