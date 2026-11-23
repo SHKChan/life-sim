@@ -3,6 +3,32 @@
 (function () {
   'use strict';
   const JY = window.JY, CN = JY.CN;
+  Object.assign(CN.careerMemories, {
+    doctor: {
+      steady: '五十歲時，你少排夜班，仍會核那張交班表。如今碰到年輕同事，會先問他們有沒有按時交清該交代的事。',
+      learn: '五十歲時，有人拿著舊病歷找你。如今翻閱病例筆記，你把拿不準的新問題留給仍在崗位上的同事討論。' },
+    nurse: {
+      steady: '五十歲時，你帶新護士做床旁照護。如今整理自己的複查單，你也把想問的問題一條條寫下來。',
+      learn: '五十歲時，你給出院的人畫過護理圖。如今社群講座請你分享經驗，你先提醒大傢俱體情況還要問醫護人員。' },
+    driver: {
+      steady: '五十歲時，你推掉了連續幾夜的長途。如今坐車出門，看到服務區就想起那碗熱面，也會提醒同行的人歇一歇。',
+      learn: '五十歲時，你帶新人認過固定線路。如今舊搭檔打來電話，你們聊起窄彎和停車的地方，路早已修寬了一些。' },
+    rider: {
+      steady: '五十歲時，你把配送縮在熟悉的街區。如今散步經過那些樓門，仍認得幾位門衛，會停下來打聲招呼。',
+      learn: '五十歲時，你在站裡幫著分單。如今雨天收到舊同事的訊息，你先問一句路滑不滑，慢一點也能到。' },
+    parcel: {
+      steady: '五十歲時，你學會等搭班的人一起搬大件。如今去取包裹，看到年輕人用小推車，也會把門扶住。',
+      learn: '五十歲時，你教人核對單號。如今幫鄰居寫寄件地址，你仍把名字和電話再念一遍，確認了才封口。' },
+    maternity: {
+      steady: '五十歲時，你不再連著接住家照護。如今翻到那本記錄冊，會想起給一家人慢慢解釋的清早。',
+      learn: '五十歲時，你更多做白天的指導。如今有人來問帶孩子的事，你先聽清處境，拿不準的就勸對方去問醫生。' },
+    eldercare: {
+      steady: '五十歲時，你和同事一起做搬扶的活。如今輪到自己需要照應，你也會把習慣說清楚，不讓人靠猜。',
+      learn: '五十歲時，你整理過照護方案。如今商量自己的照護安排，你把床邊的東西一件件指出來，哪些順手，哪些礙事。' },
+    housekeeping: {
+      steady: '五十歲時，你把單量減下來，只留近的幾家。如今收拾自己的屋子，一天做一點，做完還能坐下看會兒窗外。',
+      learn: '五十歲時，你帶著搭檔核驗收清單。如今有人問怎麼清理舊物，你先看看材料，不合適的辦法便不試。' },
+  });
   CN.careerMemories.teacher = {
     steady: '五十歲時，你仍會問清作業本上空著的那一題。如今有人帶著孩子來問讀書的事，你先聽孩子自己說，不急著替他選路。',
     learn: '五十歲時，你聽過年輕老師試講。如今偶爾受邀回去看課，帶的是改過的作業冊，聽完也會把新辦法記下來。',
@@ -75,6 +101,6 @@
       fx: (g) => { const r = g.recall('service30'); if (r && r.job === x.job) g.stat(r.route === 'learn' ? '事业' : '人缘', 3); } },
     { id: 'i_' + x.job + '_50', age: 50, t: '換個做法', auto: true, echoOf: 'i_' + x.job + '_30', cond: (g) => g.recall('job') === x.job,
       text: (g) => { const r = g.recall('service30'); return r && r.job === x.job && r.route === 'learn' ? x.b50 : x.a50; },
-      fx: (g) => { const r = g.recall('service30'); if (r && r.job === x.job) { if (x.job === 'teacher') g.remember('career50', { job: x.job, route: r.route }); g.stat(r.route === 'learn' ? '事业' : '心情', 2); } } },
+      fx: (g) => { const r = g.recall('service30'); if (r && r.job === x.job) { g.remember('career50', { job: x.job, route: r.route }); g.stat(r.route === 'learn' ? '事业' : '心情', 2); } } },
   ]));
 })();

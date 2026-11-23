@@ -3,6 +3,20 @@
 (function () {
   'use strict';
   const JY = window.JY, CN = JY.CN;
+  Object.assign(CN.careerMemories, {
+    cooperative: {
+      steady: '五十歲時，你在曬場邊看年輕人復秤。如今聽說又到了收糧的時節，和舊同事通話時，還會提醒把賬當面核清。',
+      learn: '五十歲時，你把收購合同按年份理好。如今舊同事來問往事，你先翻那一年的退貨記錄，再講後來怎麼改。' },
+    livestock: {
+      steady: '五十歲時，你把欄位減下來。如今聽鄰居說起養殖，仍會問一句記錄有沒有留好，別省掉該做的檢查。',
+      learn: '五十歲時，你把合訂飼料的賬交給年輕人。如今聽舊同事說起院口的飼料車，便想起那聲音，賬上的事卻不再全攬過來。' },
+    grower: {
+      steady: '五十歲時，你把育苗床抬高了一些。如今照看窗邊的小盆栽，也會先摸摸土，再決定要不要澆水。',
+      learn: '五十歲時，你按配送單核過一筐筐菜。如今社群一起買菜，你幫著分清份數，挑剩的一把留給自己煮湯。' },
+    farmer: {
+      steady: '五十歲時，你把遠田託人照看。如今看天氣預報，仍會想起田裡的農時，空下來便和老鄉聊上幾句。',
+      learn: '五十歲時，你把試種本交給年輕人。如今對方帶來新收成，你們翻著那幾頁舊記錄，聊今年哪些法子合適。' },
+  });
   CN.careerMemories.construction = {
     steady: '五十歲時，你把高處的活讓開，在地面教新人收尾。如今鄰居修小院，你坐在一旁提醒工具怎麼擺，不再往架子上爬。',
     learn: '五十歲時，你拿著圖紙做過驗收檢查。如今有人翻修舊屋請你看看，你把尺寸逐一記下，涉及結構的仍讓他們找專業人員。',
@@ -51,6 +65,6 @@
       fx: (g) => { const r = g.recall('land30'); if (r && r.job === x.job) g.stat(r.route === 'learn' ? '事业' : '人缘', 3); } },
     { id: 'i_' + x.job + '_50', age: 50, t: '地上的年頭', auto: true, echoOf: 'i_' + x.job + '_30', cond: (g) => g.recall('job') === x.job,
       text: (g) => { const r = g.recall('land30'); return r && r.job === x.job && r.route === 'learn' ? x.b50 : x.a50; },
-      fx: (g) => { const r = g.recall('land30'); if (r && r.job === x.job) { if (x.job === 'construction') g.remember('career50', { job: x.job, route: r.route }); g.stat(r.route === 'learn' ? '事业' : '心情', 2); } } },
+      fx: (g) => { const r = g.recall('land30'); if (r && r.job === x.job) { g.remember('career50', { job: x.job, route: r.route }); g.stat(r.route === 'learn' ? '事业' : '心情', 2); } } },
   ]));
 })();

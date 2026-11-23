@@ -14,7 +14,9 @@
 
   // 住所只解释眼前日子，不再收取一次房租或照护费。
   CN.homeLifeContext = (g) => {
-    if (['nursing', 'dorm'].includes(g.recall('hhPlace'))) return '';
+    if (g.recall('hhPlace') === 'nursing' || g.recall('liveWith') === 'nursing') return '住在養老社群，作息有了安排，你也把自己習慣的飯點和需要安靜的時候說清楚。';
+    if (g.recall('hhPlace') === 'dorm') return '宿舍的空間有限，東西收在自己的位置，晚歸和休息也得顧著同屋的人。';
+    if (g.recall('liveWith') === 'kids' && ['k1', 'k2', 'k3'].some((id) => JY.byId[id] && g.alive(id) && CN.livesWith(g, id))) return '住進孩子家，吃飯和休息的習慣慢慢商量，你也給自己留一點不被打擾的時間。';
     if (['fa', 'mo'].some((id) => JY.byId[id] && g.alive(id) && CN.livesWith(g, id))) return '老人也在這屋裡住，飯點和休息的時間要一起商量，誰出門前都多問一句。';
     const house = g.recall('house');
     const back = house === 'hometown' || g.recall('liveWith') === 'hometown'
@@ -22,14 +24,10 @@
     if (back) return '回到老家住下以後，家裡的事近了，自己的安排也要重新留出空當。';
     if (g.recall('tier') <= 2 && house === 'rent') return '住處還租著，屋裡的東西照樣按自己的習慣擺，手頭的錢也給房租和急用各留一份。';
     if (g.recall('tier') >= 3 && ['own', 'mortgage'].includes(house)) return house === 'mortgage' ? '這座小城的家安頓下來，還款日仍記在本子上，留給家裡的時間也得一起算。' : '這座小城的家住慣了，少了一筆還款，家裡的安排仍要一件件商量。';
+    if (house === 'rent') return '住處還租著，續租和家裡的安排一起記著，熟悉的日常也在這間屋子裡慢慢積下來。';
+    if (['own', 'mortgage'].includes(house)) return house === 'mortgage' ? '在這座城市有了自己的家，還款和急用的錢各留一份，往後的安排也多想一步。' : '在這座城市有了住慣的家，不用再惦記續租，日常的照應仍要慢慢安排。';
     return '';
   };
-  ['m_46_house_echo', 'm_52_care_echo', 'm_61_plan_echo'].forEach((id) => {
-    const n = JY.LIFE_NODES.find((x) => x.id === id);
-    if (!n) return;
-    const text = n.text;
-    n.text = (g) => (typeof text === 'function' ? text(g) : text || '') + CN.homeLifeContext(g);
-  });
 
   // 真正不婚的支线：不再接“孩子想结婚”和第一胎孙辈。二孩原有的成长不受影响。
   ['e_m_kid_wed', 'o_gk_born'].forEach((id) => {
@@ -121,4 +119,16 @@
       fx: (g) => { if (g.recall('familySibling') === 'apart') g.stat('人缘', -1); else g.stat('心情', 2); },
       text: (g) => ({ share: '兄弟姐妹群裡的輪班表換了很多版。有人臨時有事，另一個會接上。年節的飯終於又能坐齊。', time: '你上回替班以後，兄弟姐妹也替你擔過一次急事。那句“你歇一歇”聽著很近。', apart: '有件急事你們還是一起辦了。回程的車上，你先問對方最近身體怎麼樣，話才慢慢多起來。' }[g.recall('familySibling')]) },
   ]);
+
+  // 沿用原节点和结算；住所与习惯的补充各只加一句，不增加日志条数。
+  const housing = ['m_46_house_echo', 'm_52_care_echo', 'm_61_plan_echo', 'm_43_career_echo', 'm_54_nest_echo', 'e_family_partner_echo', 'e_family_work_echo', 'o_first_morning', 'o_care_echo'];
+  const habits = ['m_43_career_echo', 'm_48_check_echo', 'e_h_injury_echo', 'e_family_partner_echo', 'o_first_morning', 'o_hobby_echo', 'o_chronic_echo'];
+  [...new Set(housing.concat(habits))].forEach((id) => {
+    const n = JY.LIFE_NODES.concat(JY.ENCOUNTERS).find((x) => x.id === id);
+    if (!n) return;
+    const text = n.text;
+    n.text = (g) => (typeof text === 'function' ? text(g) : text || '')
+      + (housing.includes(id) ? CN.homeLifeContext(g) : '')
+      + (habits.includes(id) && CN.focusMemory ? CN.focusMemory(g) : '');
+  });
 })();

@@ -19,7 +19,7 @@ for(const [house,tier,word] of cases){
   }
 }
 g.remember('parentsCare','self');J.CN.liveWith(g,['fa']);assert(J.CN.homeLifeContext(g).includes('老人'));
-g.remember('hhPlace','nursing');assert.equal(J.CN.homeLifeContext(g),'','养老院不套用原住所');g.remember('hhPlace','');
+g.remember('hhPlace','nursing');assert(J.CN.homeLifeContext(g).includes('养老社区'),'养老院读取实际住所');g.remember('hhPlace','');
 for(const focus of ['埋头工作','陪伴家人','锻炼身体','躺平休息']){
   age(40);L.focus=focus;delete L.mem.focusRun;assert.equal(J.CN.focusMemory(g),'','旧档无历史不补造');
   for(let a=40;a<=42;a++){age(a);L.st['健康']=100;J.ECON.yearEnd(g,a);}

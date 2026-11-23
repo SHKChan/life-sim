@@ -14,8 +14,35 @@
   };
   CN.careerMemory = (g) => {
     const r = g.recall('career50');
-    return r && CN.careerMemories[r.job] && CN.careerMemories[r.job][r.route] || '';
+    const text = r && CN.careerMemories[r.job] && CN.careerMemories[r.job][r.route];
+    return typeof text === 'string' ? text : '';
   };
+  Object.assign(CN.careerMemories, {
+    beauty: {
+      steady: '五十岁时，你给老客留过不赶时间的预约。如今碰到熟人，还会聊起那面镜子前的家常。',
+      learn: '五十岁时，你把复杂发型交给年轻人收尾。如今翻到作品册，你指着一页说起当年怎么练那一剪。',
+      rest: '五十岁时，你把两次预约隔开，给腰背留了歇息的时间。如今整理头发，也习惯先坐稳再慢慢来。' },
+    grocery: {
+      steady: '五十岁时，你宁可少摆几排货，也不压满仓库。如今去买东西，仍会先看日期，再想一想家里还缺什么。',
+      learn: '五十岁时，你每天核冷柜温度。如今帮社区分送食品，你把需要冷藏的先挑出来，交代清楚再离开。',
+      rest: '五十岁时，你把货架收拢，轮到休息就歇一会儿。如今买完菜坐在街边，看熟人路过，聊上几句。' },
+    electrician: {
+      steady: '五十岁时，你留在地面核对图纸。如今有人问起家里的线路，你提醒对方先找持证人员检查，旧图纸也要留好。',
+      learn: '五十岁时，你带年轻人核检修读数。如今整理旧记录，仍把断电确认那一步圈出来，留给来请教的人看。',
+      rest: '五十岁时，你不再把检修排得太密。如今看到旧工具箱，会把表笔理顺，再坐下来喝口水。' },
+    welder: {
+      steady: '五十岁时，你开始做焊口检查。如今碰到当年的工友，说起返过工的那道弯，大家还记得清楚。',
+      learn: '五十岁时，你重新翻过换证的练习册。如今有人来问手艺，你先讲防护和检查，纸上的焊缝画得很细。',
+      rest: '五十岁时，你留出停手休息的空当。如今擦过那副护目镜，便把它收好，慢慢活动一下肩膀。' },
+    cnc: {
+      steady: '五十岁时，你把常见偏差画成小图。如今老同事发来新版图表，你放大看了很久，也添上一条旧经验。',
+      learn: '五十岁时，你带人试过新工艺。如今翻旧程序册，你记起那次试切，空白处还留着当时改过的尺寸。',
+      rest: '五十岁时，你不再把排班接满。如今做点家里的小活，也习惯量清楚再动手，累了便停。' },
+    renovation: {
+      steady: '五十岁时，你在地面教人排砖和查空鼓。如今翻到做过的房子的旧照片，会放大看看门口，想起当年的收尾。',
+      learn: '五十岁时，你把同时接的工地减下来。如今有人问修房的事，你帮着列验收项目，施工仍交给在行的人。',
+      rest: '五十岁时，你给工期之间留出了空当。如今收拾家里，也只做一小处，做完坐下看看，不急着赶下一处。' },
+  });
   // 每行的两个走法、十年后的回响和五十岁的落点都按行当写。
   const lines = [
     { job: 'restaurant', name: '饭馆', title: '午市的账',
@@ -71,13 +98,27 @@
       a40: '老业主介绍来一户新家，说你慢一点，但做完不返潮。', b40: '你带的小队开始接整套翻修。每次收工，门口都扫干净才走。',
       a50: '膝盖跪不住那么久了。你教徒弟排砖，自己负责最后的空鼓检查。', b50: '你不再一口气接三家。工地少一处，晚上能赶回去吃口热饭。' },
   ];
+  const rest = {
+    beauty: ['你把预约之间留出空档，站久了就坐一会儿。熟客提前约时间，忙完也能按点吃饭。', '五十岁了，你不再连着站满一天。剪刀收进抽屉，腰背缓一缓，再做自己的事。'],
+    grocery: ['你把补货和理货的时间分开，不再一边吃饭一边搬箱子。熟悉的货架慢慢收拾，也能盘清。', '五十岁了，你把货架收拢了一些。轮到休息就歇一会儿，不把所有事挤在关门以后。'],
+    electrician: ['你把检修之间的路程留够，不再赶着从一处跑到下一处。收工前有时间把标签核清。', '五十岁了，爬高的活先和搭班的人商量。你不硬接排得太密的检修，工具收好再走。'],
+    welder: ['你把停手休息的时间写进安排。护目镜摘下来，喝口水，等眼睛缓过来再继续。', '五十岁了，你不再接连赶几班。手停下来的时候，能慢慢活动肩膀，也把防护用品查一遍。'],
+    cnc: ['你把额外加班减下来。机器停稳以后，量具擦净收好，饭不再总是凉了才吃。', '五十岁了，你不把排班接满。下班铃响过，交清尺寸记录就走，晚上能留一点时间给自己。'],
+    renovation: ['你给两个工期之间留了空当。上一家的边角收好，再去下一家，不再来回赶场。', '五十岁了，你把赶不及的活提前说清。一天做完就收工具，膝盖累了不再硬跪着赶。'],
+  };
+  const employee = {
+    beauty: { text: '客人问起新流行的发型。培训班要 ¥6,000，还占三天休息；师傅说原来的剪染也得继续练。', choice: '花 ¥6,000，利用换班去学新手法', result: '你和同事换好班，拿着假发去上课。回来先练熟，再和师傅商量接哪种发型。' },
+    grocery: { text: '月底你帮着盘货，一箱饮料快过期了。店里准备加鲜食，你问过冷链和鲜食管理的课程，要 ¥10,000。', choice: '花 ¥10,000 学鲜食和冷链管理', result: '你记下验温和盘损耗的办法，回来帮着照看鲜食货架。机器和进货的钱仍由店里安排。' },
+    mechanic: { text: '老车的故障灯总是亮，店里的新检测仪你还没摸熟。新车型诊断的课程要 ¥12,000，你下班后看了很久介绍。', choice: '花 ¥12,000 学新车型诊断', result: '你用休息时间上课，回来对着检测记录再练一遍。遇到拿不准的故障，仍和师傅一起核查。' },
+  };
+  lines.forEach((x) => { if (rest[x.job]) [x.r40, x.r50] = rest[x.job]; });
   CN.TRADE_JOBS = (CN.TRADE_JOBS || []).concat(lines.map((x) => x.job));
   lines.forEach((x) => JY.addLifeNodes([
     { id: 'i_' + x.job + '_30', age: 30, t: x.title, cond: (g) => g.recall('job') === x.job,
-      text: (g) => x.job === 'restaurant' && !g.recall('tradeOwn') ? '午市散了，师傅让你帮着核剩菜。店里想接团餐，你问过一门备餐课，要 ¥8,000。原来的活照样得做，学不学还得自己拿主意。' : x.text, choices: [
+      text: (g) => !g.recall('tradeOwn') && employee[x.job] ? employee[x.job].text : x.job === 'restaurant' && !g.recall('tradeOwn') ? '午市散了，师傅让你帮着核剩菜。店里想接团餐，你问过一门备餐课，要 ¥8,000。原来的活照样得做，学不学还得自己拿主意。' : x.text, choices: [
         { t: x.a, canon: true, fx: (g) => { g.remember('trade30', { job: x.job, route: 'steady' }); g.stat('事业', 2); }, res: x.ar },
-        { t: (g) => x.job === 'restaurant' && !g.recall('tradeOwn') ? '花 ¥8,000 学团餐备餐' : x.b, dev: 10, cond: (g) => CN.cash(g) >= x.fee + 10000,
-          fx: (g) => { CN.pay(g, x.fee); g.remember('trade30', { job: x.job, route: 'learn' }); g.stat('学识', 3); }, res: (g) => x.job === 'restaurant' && !g.recall('tradeOwn') ? '你下班后去上课，回来跟师傅试着排备餐顺序。第一批饭盒封好时，比往常早了半小时。' : x.br },
+        { t: (g) => !g.recall('tradeOwn') && employee[x.job] ? employee[x.job].choice : x.job === 'restaurant' && !g.recall('tradeOwn') ? '花 ¥8,000 学团餐备餐' : x.b, dev: 10, cond: (g) => CN.cash(g) >= x.fee + 10000,
+          fx: (g) => { CN.pay(g, x.fee); g.remember('trade30', { job: x.job, route: 'learn' }); g.stat('学识', 3); }, res: (g) => !g.recall('tradeOwn') && employee[x.job] ? employee[x.job].result : x.job === 'restaurant' && !g.recall('tradeOwn') ? '你下班后去上课，回来跟师傅试着排备餐顺序。第一批饭盒封好时，比往常早了半小时。' : x.br },
         { t: '先缓一缓，少接一点活', dev: 10, fx: (g) => { g.remember('trade30', { job: x.job, route: 'rest' }); g.stat('心情', 2); g.stat('事业', -1); }, res: '你把这个月的安排松开一点，给自己留了几天空档。' },
       ] },
     { id: 'i_' + x.job + '_40', age: 40, t: x.name + '里的年月', auto: true, echoOf: 'i_' + x.job + '_30',
