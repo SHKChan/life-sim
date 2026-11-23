@@ -76,7 +76,7 @@
     };
     JY.addLifeNodes([
       { id, age: r.age, t: r.t, major: true, cond: (g) => eligible(g, r),
-        stake: '本世剩餘 1 次改命機會；後續機會取決於你的經歷。', text: () => origins[r.k] + r.text,
+        stake: '本世剩餘 1 次改命機會；後續機會取決於你的經歷。', text: (g) => origins[r.k] + r.text + (CN.moneyRoom ? CN.moneyRoom(g, r.fee) : ''),
         choices: [
           { t: '留在原崗', canon: true, hint: '不花錢，保留改命機會。',
             fx: (g) => g.remember('turns', Object.assign({}, g.recall('turns'), { [r.k]: 'pass' })), res: '你把報價單收進抽屜，先過眼前的日子。這次沒有花錢，改命機會還在。' },
@@ -101,23 +101,40 @@
     const rw = g.recall('rewrite');
     if (rw) life.rewrite = Object.assign({}, rw);
     const picks = life.picks || [];
-    life.turns = picks.filter((p) => !p.auto && p.major && (p.check || p.dev > 0))
+    life.turns = picks.filter((p) => !p.auto && p.major && typeof p.id === 'string')
       .sort((a, b) => Number(b.id.startsWith('t_rewrite_')) - Number(a.id.startsWith('t_rewrite_')) || b.dev - a.dev)
       .slice(0, 3).sort((a, b) => a.age - b.age)
       .map((p) => ({ id: p.id, age: p.age, t: p.t, c: p.c, res: p.res, ok: p.ok, check: p.check }));
+    // 只连接真实完成的回响及其原选择，不用最终属性倒推一生。
+    const L = JY.engine.get().L, links = [];
+    JY.LIFE_NODES.concat(JY.ENCOUNTERS).forEach((node) => {
+      if (!node.echoOf || !L.done[node.id]) return;
+      const sourceId = [].concat(node.echoOf).find((id) => L.pickBy && L.pickBy[id]);
+      const pick = picks.find((p) => p.id === sourceId && !p.auto);
+      const tail = JY.engine.echoTail(node);
+      if (!pick || !tail) return;
+      const echo = L.log.find((e) => e.k === 'echo' && e.t.includes(tail) && e.a >= pick.age);
+      if (!echo || links.some((x) => x.id === pick.id)) return;
+      links.push({ id: pick.id, age: pick.age, choice: pick.c, echoId: node.id, echoAge: echo.a, result: echo.t.slice(0, echo.t.indexOf(tail)).trim() });
+    });
+    const groups = new Set();
+    life.reviewLinks = links.sort((a, b) => Number(b.id.startsWith('t_rewrite_')) - Number(a.id.startsWith('t_rewrite_')) || a.age - b.age)
+      .filter((x) => { const group = /family|kid|marriage|crisis|care|parents/.test(x.id) ? 'family' : /money|house|f_/.test(x.id) ? 'money' : 'work'; if (groups.has(group)) return false; groups.add(group); return true; }).slice(0, 3).sort((a, b) => a.age - b.age);
     const age = life.to - life.born, s = life.snap || {}, st = life.st || {};
     life.review = age < 50 ? '這一生短了一些，你認真走過的那些日子，仍然算數。'
       : rw ? (rw.ok ? '你花掉了那次改命機會，也親手把另一種日子過成了日常。' : '那次沒成的事，沒有替你決定餘下的一生。')
       : s.net < 0 ? '賬本沒能翻到輕鬆的那頁，這一路，你已經很用力了。'
       : st['事业'] >= 85 && (st['健康'] < 40 || st['心情'] < 50) ? '工作群裡總能找到你，留給自己的時間卻總寫著下次。'
-      : life.wish && life.wish.length && life.wish.every((w) => w.ok) ? '十六歲寫下的願望，你後來真的一件件做了。'
+      : life.wish && life.wish.length && life.wish.every((w) => w.ok) ? (life.wishChange ? '後來重新想過的生活，你也一件件認真做了。' : '十六歲寫下的願望，你後來真的一件件做了。')
       : st['心情'] >= 85 ? '你沒把每一天都過成大事，卻把小日子過出了滋味。'
       : '有些路走通了，有些沒走通，你還是把這一生認真過完了。';
   };
   const endCards = G.endCards;
   G.endCards = (l, u) => {
     const { esc, card } = u;
-    return (!G.endLayout && l.review ? card('這一生，留下一句話', '', '<p class="life-review">' + esc(l.review) + '</p>') : '') + endCards(l, u);
+    const links = (l.reviewLinks || []).map((x) => '<li><p>' + esc(x.age + ' 歲 · ' + x.choice) + '</p><p class="note">' + esc(x.echoAge + ' 歲 · ' + x.result) + '</p></li>').join('');
+    return (!G.endLayout && l.review ? card('這一生，留下一句話', '', '<p class="life-review">' + esc(l.review) + '</p>') : '')
+      + (links ? '<div class="life-connections"><h3>那些選擇，後來怎樣了</h3><ul>' + links + '</ul></div>' : '') + endCards(l, u);
   };
   const homeCards = G.homeCards;
   G.homeCards = (w, u) => {

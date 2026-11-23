@@ -1,4 +1,21 @@
 /* 重心说明继承了工具行的不换行规则；在菜单里恢复折行。 */
+.shell.news-left { grid-template-areas: "left center right" "news center right"; grid-template-rows: max-content 1fr; }
+.news-slot { grid-area: news; min-width: 0; }
+.life-connections { margin-bottom: 18px; }
+.life-connections ul { padding-left: 20px; }
+.life-connections li { margin-top: 12px; overflow-wrap: anywhere; }
+@media (min-width: 821px) and (max-width: 1180px) {
+  .shell.news-left { grid-template-areas: "left center" "news center" "right center"; grid-template-rows: max-content max-content 1fr; }
+}
+@media (max-width: 820px) {
+  .shell.news-left { display: flex; flex-direction: column; }
+  .news-left > .center { order: 0; width: 100%; }
+  .news-left > .left { order: 1; width: 100%; }
+  .news-left > .right { display: contents; }
+  .news-left > .right > .card { order: 2; width: 100%; }
+  .news-left > .news-slot { order: 3; width: 100%; }
+  .news-left > .right > .life-map-card { order: 4; }
+}
 .fmenu .fopt { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .life-row [data-life-note] { grid-column: 1 / -1; overflow-wrap: anywhere; }
 

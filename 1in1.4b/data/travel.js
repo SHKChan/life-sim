@@ -59,11 +59,13 @@
       text: (g) => {
         const out = [];
         if (g.recall('gradTrip')) out.push(g.recall('gradTrip') === 'intern' ? '同学发来毕业旅行的旧照，你认出当年没赶上的那趟车。' : '毕业旅行的合照又被翻出来，群里聊了好一阵。');
-        if (g.recall('cityMove')) out.push(g.recall('cityMove') === 'stay' ? '你留在熟悉的城，楼下店主已经知道你爱吃什么。' : '搬来这些年，你终于能给问路的人指清楚方向。');
+        if (g.recall('cityMove')) out.push(g.recall('cityMove') === 'stay' ? '你想起当年续租留下的决定，如今住处是否还在原地，日子都已往前走了。' : '当年搬家的照片又被翻出来，那些第一次找路的日子，现在想起来已经熟悉。');
         if (g.recall('dispatch')) out.push(g.recall('dispatch') === 'no' ? '外派回来的同事送你一包点心，讲起那半年的饭菜。' : '短期外派带回来的经验，帮你接住了一次难办的交接。');
         if (g.recall('study3m')) out.push(g.recall('study3m') === 'no' ? '年轻同事把研修的笔记借给你，你挑了几页复印。' : '那本研修笔记还在抽屉里，用得上的地方折了角。');
-        if (g.recall('familyTrip')) out.push(g.recall('familyTrip') === 'class' ? '你又想起当年收好的地图，给下一个假期留了两天空。' : '孩子当时带回的小东西，还收在柜子里。');
-        return out.join('');
+        if (g.recall('familyTrip')) out.push(g.recall('familyTrip') === 'class' ? '你又想起当年收好的地图，给下一个假期留了两天空。' : '翻到那次出游的照片，你想起孩子当时带回的小东西。' + (married(g) ? '你和伴侣一起看了一会儿，各自记得的细节不太一样。' : '你把照片慢慢翻完，留在那一年的笑声仍然清楚。'));
+        const pet = CN.pet(g);
+        if (pet) out.push('收拾行李前，你先核对了' + pet.name + '的照料安排。');
+        return (out.length > 3 ? [out[0]].concat(out.slice(-2)) : out).join('');
       }, fx: (g) => { if (g.recall('dispatch') && g.recall('dispatch') !== 'no') g.stat('事业', 2); if (g.recall('study3m') && g.recall('study3m') !== 'no') g.stat('学识', 2); } },
   ]);
 })();

@@ -33,6 +33,23 @@
   const CN = JY.CN;
 
   /* ---------- 数字 ---------- */
+  // 只说明当下能动用的现金；不预测行情，也不把预期收入当固定结余。
+  CN.moneyRoom = (g, amount) => {
+    if (!g.recall('money0')) return '';
+    const cash = CN.cash(g), debt = Number(g.recall('debt')) || 0;
+    const cost = Number(amount);
+    if (!(cost > 0) || !Number.isFinite(cost)) return '手头现金 ' + CN.fmt(cash) + (debt > 0 ? '，账上还记着欠款，眼前安排要和还款一起算。' : '，日常和急用的钱也要留着。');
+    if (cash < cost) return '手头现金还不够这笔 ' + CN.fmt(cost) + '，日常开销也得先顾着。';
+    const left = '付出这笔钱，手头约剩 ' + CN.fmt(cash - cost) + '。';
+    if (debt > 0) return left + '还款的日子也记在账上。';
+    const income = Number(g.recall('income')), expense = Number(g.recall('expense'));
+    const steady = ['civil', 'teacher', 'doctor', 'nurse', 'office', 'tech', 'worker', 'soldier'].includes(g.recall('job'));
+    if (steady && Number.isFinite(income) && Number.isFinite(expense) && expense >= 0 && income > expense) {
+      const months = Math.ceil(cost / (income - expense) * 12);
+      if (months <= 120) return left + '按上一年结余算，大约是 ' + Math.max(1, months) + ' 个月攒下的钱。';
+    }
+    return left + (g.recall('retired') ? '往后的生活和照护，还要靠剩下的钱慢慢安排。' : '以后的进账未必一样，急用的钱也要留一份。');
+  };
   // 年收入基数（元，按省会城市、事业 50 估）
   const INCOME = { restaurant: 95000, beauty: 85000, grocery: 75000, mechanic: 100000, electrician: 95000, welder: 105000, cnc: 100000, renovation: 90000, parcel: 85000, maternity: 105000, eldercare: 75000, housekeeping: 65000, cooperative: 85000, livestock: 80000, grower: 75000, construction: 85000, none: 0, farmer: 30000, worker: 70000, rider: 80000, driver: 80000, shop: 70000, office: 100000, tech: 200000, civil: 110000, teacher: 100000, doctor: 160000, nurse: 90000, sales: 100000, boss: 180000, creator: 70000, soldier: 80000, freelance: 80000, retired: 0 };
   const TIER_INC = { 1: 1.5, 2: 1, 3: 0.8, 4: 0.65, 5: 0.5 };

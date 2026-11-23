@@ -123,7 +123,16 @@
     { id: 'c_gift12', age: 12, t: '天生的本事', auto: true, echoOf: 'c_zhuazhou', cond: (g) => !!GIFT12[g.recall('gift')],
       text: (g) => GIFT12[g.recall('gift')], fx: (g) => g.stat('心情', 2) },
     { id: 'm_gift38', age: 38, t: '天生的本事', auto: true, echoOf: 'c_zhuazhou', cond: (g) => !!GIFT38[g.recall('gift')],
-      text: (g) => GIFT38[g.recall('gift')], fx: (g) => g.stat('心情', 2) },
+      text: (g) => {
+        const gift = g.recall('gift');
+        if (gift === 'book' && ['vocational', 'junior', 'primary'].includes(g.recall('edu'))) return '你读书的路没有一直走下去，碰到不懂的工具说明，仍愿意翻到最后一页，再找人问清楚。';
+        if (gift === 'abacus' && Number(g.recall('debt')) > 0) return '会算账也没让欠款自己消失。你把还款日一项项记清，哪笔能缓，哪笔不能拖，慢慢和家里的安排对上。';
+        if (gift === 'seal' && ['none', 'retired'].includes(g.recall('job'))) return '眼前没有固定岗位，你仍会把要办的事一条条列出来，做完一项划一项。坐得住的那点耐性，还在自己身上。';
+        if (gift === 'ball' && g.s('健康') < 50) return '小时候抱过的球早不在了。身体不如从前，你把路走慢一点，累了便坐下，也还愿意活动活动。';
+        if (gift === 'brush' && g.recall('house') === 'rent') return '租来的屋子里，你给旧纸盒画上花，摆在窗边。几样不用花钱的小东西，慢慢有了自己的样子。';
+        if (gift === 'sleep' && (Number(g.recall('fatigue')) || 0) >= 6) return '心宽也有累得睡不稳的时候。夜里醒来，你喝了口水，把明天非做不可的事先写下。';
+        return GIFT38[gift];
+      }, fx: (g) => g.stat('心情', 2) },
   ]);
 
   /* 天赋专属的路：加到已有的大事里，只有带着这样天赋的人看得到（每个节点原来最多三个选项，加上以后最多四个） */
@@ -204,9 +213,33 @@
   // 仅结算精简标题；游戏过程中的原文与年龄判定保留。
   const SHORT_WISH = {"七十岁前家底过六百万":"攒下六百万家底","四十岁以后不欠任何人的钱":"不欠任何人的钱","五十五岁前成为行当里的顶尖人物":"成为行当里的顶尖人物","五十岁前把家过得和和气气":"把家过得和和气气","六十岁时依然很开心":"依然很开心","六十五岁前走出自己的路":"走出自己的路","六十岁的时候身边有个能说话的人":"身边有个能说话的人","六十岁前手里有一百五十万":"攒下一百五十万","六十岁前到哪儿都有朋友":"到哪儿都有朋友"};
   const shortWish = (t) => SHORT_WISH[t] || t;
+  const WISH_BY_ID = Object.fromEntries(Object.values(WISHES).flat().map((w) => [w.k, w]));
   const wishList = (g) => {
-    const pool = WISHES[g.recall('aim')] || [];
-    return (g.recall('wishes') || []).map((k) => pool.find((w) => w.k === k)).filter(Boolean);
+    return (g.recall('wishes') || []).map((k) => WISH_BY_ID[k]).filter(Boolean);
+  };
+  const deadline = { w500: 70, wcareer: 55, wfamily: 50, wparents: 60, whappy: 65, wodd: 65, w50: 60, wfriends: 60 };
+  const wishStatus = (g, w) => deadline[w.k] && g.age >= deadline[w.k] ? '过了约定的年纪'
+    : ['wkid', 'wparents'].includes(w.k) && !g.alive('fa') && !g.alive('mo') ? '留在当年的愿望' : '仍惦念';
+  // 只在原三十岁关口调整一次；候选来自眼下的经历，不从完整任务池挑容易的。
+  const wishChangeOffer = (g) => {
+    if (g.age !== 30 || g.recall('wishChange')) return null;
+    const wishes = g.recall('wishes') || [], done = g.recall('wishDone') || [];
+    if (wishes.length !== 3) return null;
+    const to = Number(g.recall('debt')) > 0 ? 'wfree'
+      : (Number(g.recall('kids')) > 0 || g.s('健康') < 60) ? 'whappy'
+      : !g.alive('fa') && !g.alive('mo') ? 'w80' : null;
+    const target = WISH_BY_ID[to];
+    if (!target || wishes.includes(to) || done.includes(to) || target.ok(g)) return null;
+    const unfinished = wishes.filter((k) => WISH_BY_ID[k] && !done.includes(k) && !WISH_BY_ID[k].ok(g));
+    const from = unfinished.find((k) => ['wkid', 'wparents'].includes(k) && !g.alive('fa') && !g.alive('mo')) || unfinished[0];
+    return from ? { from, to, age: g.age } : null;
+  };
+  const changeWish = (g) => {
+    const offer = wishChangeOffer(g);
+    if (!offer) return false;
+    g.remember('wishes', g.recall('wishes').map((k) => k === offer.from ? offer.to : k));
+    g.remember('wishChange', offer);
+    return true;
   };
   function wishYear(g, age) {
     const aim = g.recall('aim');
@@ -228,9 +261,25 @@
       if (!ok) return;
       done.push(w.k);
       g.stat('心情', 4);
-      g.log('十六岁写下的心愿，你做到了一件：' + w.t + '。' + (done.length === 3 ? '三件都做到了。' : ''), 'auto');
+      g.log((g.recall('wishChange') && g.recall('wishChange').to === w.k ? '三十岁重新写下的心愿，你做到了：' : '十六岁写下的心愿，你做到了一件：') + w.t + '。' + (done.length === 3 ? '眼下惦念的三件事，都做到了。' : ''), 'auto');
     });
     g.remember('wishDone', done);
+  }
+
+  const p30 = JY.PAUSES.find((n) => n.id === 'p30');
+  if (p30) {
+    const old = p30.choices[3], title = old.t, fx = old.fx;
+    p30.choices[3] = Object.assign({}, old, {
+      t: (g) => { const x = wishChangeOffer(g); return x ? '放下“' + shortWish(WISH_BY_ID[x.from].t) + '”，改为“' + shortWish(WISH_BY_ID[x.to].t) + '”' : title; },
+      hint: (g) => wishChangeOffer(g) ? '只改一个未完成心愿；当年的愿望会留下，放下不算完成。' : '',
+      fx: (g) => { changeWish(g); fx(g); },
+      res: (g) => g.recall('wishChange') ? '你没撕掉旧的一页，只在旁边写下现在更想要的生活。' : '你想了一会儿，先把眼前的日子过好。',
+    });
+  }
+  const p50 = JY.PAUSES.find((n) => n.id === 'p50');
+  if (p50) {
+    const text = p50.text;
+    p50.text = (g) => { const x = g.recall('wishChange'); return text(g) + (x && WISH_BY_ID[x.to] ? '三十岁重新写下的“' + shortWish(WISH_BY_ID[x.to].t) + '”，你也还记得。' : ''); };
   }
 
   // 接到每年的结算后面（game.js 的 engine.yearEnd 调 JY.ECON.yearEnd）
@@ -264,14 +313,14 @@
     { k: 'firsttier', t: '在大城市扎了根', d: '外地出生，在北上广深有了自己的房子。', ok: (s) => s.tier === 1 && OWN.includes(s.house) && s.cityTier !== 1 },
     { k: 'drifter', t: '漂着', d: '在大城市过了一辈子，一直租房住。', ok: (s) => s.tier <= 2 && !OWN.includes(s.house) && s.house !== 'hometown' && s.age >= 60 && s.liveWith !== 'kids' },
     { k: 'homeward', t: '归园田居', d: '在外面闯过，最后回了老家。', ok: (s) => ['early', 'late', 'house', 'parents'].includes(s.backHome) || s.liveWith === 'hometown' },
-    { k: 'boss', t: '小老板', d: '自己做生意，做了大半辈子。', ok: (s) => (['boss', 'shop'].includes(s.lastJob) || s.tradeOwn) },
+    { k: 'boss', t: '小老板', d: '你自己经营过生意，账本里有忙碌和牵挂。', ok: (s) => (['boss', 'shop'].includes(s.lastJob) || s.tradeOwn) },
     { k: 'creator', t: '靠流量吃饭', d: '做自媒体，做成了一份职业。', ok: (s) => s.lastJob === 'creator' },
-    { k: 'civil', t: '上岸', d: '考上了编制，安安稳稳到退休。', ok: (s) => s.lastJob === 'civil' },
-    { k: 'teacher', t: '教书匠', d: '站了一辈子讲台。', ok: (s) => s.lastJob === 'teacher' },
-    { k: 'medic', t: '白大褂', d: '在医院里忙了一辈子。', ok: (s) => ['doctor', 'nurse'].includes(s.lastJob) },
+    { k: 'civil', t: '上岸', d: '你走进过稳定的岗位，也认真处理过手头的事。', ok: (s) => s.lastJob === 'civil' },
+    { k: 'teacher', t: '教书匠', d: '你在讲台上教过书，留下一段有学生的日子。', ok: (s) => s.lastJob === 'teacher' },
+    { k: 'medic', t: '白大褂', d: '你在医疗岗位忙碌过，照看过具体的人。', ok: (s) => ['doctor', 'nurse'].includes(s.lastJob) },
     { k: 'coder', t: '和机器打交道', d: '在技术岗上干到了最后。', ok: (s) => s.lastJob === 'tech' },
-    { k: 'farmer', t: '守着土地', d: '种了一辈子地。', ok: (s) => s.lastJob === 'farmer' },
-    { k: 'worker', t: '手艺人', d: '靠一双手，干了一辈子活。', ok: (s) => ['worker', 'driver', 'rider'].includes(s.lastJob) && ['junior', 'vocational', 'primary', 'senior'].includes(s.edu) && s.st['事业'] >= 60 },
+    { k: 'farmer', t: '守着土地', d: '你靠土地和田间的活计，过了一段有收成的日子。', ok: (s) => ['farmer', 'cooperative', 'livestock', 'grower'].includes(s.lastJob) },
+    { k: 'worker', t: '手艺人', d: '你靠手上的本事，在行当里站住了脚。', ok: (s) => ['worker', 'driver', 'rider', 'parcel', 'electrician', 'welder', 'cnc', 'renovation', 'mechanic', 'construction', 'beauty', 'restaurant', 'housekeeping', 'maternity', 'eldercare'].includes(s.lastJob) && ['junior', 'vocational', 'primary', 'senior'].includes(s.edu) && s.st['事业'] >= 60 },
     { k: 'investor', t: '股神', d: '一辈子理财赚了八百万以上。', ok: (s) => s.finGain >= 8e6 },
     { k: 'chive', t: '交了学费', d: '理财亏了一百万以上，或者在暴雷里亏了三十万以上。', ok: (s) => s.finGain <= -1e6 || s.hyBlown >= 3e5 },
     { k: 'divorced', t: '重新来过', d: '离过婚，后半辈子自己过。', ok: (s) => s.love === 'divorced' },
@@ -297,7 +346,7 @@
   };
 
   JY.FATE = {
-    GIFTS, ENDS, endOf, shortWish,
+    GIFTS, ENDS, endOf, shortWish, wishList, wishChangeOffer, changeWish,
     // 命终：legacy.js 的 onFinish 调用。s 是这一世的结果，al 是人生图鉴
     finish(g, life, s, al) {
       const L = L_();
@@ -311,10 +360,12 @@
       life.end = { k: e.k, t: e.t, d: e.d, beat: beat(s) };
       const ws = wishList(g), done = g.recall('wishDone') || [];
       if (ws.length) {
-        life.wish = ws.map((w) => ({ t: w.t, ok: done.includes(w.k) }));
+        life.wish = ws.map((w) => ({ t: w.t, ok: done.includes(w.k), status: done.includes(w.k) ? '已完成' : wishStatus(g, w) }));
         const n = life.wish.filter((w) => w.ok).length;
         if (life.aim) life.aim.v = Math.round(100 * n / ws.length);
       }
+      const change = g.recall('wishChange');
+      if (change && WISH_BY_ID[change.from] && WISH_BY_ID[change.to]) life.wishChange = Object.assign({}, change, { fromTitle: WISH_BY_ID[change.from].t, toTitle: WISH_BY_ID[change.to].t });
       al.ends = al.ends || {};
       al.gifts = al.gifts || {};
       life.newEnd = !al.ends[e.k];
@@ -355,7 +406,8 @@
       }
       if (l.wish && l.wish.length) {
         const n = l.wish.filter((w) => w.ok).length;
-        h += card('这一生的心愿', JY.GAME.endLayout ? '' : '完成 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + (w.ok ? '已完成' : '未完成') + '</span></li>').join('') + '</ul>');
+        h += card('这一生的心愿', JY.GAME.endLayout ? '' : '完成 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + esc(w.ok ? '已完成' : w.status || '未完成') + '</span></li>').join('') + '</ul>'
+          + (l.wishChange ? '<p class="note">' + esc(l.wishChange.age + '岁时，你放下“' + l.wishChange.fromTitle + '”，重新写下“' + l.wishChange.toTitle + '”。放下的那一项留在当年，不算完成。') + '</p>' : ''));
       }
       return h;
     },

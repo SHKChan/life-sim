@@ -130,4 +130,11 @@
       + (housing.includes(id) ? CN.homeLifeContext(g) : '')
       + (habits.includes(id) && CN.focusMemory ? CN.focusMemory(g) : '');
   });
+  const spending = { y_house: null, y_house29: null, m_44_buy: null, m_55_ill: null, f_pension: 12000, f_review45: null, f_retire62: null, e_family_first_work: 6000 };
+  Object.keys(spending).forEach((id) => {
+    const n = JY.LIFE_NODES.concat(JY.ENCOUNTERS).find((x) => x.id === id);
+    if (!n) return;
+    const text = n.text;
+    n.text = (g) => (typeof text === 'function' ? text(g) : text || '') + (CN.moneyRoom ? CN.moneyRoom(g, spending[id]) : '');
+  });
 })();

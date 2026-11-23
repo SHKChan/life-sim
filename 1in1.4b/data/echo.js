@@ -12,10 +12,11 @@
   const saveAlbum = (al) => { try { localStorage.setItem(KEY, JSON.stringify(al)); return true; } catch (e) { return false; } };
   const sourceOf = (life) => life.id + ':' + life.born + ':' + life.to;
   const active = (g, k) => known(k) && g.recall('echoCarry') === k && !g.recall('echoUsed') && !g.recall('seedFrom');
-  const consume = (g) => {
+  const consume = (g, id) => {
     const k = g.recall('echoCarry');
     if (!active(g, k) || !ECHOES[k]) return;
     g.remember('echoUsed', true);
+    if (typeof id === 'string') g.remember('echoUse', { id, age: g.age, k });
     g.info('前世残响', ECHOES[k].t + '（已用）');
     g.log('前世留下的那句话，这一次你照着做了：' + ECHOES[k].t + '。', 'auto');
   };
@@ -50,14 +51,14 @@
     t: '残响：从电工学徒做起', dev: 15,
     hint: '花 ¥3,000，事业 −3；转做电工学徒。只用一次，不借债。',
     cond: (g) => g.age >= 18 && !!g.recall('money0') && CN.cash(g) >= 3000 && !g.recall('skill'),
-    fx: (g) => { CN.pay(g, 3000); g.remember('skill', 'elec'); CN.setJob(g, 'electrician', '电工学徒'); g.remember('lifePath', 'work'); g.stat('事业', -3); JY.ECHO.consume(g); },
+    fx: (g) => { CN.pay(g, 3000); g.remember('skill', 'elec'); CN.setJob(g, 'electrician', '电工学徒'); g.remember('lifePath', 'work'); g.stat('事业', -3); JY.ECHO.consume(g, id); },
     res: '你交了学费，从认线、收工具开始。师傅没夸你聪明，只说肯慢慢学，就能留下来。',
   }));
   ['y_crisis31', 'm_38_marriage'].forEach((id) => add(id, 'home', {
     t: '残响：请一天假，把话说完', dev: 10,
     hint: '事业 −2；修补关系、心情 +4。只用一次。',
     cond: (g) => g.recall('love') === 'married' && g.alive('sp'),
-    fx: (g) => { g.stat('事业', -2); g.stat('心情', 4); g.remember('fight', 'talk'); g.remember('marriage', 'mended'); JY.ECHO.consume(g); },
+    fx: (g) => { g.stat('事业', -2); g.stat('心情', 4); g.remember('fight', 'talk'); g.remember('marriage', 'mended'); JY.ECHO.consume(g, id); },
     res: '你关掉工作消息，听对方把话说完。晚饭没做什么特别的菜，两个人却坐了很久。',
   }));
   const selfNodes = JY.TURNING.ROUTES.map((r) => ['t_rewrite_' + r.k, 1]).concat([['y_last34', 2], ['m_42_office', 1]]);
@@ -71,8 +72,8 @@
     base.t = (g) => (active(g, 'self') ? '残响：' : '') + (typeof title === 'function' ? title(g) : title);
     base.hint = (g) => (typeof hint === 'function' ? hint(g) : hint || '')
       + (active(g, 'self') ? ' 残响 +8 个百分点，最高95%；成败均用掉。' : '');
-    base.fx = (g) => { if (active(g, 'self')) JY.ECHO.consume(g); if (fx) fx(g); };
-    base.fail = Object.assign({}, fail, { fx: (g) => { if (active(g, 'self')) JY.ECHO.consume(g); if (fail && fail.fx) fail.fx(g); } });
+    base.fx = (g) => { if (active(g, 'self')) JY.ECHO.consume(g, id); if (fx) fx(g); };
+    base.fail = Object.assign({}, fail, { fx: (g) => { if (active(g, 'self')) JY.ECHO.consume(g, id); if (fail && fail.fx) fail.fx(g); } });
   });
   GAME.stateCalls.push('JY.ECHO.consume');
 
@@ -86,6 +87,8 @@
     al.echoOffers = life.echoOffers.slice();
     delete al.pendingEcho;
     if (known(g.recall('echoCarry'))) life.echo = { k: g.recall('echoCarry'), used: !!g.recall('echoUsed') };
+    const use = g.recall('echoUse'), pick = use && (life.picks || []).find((p) => p.id === use.id && p.age === use.age);
+    if (life.echo && pick) life.echo.at = { id: pick.id, age: pick.age, choice: pick.c };
     saveAlbum(al);
   };
   const select = (source, k) => {
@@ -103,7 +106,9 @@
   };
   const endCards = GAME.endCards, homeCards = GAME.homeCards;
   GAME.endPreparation = echoCard;
-  GAME.endCards = (life, u) => endCards(life, u) + (GAME.endLayout ? '' : echoCard(life, u));
+  GAME.endCards = (life, u) => endCards(life, u)
+    + (life.echo ? '<p class="note echo-review">' + u.esc(life.echo.at ? '前世那句话，在 ' + life.echo.at.age + ' 岁的“' + life.echo.at.choice + '”里用上了。' : life.echo.used ? '前世那句话，这一世用过一次。' : '前世那句话，这一世没有用上；它留在这页，不再顺延。') + '</p>' : '')
+    + (GAME.endLayout ? '' : echoCard(life, u));
   GAME.homeCards = (world, u) => {
     const lives = world && world.lives || [];
     return (lives.length ? echoCard(lives[lives.length - 1], u) : '') + homeCards(world, u);

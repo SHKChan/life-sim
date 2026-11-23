@@ -145,7 +145,7 @@
 
   /* 回响：几年后回来兑现当年的选择。弹框里提一句“你 xx 岁时选了……” */
   const ECHO = {
-    m_37_crisis_echo: 'y_crisis31', m_39_money_echo: ['m_36_money', 'y_money33'], m_41_body_echo: 'm_40_body', m_43_career_echo: ['m_42_office', 'm_42_stable', 'm_42_labor', 'm_42_own', 'm_42_none'],
+    m_37_crisis_echo: ['m_35_office', 'm_35_stable', 'm_35_labor', 'm_35_own', 'm_35_none'], m_39_money_echo: ['m_36_money', 'y_money33'], m_41_body_echo: 'm_40_body', m_43_career_echo: ['m_42_office', 'm_42_stable', 'm_42_labor', 'm_42_own', 'm_42_none'],
     m_46_house_echo: ['m_44_buy', 'm_44_loan', 'm_44_own'], m_48_check_echo: 'm_45_checkup', m_49_ai_echo: 'm_47_ai', m_52_care_echo: 'm_51_parents',
     m_54_nest_echo: 'm_53_money', m_59_end_echo: 'm_58_work', m_61_plan_echo: 'm_60_plan', o_spcare_echo: 'o_sp_sick', o_scam_echo: 'o_scam',
     o_hobby_echo: ['o_hobby', 'o_learn_what'], o_fall_echo: 'o_fall', o_will_echo: 'o_will', o_care_echo: 'o_care_plan', o_trip_echo: 'o_last_place', o_lastwish_echo: 'o_last_wish',

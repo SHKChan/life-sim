@@ -28,7 +28,7 @@
       ] },
     { id: 'e_pet_farewell', y: Y, minAge: 35, maxAge: 60, t: '收好的小碗', auto: true, always: true, echoOf: ['e_pet_adopt', 'e_pet_lease'],
       cond: (g) => { const p = g.recall('adultPet'); return p && p.way !== 'no' && !CN.pet(g) && g.Y - p.y > p.life; },
-      text: (g) => { const p = g.recall('adultPet'); return g.recall('petLease') === 'friend' ? '你去朋友家，看見' + p.name + '的小碗收進了櫃子。它在熟悉的人身邊走完了最後一段日子。你們坐著，說起它剛來時的樣子。' : '陪伴十幾年的' + p.name + '離開以後，你把它的小碗洗乾淨收起來。' + (p.way === 'adopt' ? '領養時的那張登記單，還夾在疫苗本里。' : '當年買它時留的票據，字已經淡了。'); },
+      text: (g) => { const p = g.recall('adultPet'); return g.recall('petLease') === 'friend' ? '你去朋友家，看見' + p.name + '的小碗收進了櫃子。它在熟悉的人身邊走完了最後一段日子。你們坐著，說起它剛來時的樣子。' : '陪伴十幾年的' + p.name + '離開以後，你把它的小碗洗乾淨收起來。' + (p.way === 'adopt' ? '領養時的那張登記單，還夾在疫苗本里。' : '當年買它時留的票據，字已經淡了。') + '有時到點還會往門口看一眼，後來才慢慢改掉這個習慣。'; },
       fx: (g) => { g.stat('心情', -2); if (g.recall('petLease') === 'repair' || g.recall('petLease') === 'move') g.stat('人缘', 1); } },
     { id: 'e_pet_no_echo', y: Y, minAge: 30, maxAge: 40, t: '朋友的照片', auto: true, always: true, echoOf: 'e_pet_adopt',
       cond: (g) => g.recall('adultPet') && g.recall('adultPet').way === 'no' && g.since('adultPet') >= 4,

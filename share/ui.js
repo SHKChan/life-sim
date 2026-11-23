@@ -507,7 +507,7 @@
       + '<button class="b" id="c-exit" data-act="home">' + t('离开') + '</button>'
       + '</div></div></header>';
 
-    h += '<div class="shell">';
+    h += '<div class="shell' + (T.newsLeft ? ' news-left' : '') + '">';
     /* 左：名帖、状态 */
     h += '<div class="col left">';
     h += '<div class="card idcard"><div class="id-strip" style="background:' + b.color + ';color:' + b.ink + '"><span>' + esc(T.idcard) + ' · ' + b.code + '</span><span>' + esc(yearText(Y)) + '</span></div>'
@@ -540,6 +540,8 @@
       + '</div>', 'statcard');
     h += '</div>';
 
+    if (T.newsLeft) h += '<div class="news-slot">' + rumorCard(W) + '</div>';
+
     /* 中：场景、今年的重心、生平。抉择用弹框，见 decisionModal */
     const scene = sceneOf(L, c, age);
     h += '<div class="col center">';
@@ -552,8 +554,8 @@
 
     /* 右：家人、同代人、人生图、传闻 */
     h += '<div class="col right">' + familyCard(L, c) + peersCard(L)
-      + card(t('人生图'), t('一格一年'), lifeMap(c.born, L.start, Y, Y, L.marks))
-      + rumorCard(W) + '</div>';
+      + card(t('人生图'), t('一格一年'), lifeMap(c.born, L.start, Y, Y, L.marks), 'life-map-card')
+      + (T.newsLeft ? '' : rumorCard(W)) + '</div>';
     h += '</div>';
     if (showDecision) h += ui.peek ? decisionPill(ui.pending) : decisionModal(ui.pending, c);
     return h;

@@ -46,4 +46,47 @@
     { y: 2098, t: '城裡添了幾處口袋公園，午後歇腳終於不用總找商場。' },
     { y: 2108, t: '今年中秋晴得好，月餅攤主收攤後，也搬了凳子坐到門口。' },
   ]);
+
+  // 旧识只回看已经发生的交集，不把随机同代人当作同学，也不假定旧人仍健在。
+  const childhood = (g) => {
+    if (g.recall('askedMom')) return '你想起小時候那次影片電話，後來安排回家時，也會先問清彼此有空的日子。';
+    if (g.recall('cityKid') === 'shop') return '小時候在小賣部寫作業的那張桌子，你還記得，談起做生意的辛苦，也會多聽幾句。';
+    if (g.recall('cityKid') === 'class') return '小時候免費託管班的那本練習冊，你還記得，碰到拿不準的題，也願意開口問人。';
+    if (g.recall('talent')) return '小時候練過的特長，後來未必成了職業，認真練過一遍的感覺卻還在。';
+    return '';
+  };
+  const oldAcquaintance = (g, late) => {
+    if (g.recall('kindness') === 'friend' && !JY.engine.get().L.done.e_c_kindness_echo) return '你想起那位轉學同學，課間一起跳房子、互教老家話的事，仍然記得。';
+    if (g.recall('kindness') === 'friend') return late ? '你翻到那位轉學同學當年寄來的高中照片，想起兩個人互教老家話的課間，近況已經不清楚，照片仍留著。' : '收拾舊物時，你又看見轉學同學當年發來的照片，想起那幾節一起跳房子的課間。';
+    if (g.recall('craft') === 'cook') return late ? '你想起第一次學廚切壞的那些土豆，師傅當年多盛的那碗飯，到現在還記得。' : '工作遇到難處，你想起學廚時捱過的那頓數落，也想起師傅收工後多盛的那碗飯。';
+    if (['tile', 'electric', 'weld'].includes(g.recall('craft'))) return late ? '你想起當年跟著村裡叔叔走過的巷子，工具箱怎麼擺，至今還照著最早學的習慣。' : '整理工具時，你想起當年跟村裡叔叔學手藝的日子，那些活做慢一點也得核清楚。';
+    return '';
+  };
+  const background = (g) => {
+    const family = g.recall('family');
+    if (['farmer', 'migrant', 'worker'].includes(family)) return '小時候家裡的錢要算著花，這些年有事商量，你也習慣先把眼前能承擔的說清楚。';
+    if (family === 'rich') return '小時候家裡替你安排過不少事，如今自己的日子怎麼過，還得一件件拿主意。';
+    if (['civil', 'white'].includes(family)) return '小時候看慣了大人按點上下班，如今家裡的時間表，輪到你自己慢慢排。';
+    if (family === 'smallbiz') return '小時候見過家裡忙進忙出，如今算日常的賬，也會給做不完的事留一點餘地。';
+    return '';
+  };
+  const regionMemory = (g) => {
+    const food = { 东北: '冬天屋裡暖氣的熱乎', 华北: '早晨熱騰騰的麵食', 华东: '街口早餐攤的蒸汽', 华中: '雨天端回家的熱湯', 华南: '清早喝茶時的熱氣', 西南: '舊街上飄來的麻辣香氣', 西北: '一碗麵端上桌時的香氣' }[g.recall('region')];
+    if (!food) return '';
+    const home = [g.recall('city'), g.recall('homeCap')].includes(g.recall('workCity'));
+    return (home ? '如今還在熟悉的地方生活，你偶爾想起' : '在如今住的地方，你偶爾會想起老家') + food + '，那是小時候留下的記憶。';
+  };
+  const tails = {
+    y_offer_echo: (g) => childhood(g) + oldAcquaintance(g, false),
+    m_43_career_echo: (g) => background(g),
+    e_daily_11: (g) => regionMemory(g),
+    o_look_back_edu: (g) => childhood(g) + oldAcquaintance(g, true),
+    o_hometown_echo: (g) => regionMemory(g),
+  };
+  Object.entries(tails).forEach(([id, tail]) => {
+    const n = JY.LIFE_NODES.concat(JY.ENCOUNTERS).find((x) => x.id === id);
+    if (!n) return;
+    const text = n.text;
+    n.text = (g) => (typeof text === 'function' ? text(g) : text || '') + tail(g);
+  });
 })();
