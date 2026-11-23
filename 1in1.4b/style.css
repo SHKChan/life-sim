@@ -31,3 +31,51 @@
 .echo-option small { display: block; margin-top: 4px; color: var(--soft); }
 .echo-option:has(input:checked) { border-color: var(--brand); }
 .echo-option:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+.next-life { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
+.next-life h3 { font-size: 16px; }
+.next-life p { margin: 6px 0 0; }
+.next-life .b { flex-shrink: 0; color: var(--fg); text-decoration: none; }
+@media (max-width: 600px) {
+  .next-life { flex-direction: column; align-items: flex-start; }
+}
+
+/* 结算默认呈现人物与结局；详细记录和下一世准备按需展开。 */
+.end.end-compact { display: flex; flex-direction: column; gap: 22px; max-width: 1040px; padding-top: 40px; }
+.end-compact > * { width: 100%; box-sizing: border-box; }
+.life-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 32px; padding: 32px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; }
+.life-person { display: flex; align-items: center; gap: 22px; min-width: 0; }
+.life-person canvas { width: 80px; height: 96px; flex-shrink: 0; }
+.life-person h1 { font-family: var(--f-display); font-size: 38px; margin: 8px 0 12px; font-weight: 400; }
+.life-person .note { margin: 4px 0; }
+.life-eyebrow { margin: 0; color: var(--muted); font-size: 13px; }
+.life-ending { border-left: 1px solid var(--line); padding-left: 32px; align-self: center; min-width: 0; }
+.life-ending h2 { font-size: clamp(28px, 3vw, 38px); line-height: 1.35; margin: 12px 0; font-family: var(--f-display); color: var(--fg); }
+.life-ending > p:last-child { margin: 0; color: var(--soft); line-height: 1.8; }
+.life-quote { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 20px; margin: 0; text-align: center; font-family: var(--f-display); font-size: 24px; line-height: 1.5; color: var(--canon); overflow-wrap: anywhere; }
+.end-compact > .end-btns { justify-content: center; gap: 12px; }
+.end-compact > .end-btns .b { min-width: 160px; }
+.end-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.end-options .card { margin: 0; min-width: 0; }
+.end-preparation { display: grid; gap: 12px; min-width: 0; }
+.end-options summary { cursor: pointer; font-weight: 700; line-height: 1.6; }
+.end-options summary .note { float: right; font-weight: 400; font-size: 12px; margin-left: 8px; }
+.end-options summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.end-options details[open] > summary { margin-bottom: 18px; }
+.end-record-content { display: grid; gap: 20px; }
+.end-record-content > .card, .end-message > .card { padding: 0; border: 0; background: none; box-shadow: none; }
+.end-message .card-h { display: none; }
+.end-compact .next-life { margin-top: 0; padding-top: 18px; font-size: 13px; color: var(--muted); justify-content: center; flex-wrap: wrap; gap: 8px; }
+.end-compact .next-life a { color: var(--soft); text-underline-offset: 3px; }
+@media (max-width: 700px) {
+  .end.end-compact { padding: 20px 16px 40px; gap: 18px; }
+  .life-hero { grid-template-columns: minmax(0, 1fr); padding: 24px 20px; gap: 24px; }
+  .life-person { gap: 18px; }
+  .life-person h1 { font-size: 32px; }
+  .life-ending { border-left: 0; border-top: 1px solid var(--line); padding: 22px 0 0; }
+  .life-ending h2 { font-size: 30px; }
+  .life-quote { font-size: 22px; padding-top: 18px; }
+  .end-options { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .end-compact > .end-btns { flex-wrap: nowrap; }
+  .end-compact > .end-btns .b { min-width: 0; flex: 1; padding-left: 10px; padding-right: 10px; }
+  .end-compact .next-life { flex-direction: row; align-items: center; }
+}

@@ -99,10 +99,12 @@
     const al = JY.album(), source = sourceOf(life), offers = life.echoOffers || [];
     if (!offers.length || al.echoSource !== source) return '';
     const options = offers.filter(known).map((k) => '<label class="echo-option"><input type="radio" name="next-echo" value="' + k + '" data-echo-source="' + u.esc(source) + '"' + (al.pendingEcho === k ? ' checked' : '') + '><span><b>' + u.esc(ECHOES[k].t) + '</b><small>' + u.esc(ECHOES[k].d) + '</small></span></label>').join('');
-    return u.card('留給下一世的念頭', '只選一項', '<fieldset class="echo-options"><legend class="echo-legend">前世殘響</legend>' + options + '</fieldset><p class="note" data-echo-status>' + (al.pendingEcho ? '已選好，只帶入緊接著的下一世；同命挑戰不帶入。' : '可選可不選；下一世最多生效一次，不疊加。同命挑戰不帶入。') + '</p><button class="b" type="button" data-echo-clear="' + u.esc(source) + '">不帶入下一世</button>');
+    const body = '<fieldset class="echo-options"><legend class="echo-legend">前世殘響</legend>' + options + '</fieldset><p class="note" data-echo-status>' + (al.pendingEcho ? '已選好，只帶入緊接著的下一世；同命挑戰不帶入。' : '可選可不選；下一世最多生效一次，不疊加。同命挑戰不帶入。') + '</p><button class="b" type="button" data-echo-clear="' + u.esc(source) + '">不帶入下一世</button>';
+    return '<details class="card end-echo"><summary>給下一世帶個念頭<span class="note">' + (al.pendingEcho ? '已選擇' : '可選') + '</span></summary>' + body + '</details>';
   };
   const endCards = GAME.endCards, homeCards = GAME.homeCards;
-  GAME.endCards = (life, u) => endCards(life, u) + echoCard(life, u);
+  GAME.endPreparation = echoCard;
+  GAME.endCards = (life, u) => endCards(life, u) + (GAME.endLayout ? '' : echoCard(life, u));
   GAME.homeCards = (world, u) => {
     const lives = world && world.lives || [];
     return (lives.length ? echoCard(lives[lives.length - 1], u) : '') + homeCards(world, u);
@@ -112,6 +114,8 @@
       const ok = select(source, k), status = document.querySelector('[data-echo-status]');
       if (status) status.textContent = ok ? (k ? '已選好，只帶入緊接著的下一世；同命挑戰不帶入。' : '這一世不留下殘響。') : '沒有儲存成功，請重試。';
       if (ok && !k) document.querySelectorAll('[data-echo-source]').forEach((el) => { el.checked = false; });
+      const summary = document.querySelector('.end-echo > summary .note');
+      if (ok && summary) summary.textContent = k ? '已選擇' : '可選';
     };
     document.addEventListener('change', (e) => { if (e.target.dataset.echoSource) update(e.target.dataset.echoSource, e.target.value); });
     document.addEventListener('click', (e) => { const el = e.target.closest('[data-echo-clear]'); if (el) update(el.dataset.echoClear, ''); });

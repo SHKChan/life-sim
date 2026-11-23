@@ -72,6 +72,7 @@
   JY.oneInText = oneInText;
   const rarityLabel = (rare) => rare.pct >= 95 ? '罕見' : rare.pct >= 75 ? '少見' : '常見';
   JY.rarityLabel = rarityLabel;
+  JY.rarityText = (rare) => rare.pct >= 95 ? '你這一生的經歷組合，十分少見。' : rare.pct >= 75 ? '你這一生的經歷組合，不太常見。' : '你這一生的經歷，許多人也曾走過。';
 
   /* ---------- 成就 ---------- */
   const ACH = [
@@ -204,7 +205,7 @@
   /* ---------- 分享卡上的几行 ---------- */
   G.share.badges = (l) => {
     const out = JY.FATE ? JY.FATE.badges(l) : [];
-    if (l.rare) out.push('這段人生：' + rarityLabel(l.rare) + '（按遊戲模擬結果比較）');
+    if (l.rare) out.push('人生經歷：' + JY.rarityText(l.rare));
     if (l.ach && l.ach.length) out.push('解鎖成就：' + l.ach.slice(0, 4).map((id) => (ACH.find((a) => a.id === id) || {}).t).join('、'));
     if (l.aim && l.aim.v != null && !l.wish) out.push('十六歲的志向“' + AIM_T[l.aim.k] + '”，達成了 ' + l.aim.v + '%');
     return out;

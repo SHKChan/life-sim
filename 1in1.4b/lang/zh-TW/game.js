@@ -84,7 +84,7 @@ JY.GAME = {
     flavorRepeat: true,
   },
   choiceTags: false,              // 人群标签选完再展示，避免影响决定
-  version: '2.1.8',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
+  version: '2.1.13',                 // 显示在全站顶栏（打包时写进页面的 vg:version）；发布新内容时改
   // 名帖精简：不显示“现居”“时代”（场景下面已经写了住哪儿），也不显示这些字段
   profile: { liveIn: false, era: false, hide: ['子女', '心结', '心愿', '志向', '遗愿'] },
   // 场景框：在家画家和家里人（还有宠物）；出门、上班、看病的那一年画那个地方和陪着的人
@@ -147,6 +147,17 @@ JY.GAME = {
     '西南': { short: '西南', code: 'XN', color: '#6aa84f', ink: '#0b1806', card: '#3f7a2a' },
     '西北': { short: '西北', code: 'XB', color: '#b07a4f', ink: '#1a0f06', card: '#7d5230' },
   },
+  endLayout: (l, u) => {
+    const { esc } = u, age = l.to - l.born;
+    const death = JY.GAME.share.story(l).death;
+    return '<main class="end end-compact"><section class="life-hero"><div class="life-person"><canvas class="px" data-portrait="' + esc(l.id) + '" data-age="' + age + '"></canvas><div><p class="life-eyebrow">生平記錄</p><h1>' + esc(l.name) + '</h1><p class="note">' + l.born + '—' + l.to + ' · 享年 ' + age + ' 歲</p><p class="note">' + esc(death) + '</p></div></div>'
+      + '<div class="life-ending"><p class="life-eyebrow">這一生的結局</p><h2>' + esc(l.end ? l.end.t : '這一生，落下帷幕') + '</h2><p>' + esc(l.end ? l.end.d : l.review || '你把這一生，認真走完了。') + '</p></div>'
+      + '<blockquote class="life-quote" data-end-quote>“' + esc(l.note || l.words || '') + '”</blockquote></section>'
+      + u.primaryActions + '<div class="end-options"><details class="card end-records" open><summary>這一生的記錄' + ((l.fresh || []).length || (l.newAch || []).length ? '<span class="note">有新的記錄</span>' : '') + '</summary><div class="end-record-content">' + u.records + u.secondaryActions + '</div></details>'
+      + '<div class="end-preparation">' + (JY.GAME.endPreparation ? JY.GAME.endPreparation(l, u) : '') + '<details class="card end-message"><summary>給這一世留句話<span class="note">可選</span></summary>' + u.note + '</details></div></div>'
+      + JY.GAME.endAfterActions(l, u) + '</main>';
+  },
+  endAfterActions: () => '<aside class="next-life"><span>下一世，想試試武俠人生？</span><a href="../jianghuyimeng/">去江湖一夢 →</a></aside>',
   // 分享卡和文字总结
   share: {
     // 分享卡按人生结局组织；旧记录没有结局时不补算、不虚构。
@@ -155,14 +166,15 @@ JY.GAME = {
       const natural = l.cause === '壽終正寢';
       const death = natural ? (l.to - l.born >= 80 ? '壽終正寢' + (place ? '於' + place : '') : (place ? '在' + place : '') + '安然離世')
         : [l.cause, place ? '卒於' + place : ''].filter(Boolean).join(' · ');
-      return { end: l.end, review: l.review, death,
-        badges: (JY.GAME.share.badges ? JY.GAME.share.badges(l) : []).filter((s) => !s.startsWith('這一生的結局：') && !s.startsWith('評語：')) };
+      return { end: l.end, death, residence: l.info && l.info['住处'], badges: [],
+        wishes: (l.wish || []).filter((w) => w && typeof w.t === 'string' && w.t).slice(0, 3).map((w) => (w.ok ? '如願 · ' : '惦念 · ') + (JY.FATE && JY.FATE.shortWish ? JY.FATE.shortWish(w.t) : w.t)) };
     },
     sub: (l) => [l.book, l.sex, l.info && l.info['户籍']].filter(Boolean).join(' · '),
     fields: (l) => [
       ['出生於', l.birthplace || ''],
       ['学历', (l.info && l.info['学历']) || '無'],
       ['职业', (l.info && l.info['职业'] === '退休' && l.snap && JY.JOB_T && JY.JOB_T[l.snap.lastJob] ? '退休前：' + JY.JOB_T[l.snap.lastJob] : (l.info && l.info['职业']) || '無')],
+      ...(l.end ? [['這一生的結局', l.end.t, true, 24]] : []),
     ],
     summary: (l) => {
       const age = l.to - l.born;
@@ -172,13 +184,10 @@ JY.GAME = {
       out.push('【十四億分之一】這一世，我投胎成了' + l.birthplace + '的' + l.name + '。');
       out.push(l.born + '—' + l.to + ' 年，享年 ' + age + '，' + story.death + '。');
       if (l.end) out.push('這一生的結局：' + l.end.t + '。' + (l.end.d || ''));
-      if (l.review) out.push('評語：' + l.review);
       const bits = [info['学历'], info['职业'], info['婚姻'], info['住处']].filter(Boolean);
       if (bits.length) out.push('這一生：' + bits.join('，') + '。');
-      out.push('和我一樣出身的大多數人：' + l.fateText);
-      out.push('與眾不同 ' + l.dev + '%，親手做過 ' + l.picks.filter((p) => !p.auto).length + ' 個大抉擇。臨終一句：“' + l.words + '”');
-      // 稀有度、成就、志向（data/legacy.js 的 share.badges）
-      out.push(...story.badges);
+      out.push('與眾不同 ' + l.dev + '%，親手做過 ' + l.picks.filter((p) => !p.auto).length + ' 個大抉擇。');
+      out.push('“' + (l.note || l.words) + '”');
       return out;
     },
   },

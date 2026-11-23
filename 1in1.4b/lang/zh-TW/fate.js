@@ -298,7 +298,7 @@
   };
 
   JY.FATE = {
-    GIFTS, ENDS, endOf,
+    GIFTS, ENDS, endOf, shortWish,
     // 命终：legacy.js 的 onFinish 调用。s 是这一世的结果，al 是人生图鉴
     finish(g, life, s, al) {
       const L = L_();
@@ -337,7 +337,7 @@
     endCards(l, u) {
       const { esc, card } = u;
       let h = '';
-      if (l.end) {
+      if (l.end && !JY.GAME.endLayout) {
         const p = JY.RARITY && JY.RARITY.end ? JY.RARITY.end[l.end.k] : null;
         const g = GIFTS.find((x) => x.k === (l.snap || {}).gift);
         h += card('這一生的結局', l.newEnd ? '新結局' : '', '<div class="big-num"><div><b>' + esc(l.end.t) + '</b></div></div><p class="note">' + esc(l.end.d)
@@ -348,9 +348,15 @@
           + (l.seed != null ? '<p class="note">' + (l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：分享同一起點，看看朋友怎麼活。</p>' : '')
           + (l.newGifts && l.newGifts.length ? '<p class="note">解鎖了新的天賦：<b>' + esc(l.newGifts.join('、')) + '</b>。下一世抓周的時候可能擺在你面前。</p>' : ''), 'rare-card');
       }
+      if (JY.GAME.endLayout && l.end) {
+        const more = (l.otherEnds || []).map((x) => x.t);
+        h += card('經歷與收錄', '', '<p class="note">' + esc(more.length ? '同時收錄：' + more.join('、') + '。' : '這一生的結局已經記入圖鑑。') + '</p>'
+          + (l.newGifts && l.newGifts.length ? '<p class="note">解鎖天賦：' + esc(l.newGifts.join('、')) + '。</p>' : '')
+          + (l.end.beat != null ? '<p class="note">臨終時的家底，超過了 ' + l.end.beat + '% 同樣出身的人。</p>' : ''));
+      }
       if (l.wish && l.wish.length) {
         const n = l.wish.filter((w) => w.ok).length;
-        h += card('這一生的心願', '完成 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + (w.ok ? '已完成' : '未完成') + '</span></li>').join('') + '</ul>');
+        h += card('這一生的心願', JY.GAME.endLayout ? '' : '完成 ' + n + ' / ' + l.wish.length, '<ul class="ach-list">' + l.wish.map((w) => '<li class="' + (w.ok ? 'new' : '') + '"><b>' + esc(shortWish(w.t)) + '</b><span>' + (w.ok ? '已完成' : '未完成') + '</span></li>').join('') + '</ul>');
       }
       return h;
     },

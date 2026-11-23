@@ -117,7 +117,7 @@
   const endCards = G.endCards;
   G.endCards = (l, u) => {
     const { esc, card } = u;
-    return (l.review ? card('這一生，留下一句話', '', '<p class="life-review">' + esc(l.review) + '</p>') : '') + endCards(l, u);
+    return (!G.endLayout && l.review ? card('這一生，留下一句話', '', '<p class="life-review">' + esc(l.review) + '</p>') : '') + endCards(l, u);
   };
   const homeCards = G.homeCards;
   G.homeCards = (w, u) => {

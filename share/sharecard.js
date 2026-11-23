@@ -128,7 +128,7 @@
     c.fillText(YEAR + ' ' + life.born + ' — ' + life.to + ' · ' + t('享年 {n}', { n: age }), 164, y + 118);
     c.font = '13px ' + F_BODY;
     c.fillStyle = MUTED;
-    wrap(c, story ? story.death : t('卒于{y}', { y: life.deathLoc || '' }), 164, y + 142, 406, 18, 2);
+    wrap(c, story ? [story.death, story.residence].filter(Boolean).join(' · ') : t('卒于{y}', { y: life.deathLoc || '' }), 164, y + 142, 406, 18, 2);
 
     // 字段
     y = 290;
@@ -145,36 +145,36 @@
       c.font = '12px ' + F_BODY;
       c.fillStyle = MUTED;
       c.fillText(f[0], x, yy);
-      c.font = '700 15px ' + F_BODY;
+      c.font = '700 ' + (f[3] || 15) + 'px ' + F_BODY;
       c.fillStyle = f[2] ? accent : INK;
-      wrap(c, f[1], x, yy + 22, 254, 20, 2);
+      wrap(c, f[1], x, yy + (f[3] ? 32 : 22), 254, f[3] ? 30 : 20, 2);
     });
 
     y = story ? 290 + Math.ceil(fields.length / 2) * 64 : 440;
+    const wishes = story && story.wishes || [];
+    const narrativeTop = y;
     if (story) {
       if (story.end) {
-        c.fillStyle = MUTED;
-        c.font = '12px ' + F_BODY;
-        c.fillText(t('这一生的结局'), 30, y);
-        c.fillStyle = accent;
-        c.font = '900 32px ' + F_HEAD;
-        y += 38 + wrap(c, story.end.t, 30, y + 38, 540, 40, 2);
         c.fillStyle = INK;
         c.font = '14px ' + F_BODY;
-        y += wrap(c, story.end.d, 30, y, 540, 22, 3) + 14;
-      }
-      if (story.review) {
-        c.fillStyle = INK;
-        c.font = '14px ' + F_BODY;
-        y += wrap(c, story.review, 30, y + 8, 540, 23, 3) + 22;
+        y += wrap(c, story.end.d, 30, y + 8, wishes.length ? 254 : 540, 22, 3) + 22;
       }
     }
     // 一句话
-    const quote = line || life.words;
+    const quote = line || (story && life.note) || life.words;
     if (quote) {
       c.fillStyle = INK;
-      c.font = '26px ' + F_DISP;
-      y += wrap(c, '“' + quote + '”', 30, y + 10, 540, 36, 2) + 8;
+      c.font = (wishes.length ? '22px ' : '26px ') + F_DISP;
+      y += wrap(c, '“' + quote + '”', 30, y + 10, wishes.length ? 254 : 540, wishes.length ? 32 : 36, 2) + 8;
+    }
+    if (wishes.length) {
+      c.fillStyle = MUTED;
+      c.font = '12px ' + F_BODY;
+      c.fillText(t('这一生的心愿'), 316, narrativeTop + 8);
+      c.fillStyle = INK;
+      c.font = '12px ' + F_BODY;
+      wishes.slice(0, 3).forEach((wish, i) => wrap(c, wish, 316, narrativeTop + 34 + i * 24, 254, 20, 1));
+      y = Math.max(y, narrativeTop + 96);
     }
 
     // 人生图与改命度
@@ -182,7 +182,7 @@
     c.font = '11px ' + F_BODY;
     c.fillStyle = MUTED;
     c.fillText(t('人生图 · 一格一年 · 金色{a} · 青色{b}', { a: LEG[0], b: LEG[1] }), 30, y);
-    const span = Math.max(80, age + 3);
+    const span = story ? age + 1 : Math.max(80, age + 3);
     const cell = 16, gap = 3, cols = 12;
     for (let a = 0; a < span; a++) {
       const yr = life.born + a;
@@ -207,7 +207,7 @@
     y = Math.max(mapBottom, y + (story ? 58 : 186 + fateH)) + 30;
 
     // 世界因我而变
-    if (life.changes.length) {
+    if (!story && life.changes.length) {
       c.font = '12px ' + F_BODY;
       c.fillStyle = MUTED;
       c.fillText(GAME.changedMine || t('因我而变'), 30, y);

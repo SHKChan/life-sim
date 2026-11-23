@@ -717,6 +717,8 @@
     E.save();
     const count = document.getElementById('end-note-count');
     if (count) count.textContent = Array.from(text).length + ' / ' + (T.endNote.max || 30);
+    const quote = document.querySelector('[data-end-quote]');
+    if (quote) quote.textContent = '“' + (text || ui.life.words || '') + '”';
   }
   function endNoteView(life) {
     if (!T.endNote) return '';
@@ -735,10 +737,13 @@
       + '<div class="vname">' + esc(l.name) + '</div><div class="yrs">' + esc(T.year + ' ' + l.born + ' — ' + l.to) + '</div>'
       + '<div class="cause">' + esc(t('享年 {n}', { n: age }) + ' · ' + l.cause) + '</div><div class="words">“' + esc(l.words) + '”</div></div>';
     h += '<div class="end-main">';
+    const recordsStart = h.length;
     h += '<div class="card"><div class="big-num"><div><span>' + t('享年') + '</span><b>' + age + '</b></div><div><span>' + esc(T.devName) + '</span><b>' + l.dev + '%</b></div><div><span>' + t('做过的抉择') + '</span><b>' + mine.length + '</b></div></div></div>';
     // 游戏自己加的卡片（例如十四亿分之一的稀有度、成就、转折线）：endCards(life) 返回 HTML 片段
     if (T.endCards) h += T.endCards(l, { esc, t, card });
+    const records = h.slice(recordsStart);
     h += endNoteView(l);
+    const historyStart = h.length;
     if (T.endDetailsLabel) h += '<details class="card end-details"><summary>' + esc(T.endDetailsLabel) + '</summary>';
     h += '<div class="card"><h3>' + esc(T.compareTitle) + '</h3><div class="compare" style="margin-top:12px"><div><b>' + esc(T.fateLabel) + '</b>' + esc(l.fateText) + '</div><div><b>' + esc(T.yourEnd) + '</b>' + esc(l.name + t('，') + l.cause + t('。')) + '</div></div></div>';
     h += '<div class="card"><h3>' + esc(T.changed) + '</h3><div style="margin-top:10px">' + (l.changes.length
@@ -749,9 +754,14 @@
     h += '<div class="card"><h3>' + esc(T.peersTitle) + '</h3><div class="rows" style="margin-top:10px">' + l.peers.map((p) => '<div class="row"><span class="nm">' + esc(p.name) + '</span><span class="v"></span><span class="n' + (p.st.dead ? ' dead' : '') + '">' + esc(p.st.t) + '</span></div>').join('') + '</div></div>';
     h += card(t('人生图'), t('一格一年'), lifeMap(l.born, l.from, l.to, -9999, l.marks));
     if (T.endDetailsLabel) h += '</details>';
+    // 可选完整布局钩子复用现有记录、输入和操作；未配置的游戏保持原展示。
+    if (T.endLayout) return T.endLayout(l, { esc, t, card, records: records + h.slice(historyStart), note: endNoteView(l),
+      primaryActions: '<div class="end-btns"><button class="b primary big" id="e-share" data-act="share">' + t('分享这一生') + '</button><button class="b big" id="e-home" data-act="home">' + t('再入轮回') + '</button></div>',
+      secondaryActions: '<div class="end-btns"><button class="b" id="e-review" data-act="review">' + t('再看一遍') + '</button><button class="b" id="e-chron" data-act="drawer">' + esc(T.chronicle) + '</button></div>' });
     h += '<div class="end-btns"><button class="b primary big" id="e-share" data-act="share">' + t('分享这一生') + '</button>'
       + '<button class="b big" id="e-review" data-act="review">' + t('再看一遍') + '</button>'
       + '<button class="b big" id="e-home" data-act="home">' + t('再入轮回') + '</button><button class="b big" id="e-chron" data-act="drawer">' + esc(T.chronicle) + '</button></div>';
+    if (T.endAfterActions) h += T.endAfterActions(l, { esc, t, card });
     h += '</div></div>';
     return h;
   }
