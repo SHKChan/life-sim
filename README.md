@@ -58,7 +58,7 @@ npx wrangler dev --assets ./dist --compatibility-date=2025-06-01
 
 **发新版本**：
 
-1. 改版本号：各游戏目录 `game.js` 的 `version`，打包时自动写进页面，不用手写 meta
+1. 改版本号：各游戏目录的 `VERSION` 文件，打包时自动写进页面，不用手写 meta
 2. 在 [`CHANGELOG.md`](CHANGELOG.md) 最上面写一节，三个游戏写在同一份里，标题写明是哪个游戏；纯文档或测试改动不用升版本
 3. 跑上面的测试
 4. 推送，到 Cloudflare 的 Deployments 页面确认构建成功，再打开线上的 `/life-sim/` 看一眼（大厅和三个游戏各点进去一次）

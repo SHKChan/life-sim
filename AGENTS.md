@@ -20,7 +20,7 @@
 | 路径 / Worker | `life-sim`；[正式大厅](https://www.vibe-game.com/life-sim/) |
 | 生产分支 | `main`，推送会自动部署 |
 | 打包入口 | `node tools/build.js` 固定 `--base=life-sim`；输出 `dist/life-sim/`，不要手改产物 |
-| 版本 | 三个游戏均在各自 `game.js` 的 `version`；构建时写入 `vg:version`。大厅不单设版本 |
+| 版本 | 三个游戏各自目录的 `VERSION` 文件（只手写这一处）；构建时写入 `vg:version`。大厅不单设版本 |
 | 存档例外 | 前缀用游戏ID而非站点slug：`1in1.4b.save.v2`、`jianghuyimeng.save.v2`、`qunxia.save.v2` |
 | 图鉴 | 年度人生游戏另存 `<游戏ID>.album.v1`，不能随普通记录一起清除 |
 | 旧网址 | `jianghuyimeng/qunxia/` 已弃用，跳转页已删除，群侠在 `qunxia/` |

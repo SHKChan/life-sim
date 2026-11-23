@@ -9,7 +9,7 @@
  *   dist/<游戏>/...          每个游戏自己的页面、设定、故事数据
  * css、js 引用会加上内容哈希作为版本号，浏览器和 CDN 不会读到旧文件。
  * config.js 不加版本号，上线后可以直接改。
- * 每个游戏页面会加上 <meta name="vg:version">（从 game.js 的 version 或群侠 ui.js 的 VERSION 读），全站顶栏和首页靠它显示版本号。
+ * 每个游戏页面会加上 <meta name="vg:version">（从各游戏目录的 VERSION 文件读），全站顶栏和首页靠它显示版本号。
  */
 'use strict';
 const fs = require('fs');
@@ -54,14 +54,13 @@ function buildPage(srcHtml, srcDir, outDir) {
   return refs;
 }
 
-// 本页面的版本号：同目录 game.js 的 version，或者 ui.js 的 VERSION（群侠）；大厅没有
+// 本页面的版本号：同目录 VERSION 文件（只手写这一处，GUIDE 第五节）；大厅没有
 function pageVersion(dir) {
-  for (const [f, re] of [['game.js', /\bversion:\s*'([\d.]+)'/], ['ui.js', /\bconst VERSION = '([\d.]+)'/]]) {
-    const p = path.join(dir, f);
-    const m = fs.existsSync(p) && re.exec(fs.readFileSync(p, 'utf8'));
-    if (m) return m[1];
-  }
-  return '';
+  const p = path.join(dir, 'VERSION');
+  if (!fs.existsSync(p)) return '';
+  const v = fs.readFileSync(p, 'utf8').trim();
+  if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error(p + ' 的版本号格式应为 x.y.z，现在是 ' + JSON.stringify(v));
+  return v;
 }
 
 // 所有游戏 lang/ 目录里文件的内容（算 i18n.js 的版本号）

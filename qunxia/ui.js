@@ -6,7 +6,7 @@
   'use strict';
   const JY = window.JY, QX = window.QX, CFG = window.JY_CONFIG || {};
   const t = (s, v) => (JY.t ? JY.t(s, v) : s);
-  const VERSION = (window.JY && JY.GAME && JY.GAME.version) || '3.0.0';
+  const VERSION = ((document.querySelector('meta[name="vg:version"]') || {}).content) || '';
     const app = document.getElementById('app');
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const THEME_KEY = 'jianghuyimeng.theme'; // 和浮生录其他游戏共用

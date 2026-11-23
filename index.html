@@ -108,7 +108,7 @@
     }).join('') + '</div></section>'
     + '<section class="how">' + ['how1', 'how2', 'how3'].map(function (k) { var v = tx(k); return '<div><b>' + v[0] + '</b>' + v[1] + '</div>'; }).join('') + '</section></div>';
   document.getElementById('hub').innerHTML = h;
-  // 版本号写在各游戏页面的 <meta name="vg:version">（打包时从 game.js 的 version 写进去），这里去读，发版不用改大厅
+  // 版本号写在各游戏页面的 <meta name="vg:version">（打包时从各游戏的 VERSION 文件写进去），这里去读，发版不用改大厅
   [].forEach.call(document.querySelectorAll('#hub a.world'), function (a) {
     if (!window.fetch || !/^https?:$/.test(location.protocol)) return;
     fetch(a.getAttribute('href'), { cache: 'no-cache' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (html) {
