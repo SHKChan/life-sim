@@ -3,7 +3,7 @@
  * 带变量的写成 JY.t('一年约 {n} 秒', { n: 7.5 })。
  * 词表：share/lang/<语言>.js 用 JY.addI18n('en', { '暂停': 'Pause', ... }) 往里加；
  *       各游戏的 game.js 可以再加自己的用词，并在 JY.GAME.i18n.<语言> 里覆盖界面用词字段。
- * 剧情文字的翻译放在各游戏 data/<语言>/ 下，按 id 覆盖中文节点（见 CLAUDE.md“多语言”）。
+ * 剧情文字的翻译放在各游戏 data/<语言>/ 下，按 id 覆盖中文节点（见 AGENTS.md“多语言”）。
  * 语言存在 localStorage 的 vibe.lang（同一个网站下所有游戏共用），第一次按浏览器语言选。
  * 全站翻译暂时只开中文（vibe-game 的 nav.js 里 LANG_OPEN）：这里也把 LANG_OPEN 设成 false，一律用中文、不载入谷歌翻译。
  */

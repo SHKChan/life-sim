@@ -79,7 +79,7 @@ for (const g of games) {
     if (fs.existsSync(src)) fs.cpSync(src, path.join(dist, g, extra), { recursive: true });
   }
   console.log('  ' + g + '/：' + refs.length + ' 个文件');
-  // 游戏目录下自带页面的子目录（例如江湖一梦的群侠模式 qunxia/）也一起打包；tools/ 是本地测试用的，不打包
+  // 游戏目录下自带页面的子目录也一起打包；tools/ 是本地测试用的，不打包
   for (const sub of fs.readdirSync(path.join(repo, g))) {
     const dir = path.join(repo, g, sub);
     if (!fs.statSync(dir).isDirectory() || !fs.existsSync(path.join(dir, 'index.html'))) continue;

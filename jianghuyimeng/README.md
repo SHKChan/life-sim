@@ -6,7 +6,7 @@
 
 ## 开发入口
 
-先读根目录 [CLAUDE.md](../CLAUDE.md)，再读 [docs/SPEC.md](docs/SPEC.md)。纪年、人物格式、关系、跨世改命和结局规则集中在SPEC。早期可玩性任务的实现索引见 [PLAYABILITY-TASKS.md](docs/PLAYABILITY-TASKS.md)，不再作为待办重做。
+先读根目录 [AGENTS.md](../AGENTS.md)，再读 [docs/SPEC.md](docs/SPEC.md)。纪年、人物格式、关系、跨世改命和结局规则集中在SPEC。早期可玩性任务的实现索引见 [PLAYABILITY-TASKS.md](docs/PLAYABILITY-TASKS.md)，不再作为待办重做。
 
 - `game.js`：设定、版本与界面文案；`config.js`：部署配置。
 - `data/world.js`、`relations.js`：世界、标记和人物关系；三部书文件：人物剧情。

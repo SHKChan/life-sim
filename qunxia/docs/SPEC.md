@@ -1,6 +1,6 @@
 # 群侠 · 玩法与数据规范
 
-本文件的代码路径相对 `qunxia/`，命令在仓库根目录运行。开发前先读根目录 [CLAUDE.md](../../CLAUDE.md)。系统数值以引擎和数据表为准，文档不维护武功、地点等易变总数。
+本文件的代码路径相对 `qunxia/`，命令在仓库根目录运行。开发前先读根目录 [AGENTS.md](../../AGENTS.md)。系统数值以引擎和数据表为准，文档不维护武功、地点等易变总数。
 
 倚天年间的无名小卒RPG，使用独立的 `QX` 引擎与 `qunxia.save.v2` 存档；不使用年度人生的 `JY` 引擎。江湖纪年和人物关系分别以 [江湖一梦SPEC](../../jianghuyimeng/docs/SPEC.md) 和 `jianghuyimeng/data/relations.js` 为准。
 
@@ -9,7 +9,7 @@
 | 文件 | 内容 |
 |---|---|
 | `index.html` | 页面。按顺序载入 config → i18n → engine → data/* → pixel → ui |
-| `config.js` | 部署配置（网址、字体、面包屑、反馈仓库），部署字段见根目录CLAUDE.md，另有 `gameUrl`、`gameName` |
+| `config.js` | 部署配置（网址、字体、面包屑、反馈仓库），部署字段见根目录AGENTS.md，另有 `gameUrl`、`gameName` |
 | `engine.js` | 规则引擎 `window.QX`：状态、日子、地图行程、练功、战斗、事件、存档。不放剧情文字 |
 | `data/world.js` | 地区、地点、出身、门派、物品、引擎用的固定句式（`QX.TXT`）、改命标记说明、结局、通用探索与路上遭遇 |
 | `data/arts.js` | 武功定义 |

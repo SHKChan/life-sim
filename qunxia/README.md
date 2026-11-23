@@ -6,7 +6,7 @@
 
 ## 开发
 
-先读根目录 [CLAUDE.md](../CLAUDE.md)，再读 [docs/SPEC.md](docs/SPEC.md)。文件分工、事件格式、战斗、门派和信物规则集中在SPEC，不在README重复。
+先读根目录 [AGENTS.md](../AGENTS.md)，再读 [docs/SPEC.md](docs/SPEC.md)。文件分工、事件格式、战斗、门派和信物规则集中在SPEC，不在README重复。
 
 命令在仓库根目录执行：
 

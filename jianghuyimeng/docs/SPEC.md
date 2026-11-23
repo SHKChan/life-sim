@@ -4,7 +4,7 @@
 
 ## 文件
 
-本表路径相对游戏目录 `jianghuyimeng/`；开发前读根目录 [CLAUDE.md](../../CLAUDE.md)。
+本表路径相对游戏目录 `jianghuyimeng/`；开发前读根目录 [AGENTS.md](../../AGENTS.md)。
 
 | 文件 | 内容 |
 |---|---|

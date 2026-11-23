@@ -4,7 +4,7 @@
 
 [在线游玩](https://www.vibe-game.com/life-sim/1in1.4b/)。本地直接用 Chrome 打开 `index.html`，不需要服务器，存档保存在浏览器。
 
-开发前先读根目录 [CLAUDE.md](../CLAUDE.md)，剧情和状态键以 [docs/SPEC.md](docs/SPEC.md) 为准。[资料说明](docs/README.md)解释历史基线和测试产物的用途。
+开发前先读根目录 [AGENTS.md](../AGENTS.md)，剧情和状态键以 [docs/SPEC.md](docs/SPEC.md) 为准。[资料说明](docs/README.md)解释历史基线和测试产物的用途。
 
 常用命令在仓库根目录执行：
 
