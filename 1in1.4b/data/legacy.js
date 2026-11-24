@@ -192,7 +192,7 @@
       + '<p class="note">结局：<b>负重前行</b> · 享年 79 岁。留言：下辈子，给自己多留点时间。</p></div></section>';
     const row = (name, n, total) => '<div class="alb-row"><span>' + esc(name) + '</span><span class="bar"><i style="width:' + Math.round(100 * Math.min(1, n / total)) + '%"></i></span><b>' + n + ' / ' + total + '</b></div>';
     const got = ACH.filter((a) => al.ach[a.id]);
-    return ch + '<section class="album"><div class="section-h"><h2>人生图鉴</h2><span>活过 ' + al.lives + ' 世 · 清空投胎记录也不会丢</span></div><div class="card">'
+    return ch + '<section class="album"><details class="card life-album"><summary>人生图鉴<span class="note">查看走过的人生 · 记录会一直保留</span></summary><div class="album-content">'
       + row('投胎过的省份', Object.keys(al.provs).length, PROV_N)
       + row('出身', Object.keys(al.fams).length, Object.keys(FAM_T).length)
       + row('学历', Object.keys(al.edus).length, Object.keys(EDU_T).length)
@@ -200,8 +200,8 @@
       + row('成就', got.length, ACH.length)
       + (JY.FATE ? JY.FATE.homeRows(al, row) : '')
       + (al.best ? '<p class="note">最少见的一生：' + esc(al.best.name) + '（' + esc(al.best.where || '') + '）。按游戏模拟结果比较。</p>' : '')
-      + '<div class="ach-grid">' + ACH.map((a) => '<span class="' + (al.ach[a.id] ? 'on' : '') + '" title="' + esc(al.ach[a.id] ? a.d : '还没解锁') + '">' + esc(al.ach[a.id] ? a.t : '？？？') + '</span>').join('') + '</div>'
-      + '</div></section>';
+      + '<div class="ach-grid">' + got.map((a) => '<span class="on" title="' + esc(a.d) + '">' + esc(a.t) + '</span>').join('') + '</div>'
+      + '</div></details></section>';
   };
 
   /* ---------- 分享卡上的几行 ---------- */

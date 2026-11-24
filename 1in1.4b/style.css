@@ -1,4 +1,8 @@
 /* 重心说明继承了工具行的不换行规则；在菜单里恢复折行。 */
+.home .world-line .b { font-size: 15px; font-weight: 500; line-height: 1.6; padding: 8px 14px; min-height: 42px; }
+.life-album > summary, .daily-entry > summary { cursor: pointer; font-size: 19px; font-weight: 600; }
+.life-album > summary .note, .daily-entry > summary .note { display: block; margin-top: 4px; font-size: 13px; font-weight: 400; }
+.album-content { margin-top: 16px; }
 .shell.news-left { grid-template-areas: "left center right" "news center right"; grid-template-rows: max-content 1fr; }
 .news-slot { grid-area: news; min-width: 0; }
 .life-connections { margin-bottom: 18px; }

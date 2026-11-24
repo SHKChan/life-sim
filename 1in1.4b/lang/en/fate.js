@@ -476,10 +476,10 @@
       const E0 = JY.engine && JY.engine.get && JY.engine.get();
       if (!(E0 && E0.L)) {
         const k = dayKey(), done = dailyRead()[k];
-        h += '<section class="album"><div class="section-h"><h2>Daily Same-Fate</h2><span>' + k.slice(5).replace(/^(\d+)-(\d+)$/, '$1/$2') + ' · Same birth for the whole site</span></div><div class="card">'
+        h += '<section class="album"><details class="card daily-entry"><summary>Daily Same-Fate<span class="note">Optional · share a starting point with other players</span></summary><div class="album-content"><p class="note">' + k.slice(5).replace(/^(\d+)-(\d+)$/, '$1/$2') + ' · Same starting point, different choices.</p>'
           + (done ? '<p class="note">You\'ve already been born today: <b>' + done.t + '</b> · Died at ' + done.age + '. Try again and the birth is the same, but your choices can differ.</p>'
             : '<p class="note">Everyone gets the same birth for the child born today. Live out the life, then send the result to a friend to compare.</p>')
-          + '<p><button class="b primary" id="h-daily" data-act="daily">' + (done ? 'Be born again today' : 'Be born today') + '</button></p></div></section>';
+          + '<p><button class="b" id="h-daily" data-act="daily">' + (done ? 'Try today’s shared birth again' : 'Try today’s shared birth') + '</button></p></div></details></section>';
       }
       return h;
     },

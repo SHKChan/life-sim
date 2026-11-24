@@ -476,10 +476,10 @@
       const E0 = JY.engine && JY.engine.get && JY.engine.get();
       if (!(E0 && E0.L)) {
         const k = dayKey(), done = dailyRead()[k];
-        h += '<section class="album"><div class="section-h"><h2>今日同命</h2><span>' + k.slice(5).replace(/^(\d+)-(\d+)$/, '$1月$2日') + ' · 全站同一個出身</span></div><div class="card">'
+        h += '<section class="album"><details class="card daily-entry"><summary>今日同命<span class="note">可選 · 和其他玩家體驗同一個出身</span></summary><div class="album-content"><p class="note">' + k.slice(5).replace(/^(\d+)-(\d+)$/, '$1月$2日') + ' · 同一個起點，選擇可以不一樣。</p>'
           + (done ? '<p class="note">今天你已經投過：<b>' + done.t + '</b> · 享年 ' + done.age + '。再投一次，出身還是同一個，選擇可以不一樣。</p>'
             : '<p class="note">今天出生的這個孩子，所有玩家是同一個出身。走完一生，把結果發給朋友比一比。</p>')
-          + '<p><button class="b primary" id="h-daily" data-act="daily">' + (done ? '再投一次今天的胎' : '投今天的胎') + '</button></p></div></section>';
+          + '<p><button class="b" id="h-daily" data-act="daily">' + (done ? '再體驗一次今日同命' : '體驗今日同命') + '</button></p></div></details></section>';
       }
       return h;
     },

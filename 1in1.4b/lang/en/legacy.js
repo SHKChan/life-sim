@@ -193,7 +193,7 @@
       + '<p class="note">Ending: <b>Carrying the Load</b> · Died at 79. Last words: Next life, leave more time for myself.</p></div></section>';
     const row = (name, n, total) => '<div class="alb-row"><span>' + esc(name) + '</span><span class="bar"><i style="width:' + Math.round(100 * Math.min(1, n / total)) + '%"></i></span><b>' + n + ' / ' + total + '</b></div>';
     const got = ACH.filter((a) => al.ach[a.id]);
-    return ch + '<section class="album"><div class="section-h"><h2>Life Album</h2><span>' + al.lives + ' lives lived · kept even if you clear past lives</span></div><div class="card">'
+    return ch + '<section class="album"><details class="card life-album"><summary>Life Album<span class="note">Browse your past lives · your records are kept</span></summary><div class="album-content">'
       + row('Provinces born in', Object.keys(al.provs).length, PROV_N)
       + row('Family origins', Object.keys(al.fams).length, Object.keys(FAM_T).length)
       + row('学历', Object.keys(al.edus).length, Object.keys(EDU_T).length)
@@ -201,8 +201,8 @@
       + row('Achievements', got.length, ACH.length)
       + (JY.FATE ? JY.FATE.homeRows(al, row) : '')
       + (al.best ? '<p class="note">Rarest life: ' + esc(al.best.name) + ' (' + esc(al.best.where || '') + '). Compared against simulated lives in the game.</p>' : '')
-      + '<div class="ach-grid">' + ACH.map((a) => '<span class="' + (al.ach[a.id] ? 'on' : '') + '" title="' + esc(al.ach[a.id] ? a.d : 'Locked') + '">' + esc(al.ach[a.id] ? a.t : '???') + '</span>').join('') + '</div>'
-      + '</div></section>';
+      + '<div class="ach-grid">' + got.map((a) => '<span class="on" title="' + esc(a.d) + '">' + esc(a.t) + '</span>').join('') + '</div>'
+      + '</div></details></section>';
   };
 
   /* ---------- 分享卡上的几行 ---------- */
