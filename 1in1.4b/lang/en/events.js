@@ -1170,7 +1170,7 @@
     'Most of the village’s young people had left. They came back only at New Year, driving cars of all sorts of brands.',
     { t: 'The jujube tree in the yard bore fruit. You climbed up to pick some and got scolded down by Grandma.', minAge: 6, maxAge: 13, cond: (g) => has(g, 'gm') },
     'The evening wind smelled of burning straw.',
-    'In the village square at night, people did square dancing, with music playing until nine.',
+    { t: 'In the village square at night, people did square dancing, with music playing until nine.', maxAge: 84 },
     'When a family had a wedding, the banquet ran from noon to dark, and half the village came to help.',
     { t: 'You bought a popsicle at the village shop, and the owner’s wife threw in a candy.', minAge: 4, maxAge: 14 },
   ]);

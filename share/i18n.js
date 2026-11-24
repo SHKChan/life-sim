@@ -23,7 +23,7 @@
   if (!ok(lang) && ok(CFG.defaultLang)) lang = CFG.defaultLang;
   if (!ok(lang)) {
     const n = String((typeof navigator !== 'undefined' && navigator.language) || '').toLowerCase();
-    lang = /^ja/.test(n) ? 'ja' : /^es/.test(n) ? 'es' : /^en/.test(n) ? 'en' : /^zh-(tw|hk|mo)|hant/.test(n) ? 'zh-TW' : 'zh';
+    lang = CFG.langNav ? (/^zh-(tw|hk|mo)|hant/.test(n) ? 'zh-TW' : /^zh/.test(n) ? 'zh' : 'en') : /^ja/.test(n) ? 'ja' : /^es/.test(n) ? 'es' : /^en/.test(n) ? 'en' : /^zh-(tw|hk|mo)|hant/.test(n) ? 'zh-TW' : 'zh';
   }
   // 网址里带 ?lang=en 时优先（方便分享某个语言的链接）
   try { const q = new URLSearchParams(location.search).get('lang'); if (LANG_OPEN && ok(q)) lang = q; } catch (e) { /* 无界面环境 */ }
@@ -43,6 +43,7 @@
     if (/^zh/.test(JY.LANG || lang) || typeof t !== 'string' || !t) return t;
     return t.replace(/[ \u00a0]{2,}/g, ' ').replace(/ +([,.;:!?)”’])/g, '$1').replace(/([(“]) +/g, '$1').replace(/\.\s*\./g, '.')
       .replace(/([a-z])([A-Z][a-z])/g, '$1 $2')
+      .replace(/([a-z][.!?])([A-Z][a-z])/g, '$1 $2')
       .replace(/(^|[.!?]\s+|[\[\]]\s*)([a-z])/g, (m, a, b) => a + b.toUpperCase()).trim();
   };
   JY.setLang = (l) => {

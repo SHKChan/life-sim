@@ -25,7 +25,7 @@
 | 图鉴 | 年度人生游戏另存 `<游戏ID>.album.v1`，不能随普通记录一起清除 |
 | 旧网址 | `jianghuyimeng/qunxia/` 已弃用，跳转页已删除，群侠在 `qunxia/` |
 | 变更记录 | 根目录 `CHANGELOG.md`，每节标明游戏；纯文档或测试改动无需升游戏版本 |
-| 语言 | 正式站 `share/i18n.js` 的 `LANG_OPEN=false`；翻译机制保留 |
+| 语言 | 十四亿分之一：`1in1.4b/config.js` 的 `langOpen/langNav` 打开，由全站顶栏「中 / EN」切换（没存过按全站规则用英文），有英文和繁体；江湖一梦、群侠仍是 `LANG_OPEN=false`（只中文）；翻译机制保留 |
 
 部署、反馈与发布流程遵循系列指南及本次授权。游戏里的反馈通过 `window.VG_FEEDBACK` 接入；不要把旧GitHub反馈方案当作新功能待办。
 

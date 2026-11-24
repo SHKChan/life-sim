@@ -64,7 +64,35 @@
       return Number.isFinite(v) && v >= 0 ? v : null;
     } catch (e) { return null; }
   };
+  // 分享链接里朋友的结局：f=结局序号-享年-家底（万元，负数前面加 m），只在带出身种子时才读
+  const readFriend = () => {
+    try {
+      const m = /[?&]f=([0-9a-z]{1,2}-\d{1,3}-m?\d{1,6})(?:&|$)/.exec(location.search || '');
+      return m && readSeed() != null ? m[1] : null;
+    } catch (e) { return null; }
+  };
+  const decodeFriend = (raw) => {
+    const m = /^([0-9a-z]{1,2})-(\d{1,3})-(m?)(\d{1,6})$/.exec(String(raw || ''));
+    const e = m && ENDS[parseInt(m[1], 36)];
+    const age = m ? Number(m[2]) : -1;
+    return e && age >= 0 && age <= 125 ? { k: e.k, t: e.t, age, net: (m[3] ? -1 : 1) * Number(m[4]) * 1e4 } : null;
+  };
+  const encodeFriend = (l) => {
+    const i = l.end ? ENDS.findIndex((e) => e.k === l.end.k) : -1;
+    if (i < 0) return '';
+    const age = Math.max(0, Math.min(125, l.to - l.born));
+    const w = Math.max(-999999, Math.min(999999, Math.round(((l.snap || {}).net || 0) / 1e4)));
+    return i.toString(36) + '-' + age + '-' + (w < 0 ? 'm' : '') + Math.abs(w);
+  };
+  // 今日同命：用 UTC 日期做种子，全站当天投到同一个出身
+  const dayKey = () => new Date().toISOString().slice(0, 10);
+  const daySeed = (k) => { let h = 2166136261; const s = 'daily:' + k; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 2000000000; };
+  const DAILY_KEY = '1in1.4b.daily.v1';
+  const dailyRead = () => { try { return JSON.parse(localStorage.getItem(DAILY_KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const dailyWrite = (k, v) => { try { const d = dailyRead(); d[k] = v; Object.keys(d).sort().slice(0, -30).forEach((x) => { delete d[x]; }); localStorage.setItem(DAILY_KEY, JSON.stringify(d)); } catch (e) { /* 存储不可用就算了 */ } };
   let pending = readSeed();
+  let pendingF = readFriend();
+  let pendingDaily = '';
   const gen = JY.GENERATE;
   JY.GENERATE = () => {
     const friend = pending != null;
@@ -76,13 +104,25 @@
     r.me.mem.seed = seed;
     if (friend) {
       r.me.mem.seedFrom = true;
-      pending = null;
+      if (pendingF) r.me.mem.friend = pendingF;
+      if (pendingDaily) r.me.mem.daily = pendingDaily;
+      pending = null; pendingF = null; pendingDaily = '';
       // 用过就把网址里的种子去掉，刷新页面不会再投到同一个出身
       try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) { /* 忽略 */ }
     }
     return r;
   };
-  JY.GAME.share.url = (l) => { const u = JY.siteUrl ? JY.siteUrl() : ''; return u && l && l.seed != null ? u + (u.includes('?') ? '&' : '?') + 's=' + Number(l.seed).toString(36) : ''; };
+  JY.GAME.share.url = (l) => {
+    const u = JY.siteUrl ? JY.siteUrl() : '';
+    if (!u || !l || l.seed == null) return '';
+    const f = encodeFriend(l);
+    return u + (u.includes('?') ? '&' : '?') + 's=' + Number(l.seed).toString(36) + (f ? '&f=' + f : '');
+  };
+  JY.GAME.onAction = (a, d, api) => {
+    if (a !== 'daily') return;
+    pending = daySeed(dayKey()); pendingF = null; pendingDaily = dayKey();
+    api.start(null);
+  };
 
   // 判定：天赋对口的那一类容易 12%
   CN.giftOdds = (g, chk) => { const x = giftOf(g); return x && chk && chk[0] === x.stat ? 12 : 0; };
@@ -357,8 +397,11 @@
       s.cityTier = g.recall('cityTier') || 0;
       if (g.recall('seed') != null) life.seed = g.recall('seed');
       life.seedFrom = !!g.recall('seedFrom');
+      life.friend = decodeFriend(g.recall('friend'));
+      life.daily = g.recall('daily') || '';
       const e = endOf(s);
       life.end = { k: e.k, t: e.t, d: e.d, beat: beat(s) };
+      if (life.daily) dailyWrite(life.daily, { k: e.k, t: e.t, age: life.to - life.born, net: Math.round((s.net || 0) / 1e4) });
       const ws = wishList(g), done = g.recall('wishDone') || [];
       if (ws.length) {
         life.wish = ws.map((w) => ({ t: w.t, ok: done.includes(w.k), status: done.includes(w.k) ? '已完成' : wishStatus(g, w) }));
@@ -388,6 +431,17 @@
     endCards(l, u) {
       const { esc, card } = u;
       let h = '';
+      if (l.friend && l.end) {
+        const f = l.friend, myAge = l.to - l.born, myNet = (l.snap || {}).net || 0, fm = (x) => JY.CN.fmt(x);
+        const da = myAge - f.age;
+        const ageLine = da >= 3 ? '你比 TA 多活了 ' + da + ' 年。' : da <= -3 ? '你比 TA 少活了 ' + (-da) + ' 年。' : '你們活得差不多長。';
+        const dn = myNet - f.net;
+        const netLine = Math.abs(dn) < Math.max(100000, Math.abs(f.net) * 0.15) ? '家底也差不多。' : dn > 0 ? '家底你多出 ' + fm(dn) + '。' : '家底你少了 ' + fm(-dn) + '。';
+        h += card('和朋友的同一個出身', '同命挑戰',
+          '<p class="note">朋友：<b>' + esc(f.t) + '</b> · 享年 ' + f.age + ' · 家底 ' + esc(fm(f.net)) + '</p>'
+          + '<p class="note">你：<b>' + esc(l.end.t) + '</b> · 享年 ' + myAge + ' · 家底 ' + esc(fm(myNet)) + '</p>'
+          + '<p>' + esc(ageLine + netLine) + '同樣的起點，不同的一生。</p>');
+      }
       if (l.end && !JY.GAME.endLayout) {
         const p = JY.RARITY && JY.RARITY.end ? JY.RARITY.end[l.end.k] : null;
         const g = GIFTS.find((x) => x.k === (l.snap || {}).gift);
@@ -396,7 +450,7 @@
           + (l.end.beat != null ? ' 臨終時的家底，超過了 <b>' + l.end.beat + '%</b> 同樣出身的人。' : '')
           + (g ? ' 天賦：' + esc(g.t) + '。' : '') + '</p>'
           + (l.otherEnds && l.otherEnds.length ? '<p class="note">同時收錄：' + l.otherEnds.map((x) => esc(x.t) + (x.fresh ? '（新）' : '')).join('、') + '。</p>' : '')
-          + (l.seed != null ? '<p class="note">' + (l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：分享同一起點，看看朋友怎麼活。</p>' : '')
+          + (l.seed != null ? '<p class="note">' + (l.daily ? '今日同命 · ' + esc(l.daily.slice(5)) + '：全站今天是同一個出身。' : l.seedFrom ? '這一世是朋友分享來的出身。' : '') + '同命挑戰：分享同一起點，看看朋友怎麼活。</p>' : '')
           + (l.newGifts && l.newGifts.length ? '<p class="note">解鎖了新的天賦：<b>' + esc(l.newGifts.join('、')) + '</b>。下一世抓周的時候可能擺在你面前。</p>' : ''), 'rare-card');
       }
       if (JY.GAME.endLayout && l.end) {
@@ -414,7 +468,20 @@
     },
     // 首页：网址里带着朋友分享的出身时，提示一句
     homeChallenge() {
-      return pending == null ? '' : '<section class="album"><div class="section-h"><h2>同命挑戰</h2><span>朋友發來了一個出身</span></div><div class="card"><p class="note">點“投胎”，你會生在和朋友同一個地方、同一個家裡。同一個起點，看你能活成什麼樣。</p></div></section>';
+      let h = '';
+      if (pending != null) {
+        h += '<section class="album"><div class="section-h"><h2>同命挑戰</h2><span>朋友發來了一個出身</span></div><div class="card"><p class="note">點“投胎”，你會生在和朋友同一個地方、同一個家裡。'
+          + (pendingF ? '朋友已經走完了這一生，結局先不告訴你，等你走完再一起比。' : '同一個起點，看你能活成什麼樣。') + '</p></div></section>';
+      }
+      const E0 = JY.engine && JY.engine.get && JY.engine.get();
+      if (!(E0 && E0.L)) {
+        const k = dayKey(), done = dailyRead()[k];
+        h += '<section class="album"><div class="section-h"><h2>今日同命</h2><span>' + k.slice(5).replace(/^(\d+)-(\d+)$/, '$1月$2日') + ' · 全站同一個出身</span></div><div class="card">'
+          + (done ? '<p class="note">今天你已經投過：<b>' + done.t + '</b> · 享年 ' + done.age + '。再投一次，出身還是同一個，選擇可以不一樣。</p>'
+            : '<p class="note">今天出生的這個孩子，所有玩家是同一個出身。走完一生，把結果發給朋友比一比。</p>')
+          + '<p><button class="b primary" id="h-daily" data-act="daily">' + (done ? '再投一次今天的胎' : '投今天的胎') + '</button></p></div></section>';
+      }
+      return h;
     },
     // 首页人生图鉴里的两行
     homeRows(al, row) {

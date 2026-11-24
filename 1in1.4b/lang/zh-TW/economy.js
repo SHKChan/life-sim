@@ -436,7 +436,8 @@
     if (r.name === '含饴弄孙') return ['gk1', 'gk2', 'gk3'].some((id) => JY.byId[id] && g.alive(id)) ? '連著幾年給孫輩留出時間，你也學著先聽他們把話講完，累了就說要歇一歇。' : '';
     if (r.name === '陪伴家人') {
       const ids = CN.household(g);
-      return ids.length ? '這些年你常留在家裡，知道同住的人什麼時候吃飯、什麼時候想安靜一會兒。' : '這些年你常把時間留給家裡的安排，一個人吃飯時，也願意給自己多留一會兒。';
+      if (ids.length) return '這些年你常留在家裡，知道同住的人什麼時候吃飯、什麼時候想安靜一會兒。';
+      return CN.alone(g) ? '這些年你常把時間留給家裡的安排，一個人吃飯時，也願意給自己多留一會兒。' : '這些年你常把時間留給家裡人的訊息，電話一響，總是先接起來。';
     }
     return '';
   };
@@ -507,7 +508,7 @@
     const strain = (Number(g.recall('workStrain')) || 0) + (f >= 5 ? (g.recall('lightDuty') ? 0.5 : 1) : 0);
     g.remember('workStrain', strain);
     // 长年透支的损伤不会在退休当年消失。
-    if (age >= 60 && strain >= 20 && g.s('健康') > 25) g.stat('健康', g.recall('lightDuty') ? -1 : -3);
+    if (age >= 60 && strain >= 20 && g.s('健康') > 25) g.stat('健康', g.recall('lightDuty') ? -1 : (g.rnd() < 0.5 ? -2 : -1));
     g.info('狀態', f >= 4 ? '長期透支' : '');
     if (f >= 5 && g.rnd() < 0.5) g.stat('健康', -1);
     if (age >= 28 && age <= 60) {

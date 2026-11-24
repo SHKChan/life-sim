@@ -21,7 +21,7 @@
 
   /* ---------- 这一世的结果 ---------- */
   const EDU_T = { primary: 'Primary school', junior: 'Middle school', vocational: 'Vocational school', senior: 'High school', college: 'Junior college', bachelor: 'Bachelor’s', master: 'Master’s', phd: 'PhD' };
-  const JOB_T = { none: 'No steady job', farmer: 'Farming', worker: 'Factory worker', rider: 'Delivery rider', driver: 'Driver', shop: 'Shopkeeper', office: 'Office worker', tech: 'Tech worker', civil: 'Civil servant', teacher: 'Teacher', doctor: 'Doctor', nurse: 'Nurse', sales: 'Sales', boss: 'Business owner', creator: 'Content creator', soldier: 'Soldier', freelance: 'Freelancer', retired: 'Retired' };
+  const JOB_T = { restaurant: 'Restaurant owner', beauty: 'Hairdresser and beautician', grocery: 'Convenience store owner', mechanic: 'Auto repair mechanic', electrician: 'Electrician', welder: 'Welder', cnc: 'CNC machinist', renovation: 'Renovation contractor', parcel: 'Parcel station owner', maternity: 'Postnatal and child caregiver', eldercare: 'Elder care aide', housekeeping: 'Housekeeper', cooperative: 'Co-op manager', livestock: 'Livestock farmer', grower: 'Large-scale grower', construction: 'Construction worker', none: 'No steady job', farmer: 'Farming', worker: 'Factory worker', rider: 'Delivery rider', driver: 'Driver', shop: 'Shopkeeper', office: 'Office worker', tech: 'Tech worker', civil: 'Civil servant', teacher: 'Teacher', doctor: 'Doctor', nurse: 'Nurse', sales: 'Sales', boss: 'Business owner', creator: 'Content creator', soldier: 'Soldier', freelance: 'Freelancer', retired: 'Retired' };
   const FAM_T = { rich: 'Wealthy family', civil: 'State-employee family', white: 'Office-worker family', smallbiz: 'Small-business family', worker: 'Working-class family', farmer: 'Farming family', migrant: 'Migrant-worker parents' };
   const HUKOU_T = { city: 'City', county: 'County town', rural: 'Village' };
   // 稀有度用的几项（和 tools/rarity.js 的统计口径一致）
@@ -37,7 +37,7 @@
     const s = {
       hukou: r('hukou'), family: r('family'), leftBehind: !!r('leftBehind'), prov: r('prov'), region: r('region'),
       edu: r('edu'), gk: r('gk'), uni: r('uni'), job: r('job'), lastJob: r('preJob') || r('job'), love: r('love'), kids: r('kids') || 0,
-      tier: r('tier') || 5, workCity: r('workCity'), house: r('house'), backHome: r('backHome'), startup: r('startup'), biz: r('biz'),
+      tradeOwn: !!r('tradeOwn'), tier: r('tier') || 5, workCity: r('workCity'), house: r('house'), backHome: r('backHome'), startup: r('startup'), biz: r('biz'),
       ladder: r('ladder50') || r('ladder40'), aiMove: r('aiMove'), kidPlan: r('kidPlan'), remarried: !!r('remarried'),
       hyBlown: Number(r('hyBlown')) || 0, crash: r('crash'), finGain: Number(r('finGain')) || 0, paAcct: Number(r('paAcct')) || 0,
       net: Math.round(CN.net(g)), age: life.to - life.born, city: r('city'),
@@ -70,6 +70,9 @@
     return String(n);
   };
   JY.oneInText = oneInText;
+  const rarityLabel = (rare) => rare.pct >= 95 ? 'Rare' : rare.pct >= 75 ? 'Uncommon' : 'Common';
+  JY.rarityLabel = rarityLabel;
+  JY.rarityText = (rare) => rare.pct >= 95 ? 'The combination of experiences in your life is very rare.' : rare.pct >= 75 ? 'The combination of experiences in your life is not very common.' : 'Many people have walked a life like yours.';
 
   /* ---------- 成就 ---------- */
   const ACH = [
@@ -82,7 +85,7 @@
     { id: 'tenmil', t: 'Multi-millionaire', d: 'Net worth over $1.4 million (¥10M) at death', ok: (s) => s.net >= 1e7 },
     { id: 'selfmade', t: 'Self-made', d: 'From a farming, factory or migrant family, built $1.1 million (¥8M)', ok: (s) => ['farmer', 'worker', 'migrant'].includes(s.family) && s.net >= 8e6 },
     { id: 'founder', t: 'Startup survivor', d: 'Co-founded a startup that survived', ok: (s) => s.startup === 'ok' },
-    { id: 'boss', t: 'Own boss', d: 'Made a street stall, online shop or franchise work', ok: (s) => ['stall', 'online', 'franchise'].includes(s.biz) },
+    { id: 'boss', t: 'Own boss', d: 'Made a street stall, online shop or franchise work', ok: (s) => (['stall', 'online', 'franchise'].includes(s.biz) || s.tradeOwn) },
     { id: 'top', t: 'Top of the ladder', d: 'Became the top person at work in your fifties', ok: (s) => s.ladder === 'top' },
     { id: 'investor', t: 'Savvy investor', d: 'Made over $700,000 (¥5M) investing in a lifetime', ok: (s) => s.finGain >= 5e6 },
     { id: 'chive', t: 'Lesson learned', d: 'Got burned by a collapsing product or sold in a crash', ok: (s) => s.hyBlown > 0 || s.crash === 'cut' },
@@ -156,11 +159,7 @@
     const { esc, card } = u;
     let h = JY.FATE ? JY.FATE.endCards(l, u) : '';
     const s = l.snap || {};
-    if (l.rare) {
-      h += card('How rare was this life', l.bestEver ? 'Your rarest life so far' : '',
-        '<div class="big-num"><div><span>About</span><b>1 in ' + esc(oneInText(l.rare.oneIn)) + '</b><span>people live a life like this</span></div><div><span>Rarer than</span><b>' + l.rare.pct + '%</b><span>of lives</span></div></div>'
-        + '<p class="note">Based on how common your origin, education, job, marriage, children, home city and lifespan each are among 1.4 billion people.</p>', 'rare-card');
-    }
+    if (l.fresh && l.fresh.length) h += card('Life Album · new', '', '<p class="note">' + esc(l.fresh.join(', ')) + '</p>');
     if (l.aim && l.aim.v != null && !l.wish) {
       h += card('Your ambition at sixteen', esc(AIM_T[l.aim.k] || ''), '<div class="aim-bar"><i style="width:' + l.aim.v + '%"></i></div><p class="note">Achieved <b>' + l.aim.v + '%</b>. '
         + esc({ rich: 'Net worth at death ' + fmt(s.net) + '. ', proud: 'Counts education, career and social ties.', free: 'Counts mood and how often you took your own road.', none: 'Counts mood and social ties.' }[l.aim.k] || '') + '</p>');
@@ -172,16 +171,14 @@
         return '<li class="' + ((l.newAch || []).includes(id) ? 'new' : '') + '"><b>' + esc(a.t) + '</b><span>' + esc(a.d) + (p != null ? ' · ' + (p < 1 ? 'under 1' : Math.round(p)) + '% of lives' : '') + '</span>' + ((l.newAch || []).includes(id) ? '<em>new</em>' : '') + '</li>';
       }).join('') + '</ul>');
     }
-    // 转折线：自己做的大事，一步一步走到这里
-    const steps = (l.picks || []).filter((p) => p.major && !p.auto);
-    if (steps.length) {
-      h += card('Turning points', 'The big choices you made yourself', '<ol class="turns">' + steps.slice(0, 30).map((p) => '<li class="' + (!p.canon && p.ok ? 'mod' : !p.ok ? 'fail' : '') + '"><span>' + p.age + '</span><b>' + esc(p.t) + '</b>' + esc(p.c) + (p.check ? (p.ok ? ' (it worked)' : ' (it failed)') : '') + '</li>').join('')
-        + '<li class="fin"><span>' + (l.to - l.born) + '</span><b>' + esc(l.cause) + '</b>' + esc([s.edu && EDU_T[s.edu], s.lastJob && JOB_T[s.lastJob], l.info && l.info['婚姻'], l.info && l.info['住处']].filter(Boolean).join(' · ')) + '</li></ol>');
-    }
     if (s.finGain || s.paAcct) {
       h += card('A lifetime of investing', '', '<p class="note">' + (s.finGain ? 'Investments ' + (s.finGain >= 0 ? 'gained ' : 'lost ') + esc(fmt(Math.abs(s.finGain))) + '. ' : '') + (s.hyBlown ? 'Lost in a collapsed product: ' + esc(fmt(s.hyBlown)) + '. ' : '') + (s.paAcct ? 'Private pension: ' + esc(fmt(s.paAcct)) + '. ' : '') + 'Net worth at death: ' + esc(fmt(s.net)) + '.</p>');
     }
-    if (l.fresh && l.fresh.length) h += card('Life Album · new', '', '<p class="note">' + esc(l.fresh.join(', ')) + '</p>');
+    if (l.rare) {
+      h += card('How Special This Life Was', '',
+        '<div class="big-num"><div><b>' + rarityLabel(l.rare) + '</b></div></div>'
+        + '<p class="note">Compared against simulated lives in the game; this says nothing about whether a life is good or bad.</p>', 'rare-card');
+    }
     return h;
   };
 
@@ -190,7 +187,10 @@
     const { esc } = u;
     const al = JY.album();
     const ch = JY.FATE ? JY.FATE.homeChallenge(u) : '';
-    if (!al.lives) return ch;
+    if (!al.lives) return ch + '<section class="album"><div class="section-h"><h2>A Life Might Look Like This</h2><span>A fictional example. Your life will be different</span></div><div class="card">'
+      + '<p><b>Zhoukou, Henan · Rural · Working-class family</b>, born in 2026.</p>'
+      + '<p>At fifteen, you missed the high-school entrance cut-off by a few points and went to a county vocational school to learn auto repair. At twenty-seven, renting in a big city, you chose to stay rather than go back home. At fifty-four, the check-up report showed a row of red arrows, and the doctor said it would be too late if you didn\'t rest.</p>'
+      + '<p class="note">Ending: <b>Carrying the Load</b> · Died at 79. Last words: Next life, leave more time for myself.</p></div></section>';
     const row = (name, n, total) => '<div class="alb-row"><span>' + esc(name) + '</span><span class="bar"><i style="width:' + Math.round(100 * Math.min(1, n / total)) + '%"></i></span><b>' + n + ' / ' + total + '</b></div>';
     const got = ACH.filter((a) => al.ach[a.id]);
     return ch + '<section class="album"><div class="section-h"><h2>Life Album</h2><span>' + al.lives + ' lives lived · kept even if you clear past lives</span></div><div class="card">'
@@ -200,7 +200,7 @@
       + row('职业', Object.keys(al.jobs).length, Object.keys(JOB_T).length - 1)
       + row('Achievements', got.length, ACH.length)
       + (JY.FATE ? JY.FATE.homeRows(al, row) : '')
-      + (al.best ? '<p class="note">Rarest life: ' + esc(al.best.name) + ' (' + esc(al.best.where || '') + '), about 1 in ' + esc(oneInText(al.best.oneIn)) + '.</p>' : '')
+      + (al.best ? '<p class="note">Rarest life: ' + esc(al.best.name) + ' (' + esc(al.best.where || '') + '). Compared against simulated lives in the game.</p>' : '')
       + '<div class="ach-grid">' + ACH.map((a) => '<span class="' + (al.ach[a.id] ? 'on' : '') + '" title="' + esc(al.ach[a.id] ? a.d : 'Locked') + '">' + esc(al.ach[a.id] ? a.t : '???') + '</span>').join('') + '</div>'
       + '</div></section>';
   };
@@ -208,7 +208,7 @@
   /* ---------- 分享卡上的几行 ---------- */
   G.share.badges = (l) => {
     const out = JY.FATE ? JY.FATE.badges(l) : [];
-    if (l.rare) out.push('About 1 in ' + oneInText(l.rare.oneIn) + ' people live a life like this (rarer than ' + l.rare.pct + '% of lives)');
+    if (l.rare) out.push('Life experience: ' + JY.rarityText(l.rare));
     if (l.ach && l.ach.length) out.push('Achievements: ' + l.ach.slice(0, 4).map((id) => (ACH.find((a) => a.id === id) || {}).t).join(', '));
     if (l.aim && l.aim.v != null && !l.wish) out.push('Ambition at 16, “' + AIM_T[l.aim.k] + '”: ' + l.aim.v + '%');
     return out;

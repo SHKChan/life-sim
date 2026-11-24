@@ -141,7 +141,7 @@
   const themeNow = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   // 语言按钮：只在单独打包、打开了语言切换的版本里出现（config.js 的 langOpen，例如 itch 版）；网站上由全站顶栏切换
   function langBtn(id) {
-    if (!JY.LANG_OPEN) return '';
+    if (!JY.LANG_OPEN || (window.JY_CONFIG && window.JY_CONFIG.langNav)) return '';
     const opts = [['zh', '简'], ['zh-TW', '繁'], ['en', 'EN']].filter((o) => !JY.GAME || !JY.GAME.langs || o[0] === 'zh' || JY.GAME.langs.includes(o[0]));
     return '<span class="langs" role="group" aria-label="Language">' + opts.map((o) => '<button class="b" id="' + id + '-' + o[0] + '" data-act="lang" data-v="' + o[0] + '" aria-pressed="' + (JY.LANG === o[0]) + '">' + o[1] + '</button>').join('') + '</span>';
   }
@@ -398,7 +398,7 @@
     let h = '<div class="home"><div class="home-hero"><div><h1>' + T.titleHtml + '</h1>'
       + '<p>' + esc(T.intro) + '</p></div>'
       + '<div>' + themeBtn('h-theme', true) + langBtn('h-lang') + '</div></div>';
-    h += '<div class="world-line">';
+    h += '<div class="world-line' + (fresh ? ' fresh' : '') + '">';
     if (fresh) h += '<span>' + T.freshLine + '</span>'; // 游戏自己写的用词，可以带 <b>
     else if (T.random) h += '<span>' + t('已经活过 <b>{n}</b> 世', { n: W.lives.length }) + '</span>';
     else h += '<span><b>' + esc(T.world + T.year) + ' ' + Math.max(0, W.year) + '</b> · ' + esc(t(E.era(W.year))) + ' · ' + t('已经活过 {n} 世', { n: W.lives.length }) + '</span>';
@@ -989,7 +989,7 @@
       case 'feedback': ui.feedback = { kind: 'story', text: '', ctx: true, msg: '', wasPaused: ui.paused }; ui.paused = true; render(); break;
       case 'fb-close': ui.paused = ui.feedback ? ui.feedback.wasPaused : ui.paused; ui.feedback = null; render(); break;
       case 'fb-kind': case 'fb-gh': case 'fb-copy': case 'fb-send': feedbackAct(a, d); break;
-      default: break;
+      default: if (T.onAction) T.onAction(a, d, { start }); break; // 游戏自己的按钮（例如十四亿分之一的“投今天的胎”）
     }
   }
   app.addEventListener('click', (e) => {

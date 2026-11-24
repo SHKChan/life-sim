@@ -76,6 +76,9 @@ canvas.px { image-rendering: pixelated; image-rendering: crisp-edges; display: b
 .b[aria-pressed="true"] { background: var(--btn-on); color: var(--btn-on-fg); border-color: var(--btn-on); }
 .b.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 500; }
 .b.big { padding: 10px 20px; font-size: 15px; }
+/* 第一次来的人：投胎按钮要一眼看到 */
+.world-line.fresh { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+.world-line.fresh .b.big { padding: 14px 40px; font-size: 20px; letter-spacing: .15em; box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 22%, transparent); }
 .b:disabled { opacity: .45; cursor: default; }
 /* 顶栏按钮紧凑一点；暂停键和速度说明固定宽度，暂停前后顶栏不会挤成两行 */
 .ctl .b { padding: 6px 10px; }

@@ -410,3 +410,12 @@ node tools/build.js
 - 简体变化后用 `python share/tools/tw.py 1in1.4b` 同步繁体。共享词表不得丢旧键或覆盖已有译文；繁体回归用 `SIM_LANG=zh-TW`（PowerShell设置 `$env:SIM_LANG`，结束后移除）。
 - 界面在Chrome或内置浏览器验收，覆盖桌面、390px、折叠/展开、头像和真实分享图；用独立测试存档。改共享代码还要回归江湖一梦；群侠用自己的 `tools/playtest.js`，不能用共享人生模拟器。
 - 日志、截图和当前对比写入被Git忽略的 `docs/validation/`，不提交逐阶段结果。长期基线的口径和限制见 [资料说明](README.md)；规则历史见根目录 [CHANGELOG.md](../../CHANGELOG.md) 和Git历史。
+
+## v2.1.11：寿命校准、去重复、同命玩法
+
+- `data/lifetable.js`：包装 `GAME.engine.yearEnd`，30 岁起按年龄表和健康系数抽死亡，死因由 `causeOf` 按年龄段给出。改参数后用 `~/exp` 一类的多策略批量测试看中位寿命、60 岁前死亡比例。
+- `data/variety.js`：每世 `varSeed` 记忆；对纯自动、无抉择、无记忆副作用、无回响关联的节点包一层按种子的抽样 `cond`。带 `remember/set/die/spawn/marry/move/pay/earn/stat` 的节点、`echoOf` 目标、`KEEP` 名单一律不抽。
+- 学历：`childhood.js` 的中考线（高 ≥98、中 ≥80）和 `youth.js` 的高考线（顶尖 ≥113、好 ≥100、普通本科 ≥88、大专 ≥74）按“学识普遍偏高”上移；考编和 `office` 转职要 `degreed`（大专及以上）。
+- 英文：`config.js` 的 `langOpen/langNav/defaultLang:'en'`，语言由全站顶栏切换；`game.js` 的 `langFiles.en` 列出已译文件，新增数据文件要同步写 `lang/en/tr/<文件>.json` 并跑 `node share/tools/tr.js 1in1.4b en --all`。
+- 检查：`node 1in1.4b/tools/check-v211.js`。
+- `data/fate.js`：`?s=<种子>&f=<结局>-<享年>-<家底万>` 是朋友对比；`daySeed(dayKey)` 是今日同命；存档键 `1in1.4b.daily.v1` 只存最近 30 天结果。`GAME.onAction` 是 `share/ui.js` 新增的可选钩子。

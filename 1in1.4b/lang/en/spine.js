@@ -32,6 +32,60 @@
   const byId = (id) => JY.LIFE_NODES.find((n) => n.id === id) || JY.ENCOUNTERS.find((n) => n.id === id);
   JY.LIFE_NODES.concat(JY.ENCOUNTERS).forEach((n) => { if (SET.has(n.id)) n.major = true; });
 
+  // 这些节点原先会被当作小事，但能改变学历、职业、婚姻、生育、住所或长期支出。
+  const PERSONAL = [
+    'c_follow_parents', 'y_repeat_college', 'y_army_back', 'y_work20', 'y_abroad', 'y_steady24',
+    'y_grad_out', 'y_marry27', 'y_phd_out', 'y_marry29', 'y_parents29', 'y_promo29',
+    'y_backwork31', 'y_kid31', 'y_marry32', 'y_single32', 'y_ivf33', 'y_debt33', 'y_credit22',
+    'm_37_kid2', 'm_38_single', 'm_40_nokid', 'm_47_land',
+    'o_after_retire', 'o_retire_plain', 'o_back_home', 'o_grandcare',
+    'e_m_parent_ill', 'e_m_sp_ill', 'e_m_pa_bill', 'e_m_kid_school', 'e_m_kid_move',
+    'e_m_kid_gaokao', 'e_m_kid_city', 'e_m_kid_wed', 'e_m_oldhouse',
+    'e_m_ladder', 'e_m_ladder2', 'e_m_biz', 'e_m_consult',
+    'e_ai_layoff', 'e_rent_offer', 'e_village_coop', 'e_o_after_widow',
+    'e_family_no_wedding', 'e_family_sibling', 'e_m_kid_teen',
+    'e_invest', 'e_robot_buy', 'e_friend_borrow', 'o_sp_sick', 'o_fall', 'e_o_last_hospital',
+  ];
+  PERSONAL.forEach((id) => { const n = byId(id); if (n) n.major = true; });
+
+  // 明确选择不要孩子后，不再由四十岁的通用节点推翻。
+  const noKid = byId('m_40_nokid');
+  if (noKid) {
+    const cond = noKid.cond;
+    noKid.cond = (g) => g.recall('kidPlan') !== 'dink' && g.recall('nokid') !== 'dink' && (!cond || cond(g));
+  }
+
+  // 只给少量同一领域的小事续接明确的手选；不从自动经历反推人格。
+  const FOLLOW = {
+    e_family_teen_repair: [
+      { id: 'e_m_kid_teen', key: 'kidBond', map: { close: 0, loose: 1 } },
+    ],
+    e_family_partner: [
+      { id: 'y_crisis31', key: 'fight', map: { talk: 0, cold: 2 } },
+      { id: 'm_38_marriage', key: 'marriage', map: { mended: 0, cold: 2 } },
+    ],
+    m_58_work: [
+      { id: 'm_42_office', key: 'career42', map: { mid: 0, pivot: 2, home: 1 } },
+      { id: 'm_42_stable', key: 'career42', map: { steady: 1, remote: 2 } },
+      { id: 'm_42_labor', key: 'career42', map: { grind: 0, far: 2 } },
+      { id: 'm_47_ai', key: 'ai47', map: { hold: 0, learn: 2, out: 1 } },
+    ],
+  };
+  JY.GAME.engine.autoChoice = (n, g, opts) => {
+    const rules = FOLLOW[n.id];
+    if (!rules) return;
+    const picks = JY.engine.get().L.picks || [];
+    for (let p = picks.length - 1; p >= 0; p--) {
+      if (picks[p].auto) continue;
+      const rule = rules.find((r) => r.id === picks[p].id);
+      if (!rule) continue;
+      if (picks[p].check && !picks[p].ok) return;
+      const i = rule.map[g.recall(rule.key)];
+      // 最近一次明确决定没有对应选项时回退，不翻旧账覆盖它。
+      return opts.some((o) => o.i === i) ? i : undefined;
+    }
+  };
+
   /* stake：这一步决定什么；hints：按选项在 choices 里的位置（下标），写代价和好处 */
   const PATCH = {
     c_xiaoshengchu: { stake: 'How good your middle school is will decide how you do in the high-school entrance exam three years from now.', hints: { 1: 'Get in and your Smarts and exam prospects jump' , 2: 'Fees of several thousand dollars a year, paid by your family' } },
@@ -45,7 +99,7 @@
     y_zhiyuan: { stake: 'Which city and which major decide where your first job is and what it pays.', hints: { 0: 'More chances in a big city; pricier homes too', 1: 'Stable, mid-level pay, little fear of layoffs', 2: 'Close to home, a bit less pay, easy to look after family' } },
     y_zhuanke: { stake: 'College, a repeat year, or straight to work.', hints: { 0: 'Easy to find work in three years', 1: 'Bet another year on a university place', 2: 'Earn early; education stops at high school' } },
     y_luobang: { stake: 'You did not get in. What now?', hints: { 0: 'Try again next year', 1: 'Paid right away; hard work', 2: 'Must pass the medical; good placement after service' } },
-    y_offer: { stake: 'Your first job largely decides, until thirty, which city you live in, what you earn and how tired you are.', hints: { 0: 'Only with high Smarts; best pay, most overtime', 1: 'Safe; hard to lay off', 2: 'An exam to pass; pass and you are set for life', 3: 'Needs Social to take off; income depends on luck' } },
+    y_offer: { stake: 'Your first job largely decides, until thirty, which city you live in, what you earn and how tired you are.', hints: { 0: 'Only with high Smarts; best pay, most overtime', 1: 'Safe; hard to lay off', 2: 'Requires passing an exam; the work is fairly stable', 3: 'Needs Social to take off; income depends on luck' } },
     y_ai24: { stake: 'AI has arrived and there is less work for you. Adapt, or switch to work machines cannot do?', hints: { 0: 'With enough Smarts you stay, same pay', 1: 'A new field; slow start, good prospects', 2: 'Modest pay, but no machine can replace you' } },
     y_love23: { stake: 'This affects when you settle down, and with whom.', hints: { 0: 'Easier with high Social', 1: 'Happier, but your family will keep nagging' } },
     y_love25: { stake: 'Stay single, or start looking.', hints: { 0: 'Through friends; reliable', 1: 'Pure luck; a good Mood helps you meet the right person', 2: 'Freedom; perhaps lonelier in old age' } },
@@ -65,20 +119,20 @@
     m_35_stable: { stake: 'Try for a step up?', hints: { 0: 'No risk', 1: 'With enough Social you get it; a pay rise' } },
     m_35_labor: { stake: 'Manual work: one day your body will not keep up.', hints: { 0: 'A few more years of earning, hard on your body', 3: 'Switch to a small business of your own' } },
     m_35_own: { stake: 'Grow the business?', hints: { 0: 'Safe', 1: 'Only borrow with high Career; win and income doubles, lose and you carry debt', 2: 'Less income, peace of mind' } },
-    m_35_none: { stake: 'No real job these past years. What now?', hints: { 0: 'A steady income', 2: 'With enough Smarts you can freelance' } },
+    m_35_none: { stake: 'What you\'ll make a living from next.', hints: { 0: 'A steady income', 2: 'With enough Smarts you can freelance' } },
     m_38_marriage: { stake: 'The marriage has gone cold.', hints: { 0: 'Muddle through; Mood slowly sinks', 1: 'With enough Social you can talk it through', 2: 'Separate; everything gets recalculated' } },
     m_42_office: { stake: 'At forty-two, your industry changes again.', hints: { 0: 'No raise', 1: 'With enough Smarts you switch, for higher pay', 2: 'Half the pay, an easier life' } },
     m_42_labor: { stake: 'Try a different life?', hints: { 0: 'Safe', 1: 'Put in $11K; succeed and you are your own boss', 2: 'High pay; you see your family once a year' } },
     m_44_buy: { stake: 'Forty-four and still renting. Buy now, or rent for good?', hints: { 0: 'No debt; money free to invest', 3: 'A home of your own; a mortgage past retirement' } },
     m_44_loan: { stake: 'The mortgage: pay down more, or move?', hints: { 0: 'Keep the cash', 1: 'Less interest, tighter budget' } },
     m_47_ai: { stake: 'Another wave of AI. Keep up again?', hints: { 0: 'Earn a bit less and hold on until retirement', 1: 'With enough Smarts you keep your job', 2: 'Much less income, much less stress' } },
-    m_51_parents: { stake: 'Your parents are old. Caring for them is a trade-off between money, time and conscience.', hints: { 1: 'Hundreds a month; easier on you, hard on your conscience', 2: 'Hardest on you, best for them', 3: 'Pay for help and catch your breath' } },
+    m_51_parents: { stake: 'Your parents are getting old; how to divide care time and costs.', hints: { 1: 'Pay someone each month so you run around less', 2: 'Care for them yourself, at a large cost of time and energy', 3: 'Pay for help and catch your breath' } },
     m_55_ill: { stake: 'A serious illness: the treatment decides how many years you have left.', hints: { 0: 'Most expensive, best chance of surviving', 1: 'Cheaper; harder on your body', 2: 'Spare your children the worry; bear it alone' } },
     m_60_plan: { stake: 'Where you live after retiring decides who is around you in old age.', hints: { 1: 'Spend on fixing up the old house; peace and quiet', 2: 'Near the grandkids; help raise them', 3: 'Free up money for retirement', 4: 'Warm winters; extra cost every year' } },
     o_keep_working: { stake: 'Retired. Keep working anyway?', hints: { 0: 'Extra income; your body pays', 3: 'Easier on your body; money is tighter' } },
-    o_where: { stake: 'Live with your children in old age, or keep your own home?', hints: { 0: 'Someone looks after you; you mind their moods', 1: 'Free, but no one is near if something happens' } },
+    o_where: { stake: 'Live with your children in old age, or keep your own home?', hints: { 0: 'Someone looks after them, but living habits need adjusting', 1: 'Free, but no one is near if something happens' } },
     o_where_nokid: { stake: 'No children nearby. How will you arrange old age?', hints: { 2: '$700 a month; someone looks after you' } },
-    o_care_plan: { stake: 'Who will look after you from now on?', hints: { 0: 'One payment; a robot that steadies you and reminds you of pills', 1: '$700 a month, with carers', 2: 'Living with your children: lively, and crowded', 3: 'Free; if something happens, no one knows' } },
+    o_care_plan: { stake: 'Who will look after you from now on?', hints: { 0: 'One payment; a robot that steadies you and reminds you of pills', 1: '$700 a month, with carers', 2: 'Living with your children: lively, and crowded', 3: 'No extra care cost, but there may be no one to help in an emergency' } },
     o_will: { stake: 'Who gets what you saved over a lifetime?' },
     o_icu_talk: { stake: 'Someone has to decide this for you in advance.' },
   };
@@ -92,7 +146,7 @@
 
   /* 回响：几年后回来兑现当年的选择。弹框里提一句“你 xx 岁时选了……” */
   const ECHO = {
-    m_37_crisis_echo: 'y_crisis31', m_39_money_echo: ['m_36_money', 'y_money33'], m_41_body_echo: 'm_40_body', m_43_career_echo: ['m_42_office', 'm_42_stable', 'm_42_labor', 'm_42_own', 'm_42_none'],
+    m_37_crisis_echo: ['m_35_office', 'm_35_stable', 'm_35_labor', 'm_35_own', 'm_35_none'], m_39_money_echo: ['m_36_money', 'y_money33'], m_41_body_echo: 'm_40_body', m_43_career_echo: ['m_42_office', 'm_42_stable', 'm_42_labor', 'm_42_own', 'm_42_none'],
     m_46_house_echo: ['m_44_buy', 'm_44_loan', 'm_44_own'], m_48_check_echo: 'm_45_checkup', m_49_ai_echo: 'm_47_ai', m_52_care_echo: 'm_51_parents',
     m_54_nest_echo: 'm_53_money', m_59_end_echo: 'm_58_work', m_61_plan_echo: 'm_60_plan', o_spcare_echo: 'o_sp_sick', o_scam_echo: 'o_scam',
     o_hobby_echo: ['o_hobby', 'o_learn_what'], o_fall_echo: 'o_fall', o_will_echo: 'o_will', o_care_echo: 'o_care_plan', o_trip_echo: 'o_last_place', o_lastwish_echo: 'o_last_wish',
@@ -103,7 +157,9 @@
    *   人生主干（major）总要问；意外带判定或会出人命的，离上一次亲自选的意外隔十二年以上才问；其余自动选。 */
   const big = (n) => (n.choices || []).some((c) => c.check || c.fatal);
   JY.GAME.engine.minor = (n, g) => {
-    if (n.major) return false;
+    if (n.major || (n.choices || []).some((c) => c.fatal)) return false;
+    // 普通生日可顺其自然；一旦有大额买车选项就必须亲选。
+    if (n.id === 'm_40_body' && JY.engine.choices(n).some((o) => o.i === 2)) return false;
     if (!JY.ENCOUNTERS.includes(n) || !big(n)) return true;
     const L = JY.engine.get().L;
     const last = L.picks.filter((p) => p.enc && !p.auto).map((p) => p.age).pop();

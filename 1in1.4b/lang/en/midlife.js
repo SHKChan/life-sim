@@ -13,9 +13,9 @@
   /* ---------- 小工具 ---------- */
   const OFFICE = ['office', 'tech', 'sales'];
   const STABLE = ['civil', 'teacher', 'doctor', 'nurse', 'soldier'];
-  const LABOR = ['worker', 'rider', 'driver', 'farmer'];
-  const OWN = ['boss', 'shop', 'creator', 'freelance'];
-  const JOBT = { office: 'Office worker', tech: 'Programmer', sales: 'Salesperson', civil: 'Civil servant', teacher: 'Teacher', doctor: 'Doctor', nurse: 'Nurse', soldier: 'Soldier',
+  const LABOR = ['electrician', 'welder', 'cnc', 'renovation', 'maternity', 'eldercare', 'housekeeping', 'construction', 'worker', 'rider', 'driver', 'farmer'];
+  const OWN = ['restaurant', 'beauty', 'grocery', 'mechanic', 'parcel', 'cooperative', 'livestock', 'grower', 'boss', 'shop', 'creator', 'freelance'];
+  const JOBT = { restaurant: 'Restaurant owner', beauty: 'Hairdresser and beautician', grocery: 'Convenience store owner', mechanic: 'Auto repair mechanic', electrician: 'Electrician', welder: 'Welder', cnc: 'CNC machinist', renovation: 'Renovation contractor', parcel: 'Parcel station owner', maternity: 'Postnatal and child caregiver', eldercare: 'Elder care aide', housekeeping: 'Housekeeper', cooperative: 'Co-op manager', livestock: 'Livestock farmer', grower: 'Large-scale grower', construction: 'Construction worker', office: 'Office worker', tech: 'Programmer', sales: 'Salesperson', civil: 'Civil servant', teacher: 'Teacher', doctor: 'Doctor', nurse: 'Nurse', soldier: 'Soldier',
     worker: 'Factory worker', rider: 'Delivery rider', driver: 'Driver', farmer: 'Farmer', boss: 'Business owner', shop: 'Shop owner', creator: 'Content creator', freelance: 'Freelancer', none: 'None' };
   const job = (g) => g.recall('job') || 'none';
   const cat = (g) => {
@@ -185,7 +185,7 @@
         { t: (g) => 'Take the severance and open a small shop of your own (startup money ' + fmt(SHOP[tier(g)] || 150000) + ', ' + CN.jobLine(g, 'shop') + ')', dev: 25,
           fx: (g) => { A = k1(myInc(g) / 12 * 11); CN.earn(g, A); B = SHOP[tier(g)] || 150000; M = spend(g, B); CN.setJob(g, 'shop', 'Opened a small shop'); g.remember('crisis35', 'shop'); },
           res: () => 'Severance came to ' + fmt(A) + '. Finding a storefront, fitting it out and stocking it cost ' + fmt(B) + (M ? ', and the shortfall of ' + fmt(M) + ' was borrowed' : '') + '. On opening day, a former colleague sent a flower basket.' },
-        { t: (g) => 'Go back to your hometown and sit the exam for a permanent government post (' + CN.jobLine(g, 'civil', 4) + ')', dev: 25, check: ['学识', 60], cond: (g) => !atHome(g),
+        { t: (g) => 'Go back to your hometown and sit the exam for a permanent government post (' + CN.jobLine(g, 'civil', 4) + ')', dev: 25, check: ['学识', 60], cond: (g) => !atHome(g) && degreed(g),
           fx: (g) => { backHome(g); CN.setJob(g, 'civil', 'County public-sector job'); g.remember('crisis35', 'home'); g.stat('心情', 4); }, res: 'Thirty-five was the last year you could apply. You passed and moved back to your hometown.',
           fail: { fx: (g) => { backHome(g); CN.setJob(g, 'none', 'Between jobs'); g.remember('crisis35', 'idle'); g.stat('心情', -6); }, res: 'You missed by two points. You moved back to your hometown anyway and stayed home for a while.', dev: 10 } },
       ] },
@@ -209,7 +209,7 @@
         { t: 'Go back to your hometown and stop grinding it out away from home', dev: 15, cond: (g) => !atHome(g),
           fx: (g) => { backHome(g); CN.setJob(g, g.recall('hukou') === 'rural' ? 'farmer' : 'shop', g.recall('hukou') === 'rural' ? 'Back home farming' : 'Runs a small shop back home'); g.remember('laborRoute', 'home'); g.stat('心情', 3); }, res: 'You packed up your bedding and rode through the night. Breakfast back home still tastes the same.' },
         { t: 'Try somewhere new and open a car repair shop in the county town', dev: 15, cond: (g) => atHome(g) && job(g) !== 'farmer',
-          fx: (g) => { M = spend(g, 50000); CN.setJob(g, 'shop', 'Opened a car repair shop'); g.remember('laborRoute', 'home'); }, res: () => 'Renting a space and buying tools cost $7,100' + (M ? ', and you borrowed ' + fmt(M) : '') + '. You painted the sign over the door yourself.' },
+          fx: (g) => { M = spend(g, 50000); CN.setJob(g, 'mechanic', 'Opened a car repair shop'); g.remember('tradeOwn', true); g.remember('laborRoute', 'home'); }, res: () => 'Renting a space and buying tools cost $7,100' + (M ? ', and you borrowed ' + fmt(M) : '') + '. You painted the sign over the door yourself.' },
       ] },
     { id: 'm_35_own', age: 35, t: 'Business', cond: (g) => cat(g) === 'own',
       text: (g) => 'Someone comes to you and says now is the perfect time to expand, and asks if you want to open another location and put in more money. By your count, it would take ' + fmt(SHOP[tier(g)] || 150000) + '. ',
@@ -408,12 +408,12 @@
       choices: [
         { t: 'Stay put and keep working', canon: true, fx: (g) => { g.stat('健康', -3); g.stat('事业', 2); g.remember('career42', 'grind'); }, res: 'You are still in the same place. The breakfast sellers by the door have changed three times, and they all know you.' },
         { t: (g) => 'Open a shop with your fellow villager (put in $11,000, ' + CN.jobRisk('shop') + ')', dev: 15, cond: (g) => cash(g) >= 60000,
-          fx: (g) => { M = spend(g, 80000); CN.setJob(g, 'shop', 'Co-owns a shop with a friend from home'); g.remember('career42', 'shop'); }, res: () => 'You put in $11,000' + (M ? ', and the shortfall of ' + fmt(M) + ' was borrowed' : '') + '. You opened a noodle restaurant, you in the kitchen and him on the books.' },
+          fx: (g) => { M = spend(g, 80000); CN.setJob(g, 'restaurant', 'Open a noodle shop with a fellow villager'); g.remember('tradeOwn', true); g.remember('career42', 'shop'); }, res: () => 'You put in $11,000' + (M ? ', and the shortfall of ' + fmt(M) + ' was borrowed' : '') + '. You opened a noodle restaurant, you in the kitchen and him on the books.' },
         { t: (g) => 'Go somewhere farther away (about ' + fmt(mPay(g, job(g), 1, 6)) + '/month, home once a year)', dev: 15, fx: (g) => { CN.goCity(g, 1); g.stat('事业', 6); g.stat('人缘', -4); g.remember('career42', 'far'); },
           res: (g) => 'You went to ' + g.recall('workCity') + '. You went home once a year, ' + (hasKid(g) && kAge(g) < 15 ? 'and your child had to pause for a second before recognizing you.' : 'and your family met you at the station and noticed how thin you had gotten.') },
       ] },
     { id: 'm_42_own', age: 42, t: 'A New Angle', cond: (g) => cat(g) === 'own',
-      text: 'Your friends in business are all livestreaming, saying one evening can sell a month’s worth of your stock.',
+      text: (g) => 'After so many years in ' + (JOBT[job(g)] || 'Business') + ', the old customers are still there but new ones are few. Some in the trade team up for group buying, others hold on to their shops. You lay out this year\'s accounts and want to do things differently.',
       choices: [
         { t: 'Stick honestly to your old customers', canon: true, fx: (g) => { g.stat('人缘', 2); g.remember('career42', 'steady'); }, res: 'Most of your customers have been with you for ten years. They say you’re the one they trust.' },
         { t: 'Go on camera and livestream yourself', dev: 15, check: ['人缘', 45],
@@ -425,7 +425,7 @@
       text: 'The neighborhood posted a hiring notice: home elder-care aide, trained on the job, close to home.',
       choices: [
         { t: 'Stay home', canon: true, fx: (g) => { g.stat('人缘', 2); g.remember('career42', 'stayhome'); }, res: 'You took a photo of the notice and sent it to a neighbor.' },
-        { t: 'Sign up', dev: 15, fx: (g) => { CN.setJob(g, 'worker', 'Elder-care aide'); g.remember('career42', 'work'); }, res: 'Every day you visit a few elderly people at home, taking blood pressure and keeping them company. One old lady always calls you by her daughter’s name.' },
+        { t: 'Sign up', dev: 15, fx: (g) => { CN.setJob(g, 'eldercare', 'Elder-care aide'); g.remember('career42', 'work'); }, res: 'Every day you visit a few elderly people at home, taking blood pressure and keeping them company. One old lady always calls you by her daughter’s name.' },
       ] },
     { id: 'm_43_career_echo', age: 43, t: 'Work', auto: true, cond: (g) => !!g.recall('career42'),
       fx: (g) => { const c = g.recall('career42'); A = 0; if (c === 'far') g.stat('人缘', -2); if (c === 'live' || c === 'pivot') g.stat('事业', 3); if (c === 'remote') { A = w1(myInc(g) * 0.3); CN.earn(g, A); } },
@@ -491,9 +491,9 @@
     { id: 'm_45_checkup', age: 45, t: 'The Checkup Report', loc: 'hospital',
       text: (g) => (cat(g) === 'labor' || cat(g) === 'own' || cat(g) === 'none' ? 'A free community checkup' : 'A workplace checkup') + ', and the report had a line in bold: ' + CN.pick(['thyroid nodule, follow-up recommended', 'high blood pressure', 'high blood sugar', 'fatty liver, moderate']) + '. ' + (g.recall('body40') === 'run' ? 'The doctor said it was lucky you exercise, or it would be worse.' : ''),
       choices: [
-        { t: 'Get some medicine and take it', canon: true, fx: (g) => { g.stat('健康', 1); g.remember('check45', 'pills'); }, res: 'The pill box sits on the dining table: one in the morning, one at night.' },
-        { t: 'Overhaul your daily routine', dev: 10, fx: (g) => { g.stat('健康', 6); g.stat('心情', -2); g.remember('check45', 'change'); }, res: 'You gave up late-night snacks and went to bed before eleven. For the first month, you went to sleep hungry every night.' },
-        { t: 'Brush it off', dev: 10, fx: (g) => { g.stat('健康', -4); g.remember('check45', 'ignore'); }, res: 'You said everyone has a few things wrong with them. You photographed the report, saved it to your album, and never opened it again.' },
+        { t: 'Get some medicine and take it', canon: true, fx: (g) => { g.stat('健康', 1); g.remember('check45', 'pills'); if ((g.recall('fatigue') || 0) >= 3 || g.s('健康') < 55) g.remember('chronic', 'pills'); }, res: 'The pill box sits on the dining table: one in the morning, one at night.' },
+        { t: 'Overhaul your daily routine', dev: 10, fx: (g) => { g.stat('健康', 6); g.stat('心情', -2); g.remember('check45', 'change'); if ((g.recall('fatigue') || 0) >= 3 || g.s('健康') < 55) g.remember('chronic', 'control'); g.remember('fatigue', Math.max(0, (g.recall('fatigue') || 0) - 2)); }, res: 'You gave up late-night snacks and went to bed before eleven. For the first month, you went to sleep hungry every night.' },
+        { t: 'Brush it off', dev: 10, fx: (g) => { g.stat('健康', -4); g.remember('check45', 'ignore'); if ((g.recall('fatigue') || 0) >= 3 || g.s('健康') < 55) g.remember('chronic', 'ignore'); }, res: 'You said everyone has a few things wrong with them. You photographed the report, saved it to your album, and never opened it again.' },
       ] },
     { id: 'm_46_house_echo', age: 46, t: 'Home', auto: true, cond: (g) => !!g.recall('house44'),
       fx: (g) => {
@@ -618,7 +618,7 @@
         kid: 'Your child moved into the new home and kept a room for you. You stayed two days and wanted to go back to your own place.',
       }[g.recall('nest')]) },
     { id: 'm_55_ill', age: 55, t: 'Illness', loc: 'hospital', cond: (g) => g.s('健康') < 45,
-      text: (g) => 'At one examination, the doctor asked for a family member to come in alone. ' + (g.recall('check45') === 'ignore' ? 'You thought again about that report ten years ago that you brushed off. ' : '') + 'It was a condition that needed surgery. After insurance, you would have to pay about ' + fmt(g.recall('hukou') === 'rural' ? 60000 : 90000) + '. ',
+      text: (g) => 'At one examination, the doctor asked for a family member to come in alone. ' + (g.recall('check45') === 'ignore' ? 'You thought again about that report ten years ago that you brushed off. ' : '') + (g.recall('chronic') === 'ignore' ? 'The blood pressure and blood sugar you left unmanaged all these years now have to be treated too.' : g.recall('chronic') ? 'The doctor has gone through, page by page, the records of your regular check-ups over the years.' : '') + 'It was a condition that needed surgery. After insurance, you would have to pay about ' + fmt(g.recall('hukou') === 'rural' ? 60000 : 90000) + '. ',
       choices: [
         { t: 'Have surgery at a big hospital', canon: true, check: ['健康', 0], // 健康 15 以上成功率 95%
           fx: (g) => { A = g.recall('hukou') === 'rural' ? 60000 : 90000; M = spend(g, A); g.stat('健康', 15); g.remember('ill55', 'surgery'); },
@@ -677,7 +677,7 @@
       text: (g) => 'You are sixty. Retirement is five years away, and you have begun to think about where to spend the later years. ' + (hasKid(g) && g.recall('kidCity') ? kn(g) + ' in ' + g.recall('kidCity') + '. ' : '') + (hv(g) ? 'Your home is now worth ' + fmt(hv(g) * 1e4) + '. ' : ''),
       choices: [
         { t: 'Stay where you live now', canon: true, fx: (g) => { g.stat('心情', 2); g.remember('plan60', 'stay'); }, res: 'You know every vegetable stall here.' },
-        { t: 'Go back to your hometown and fix up the old house', dev: 15, cond: (g) => !atHome(g) && !['sold', 'gave'].includes(g.recall('oldHouse')),
+        { t: 'Repair the old house and move back home', dev: 15, cond: (g) => !atHome(g) && !['sold', 'gave'].includes(g.recall('oldHouse')),
           fx: (g) => {
             A = 100000; spend(g, A);
             if (!hv(g)) settleOld(g, oldVal(g));
@@ -695,10 +695,10 @@
             g.stat('人缘', 3); g.remember('plan60', 'kid');
           },
           res: (g) => (M === 'buy' ? 'You sold the old house and, in ' + g.recall('kidCity') + ', bought a small two-bedroom, fifteen minutes’ walk from your child.' : 'In ' + g.recall('kidCity') + ', you rented a place near your child, fifteen minutes on foot.') },
-        { t: 'Move to a smaller place for more breathing room', dev: 10, cond: (g) => house(g) === 'own' && hv(g) >= 40,
+        { t: 'Move to a smaller home and keep some savings', dev: 10, cond: (g) => house(g) === 'own' && hv(g) >= 40,
           fx: (g) => { const p = Math.round(hv(g) * 0.5); CN.sellHouse(g); CN.buyHouse(g, { price: p, down: 1 }); A = p * 1e4; g.remember('plan60', 'down'); },
           res: () => 'The big place was sold and a small one bought, and the difference of ' + fmt(A) + ' was put into savings. It is on a low floor with an elevator, so you needn’t worry if your legs go later.' },
-        { t: 'After retirement, spend winters in the south', dev: 10, cond: (g) => !(house(g) === 'own' && hv(g) >= 40),
+        { t: 'Spend winters in the south', dev: 10, cond: (g) => !(house(g) === 'own' && hv(g) >= 40),
           fx: (g) => { g.stat('心情', 3); g.remember('plan60', 'south'); }, res: 'On your phone you looked at the rents in several seaside towns, bookmarking one after another.' },
       ] },
     { id: 'm_61_plan_echo', age: 61, t: 'A New Chapter', auto: true, cond: (g) => !!g.recall('plan60'),
@@ -748,6 +748,7 @@
    * 工资用 youth.js 挂在 CN 上的 CN.jobPay / CN.jobLine（和 economy.js 的收入表一致）。 */
   const EMP = ['office', 'tech', 'sales', 'civil', 'teacher', 'doctor', 'nurse', 'worker', 'rider', 'driver', 'soldier'];
   const hiEdu = (g) => ['bachelor', 'master', 'phd'].includes(g.recall('edu'));
+  const degreed = (g) => ['college', 'bachelor', 'master', 'phd'].includes(g.recall('edu'));
   const title = (g) => JY.engine.get().L.info['职业'] || JOBT[job(g)] || '';
   // 每一世不同、同一年里固定的随机数（yearRoll 只看年份，所有人同一年出生，各世会一样）
   const lifeSeed = (g) => { const c = JY.byId[g.me]; const t = ((c && c.name) || '') + (g.recall('city') || ''); let h = 7; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 1000003; return h; };

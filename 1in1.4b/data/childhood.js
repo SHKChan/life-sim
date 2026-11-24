@@ -501,7 +501,7 @@
         if (g.recall('olympiad')) s += 4;
         if (g.recall('cityKid') === 'class') s += 2;
         s += Math.round((g.rnd() - 0.5) * 18);
-        g.remember('zkScore', s >= 86 ? 'high' : s >= 70 ? 'mid' : 'low'); // 分数线按真实比例：约两成上好高中，一半出头上普高
+        g.remember('zkScore', s >= 98 ? 'high' : s >= 80 ? 'mid' : 'low'); // 分数线按真实比例：约两成上好高中，六成上普高（学识在 v2.1 后普遍偏高，线随之上移）
         CN.setEdu(g, 'junior', '初中');
         atSchool(g, '中考考场');
       },
@@ -538,8 +538,8 @@
       cond: (g) => g.recall('edu') === 'vocational',
       text: '职高要分专业了。墙上贴着几个热门专业的就业率。',
       choices: [
-        { t: '汽修或机电，好找工作', canon: true, fx: (g) => { g.remember('vocMajor', 'mech'); g.stat('健康', 1); g.info('专业', '机电'); }, res: '你的指甲缝里从此总有洗不掉的油。第一次把一台发动机装回去打着了火，你在车间里叫出了声。' },
-        { t: '护理或幼教', dev: 10, fx: (g) => { g.remember('vocMajor', 'care'); g.stat('人缘', 3); g.info('专业', '护理'); }, res: '你学会了量血压、扎针。老师说，以后老人越来越多，这行缺人。' },
+        { t: '汽修或机电，好找工作', fx: (g) => { g.remember('vocMajor', 'mech'); g.stat('健康', 1); g.info('专业', '机电'); }, res: '你的指甲缝里从此总有洗不掉的油。第一次把一台发动机装回去打着了火，你在车间里叫出了声。' },
+        { t: '护理或幼教', fx: (g) => { g.remember('vocMajor', 'care'); g.stat('人缘', 3); g.info('专业', '护理'); }, res: '你学会了量血压、扎针。老师说，以后老人越来越多，这行缺人。' },
         { t: '电商直播', dev: 15, fx: (g) => { g.remember('vocMajor', 'ecom'); g.stat('心情', 2); g.info('专业', '电商'); }, res: '你对着镜头说了第一句“家人们”，自己先笑场了。' },
         { t: '工业机器人维修', dev: 15, cond: (g) => g.s('学识') >= 40, fx: (g) => { g.remember('vocMajor', 'robot'); g.stat('学识', 3); g.info('专业', '机器人维修'); }, res: '实训室里那台机械臂比你还高。你第一次让它动起来的时候，全班都在鼓掌。' },
       ] },

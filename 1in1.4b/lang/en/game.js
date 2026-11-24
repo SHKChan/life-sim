@@ -9,7 +9,7 @@
     title: '1 in 1.4 Billion',
     titleHtml: '1 in <i>1.4</i> Billion',
     intro: 'This year, about nine million babies are born in China. You are one of them. Your province, city or village, and your family are random, weighted by the real population. The rest of your life is up to you.',
-    freshLine: 'Not born yet.',
+    freshLine: 'You only get one life. Click once and see where you land.',
     year: 'Year',
     world: 'world',
     idcard: 'Life record',
@@ -41,7 +41,7 @@
       ['Year by year', 'At 1× a year takes about 12 seconds, a whole life about twenty minutes; speed up to 2×–16× any time. Each year pick a focus: study, work, family, exercise… What you build up decides how the big moments go.'],
       ['Only the big moments stop you', 'School, work, marriage, a home, children, money, old age: a choice pops up and tells you what is at stake. Small things follow your temperament. Gold is what most people choose; teal is the road less taken.'],
       ['Choices come back', 'What you study, which city you move to, who you live with: everything after follows. Years later an “Echo” reminds you what you chose.'],
-      ['Collect lives', 'Every life goes into your Life Album: provinces you were born in, roads you walked, rare lives unlocked. See how rare your life was among 1.4 billion.'],
+      ['Collect lives', 'Every life goes into your Life Album: provinces you were born in, roads you walked, rare lives unlocked. See how many kinds of lives you can collect.'],
       ['Shortcuts', 'Space pauses, number keys 1–4 choose, Esc folds the choice away so you can look around first.'],
     ],
     lastWords: {
@@ -101,6 +101,10 @@
     },
   });
   JY.addI18n('en', {
+    // added in v2.1.11
+    '展开完整人生记录': 'Show the full life record', '给这一世留一句话': 'Leave one last line for this life', '留言：': 'Last words: ',
+    '留言（最多30字，可以不留）': 'Last words (up to 30 characters, optional)', '只存本机，不放进分享链接': 'Saved on this device only, not included in the share link',
+    '这一生的心愿': "This life's wishes", '进入': 'Enter',
     // stats and labels
     健康: 'Health', 学识: 'Smarts', 心情: 'Mood', 人缘: 'Social', 财富: 'Wealth', 事业: 'Career',
     存款: 'Savings', 家境: 'Family means', 年收入: 'Income / yr', 年支出: 'Spending / yr', 房产: 'Property', 理财: 'Investments', 行情: 'Market', 欠款: 'Debt',

@@ -13,12 +13,12 @@ JY.GAME = {
   // langFiles：已经翻好的数据文件，没列出的照旧载入中文原文（翻译一个文件，加一个）
   langs: ['en', 'zh-TW'],
   langFiles: {
-    en: ['world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js'],
+    en: ['echo.js', 'turning.js', 'pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'lifetable.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js'],
     // 繁体：share/tools/tw.py 从简体自动生成，全部文件都有
-    'zh-TW': ['echo.js', 'turning.js', 'pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js'],
+    'zh-TW': ['echo.js', 'turning.js', 'pets.js', 'daily.js', 'note.js', 'family.js', 'careers-land.js', 'careers-service.js', 'careers-small.js', 'careers-jobs.js', 'travel.js', 'health.js', 'world.js', 'economy.js', 'childhood.js', 'youth.js', 'midlife.js', 'oldage.js', 'events.js', 'finance.js', 'tech.js', 'fate.js', 'spine.js', 'legacy.js', 'rarity.js', 'lifetable.js', 'variety.js'],
   },
   intro: '今年，中国大约有九百万个孩子出生。你是其中一个。省份、城乡、家境都是随机的，按真实的人口比例来。剩下的一生，由你来过。',
-  freshLine: '还没有投过胎。',
+  freshLine: '一生只有一次，点一下，看你会投到哪里。',
   year: '公元',
   world: '世界',
   idcard: '人生档案',
@@ -55,7 +55,7 @@ JY.GAME = {
     hookDeathFirst: true,
     healthDeath: '久病不起，在医院去世',
     naturalDeath: '寿终正寝',
-    lifespan: { base: 70, k: 0.3, rate: 0.03, decline: [[52, 1], [75, 1], [85, 1]] }, // 八十五岁以后老得更快
+    lifespan: { base: 78, k: 0.3, rate: 0.03, decline: [[52, 1], [75, 1], [85, 1]] }, // 八十五岁以后老得更快
     oddsMod: (g, chk) => JY.ECON.oddsMod(g, chk),
     wakeBoost: [],
     endTitle: '离世',
@@ -77,7 +77,8 @@ JY.GAME = {
     defaultFocus: (c, age, opts, g) => {
       if (age >= 23 && g.recall('job') && !['none', 'retired'].includes(g.recall('job'))
         && ['k1', 'k2', 'k3'].some((id) => JY.byId[id] && g.alive(id) && g.ageOf(id) + age - g.age < 18)) return '陪伴家人';
-      if (age >= 55) return '锻炼身体';
+      // 不碰重心的人，晚年默认陪家人，不再默认“锻炼”（锻炼要自己选，才有活得更久的回报）
+      if (age >= 60 && ['none', 'retired'].includes(g.recall('job') || 'none')) return '陪伴家人';
       return null;
     },
     deathLine: (g, id, cause) => JY.ECON.deathLine(g, id, cause),
@@ -123,7 +124,7 @@ JY.GAME = {
     ['一年一年过', '1× 时一年约 12 秒，一生二十来分钟；嫌慢就开 2×–16×。每年选一个重心：读书、工作、陪家人、锻炼……重心攒下的属性，会决定大事的成败。'],
     ['只在大事上停下', '升学、工作、结婚、买房、孩子、钱、养老：弹出抉择，写明这一步赌的是什么。小事顺着你的性子自己过去。金色是大多数人的选择，青色是少有人走的路。'],
     ['选过的事会回来', '读什么书、去哪座城、和谁过日子，后面的路都跟着变。几年后的“回响”会提醒你当年选了什么。'],
-    ['收集人生', '每一世都记进人生图鉴：去过的省份、走过的路、解锁的稀有人生。看看你这一生，在十四亿人里有多少见。'],
+    ['收集人生', '每一世都记进人生图鉴：去过的省份、走过的路、解锁的稀有人生。看看你能收集到多少种人生。'],
     ['快捷键', '空格暂停，数字键 1–4 直接选，Esc 收起抉择先看看局面。'],
   ],
   lastWords: {

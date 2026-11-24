@@ -14,7 +14,7 @@
   const CN = JY.CN;
 
   /* ---------- 小工具 ---------- */
-  const FORMAL = ['civil', 'teacher', 'doctor', 'nurse', 'soldier', 'office', 'tech', 'sales', 'worker', 'driver'];
+  const FORMAL = ['electrician', 'welder', 'cnc', 'civil', 'teacher', 'doctor', 'nurse', 'soldier', 'office', 'tech', 'sales', 'worker', 'driver'];
   const DECIDE = [65, 66, 67, 68, 69, 71, 73, 74, 76, 78, 80, 82, 84, 86, 88, 91, 94];
   const freeYear = (g) => !DECIDE.includes(g.age);
   // 退休金（元/年），和 economy.js 的 PENSION 一致，只用来显示每月多少
@@ -104,6 +104,32 @@
     if (lw(g) === 'nursing') return hasSp(g) ? 'You and ' + spName(g) + ' share a room at the nursing home' : 'You live in the nursing home, and a care aide comes by several times a day';
     if (CN.alone(g)) return 'You live alone, and someone from the neighborhood committee knocks on your door once a day';
     return CN.youHh(g);
+  };
+
+  // 中年的家庭记忆有明确对象，不能套给再婚伴侣或另一个孩子。
+  const partnerMemory = (g) => {
+    if (partner(g) !== 'sp') return '';
+    return ({ talk: 'You still keep the habit of talking slowly after meals, and when tired you say so first.', space: 'Each of you still keeps your own pastimes. You ask each other whether anything new happened today.', busy: 'Sometimes the talk drifts back to bills and chores. You put down your phone and add a question about how the day went.' })[g.recall('familyPartner')] || '';
+  };
+  const kidMemory = (g, visit) => {
+    if (!JY.byId.k1 || !g.alive('k1')) return '';
+    const k = g.name('k1');
+    if (visit && g.recall('familyTeen') === 'listen') return 'You and ' + k + 'When talking, you still wait for them to finish. When you\'re the one who can\'t decide, you try saying it out first.';
+    if (visit && g.recall('familyTeen') === 'later') return 'You think of that club sign-up form that was never handed in. This time, with ' + k + ' you talk over a small matter, and you don\'t say "when I\'m done being busy" again.';
+    const work = g.recall('familyWork');
+    if (work === 'budget') return 'Talking about future care, ' + k + ' first asks what you plan. You list things out one by one, the way you once worked out that first paycheck.';
+    if (work === 'support') return 'You bring up the money lent back then to tide things over, and ' + k + ' still remembers the note "eat well" on the transfer. This time you tell them a little of your own troubles too.';
+    if (work === 'alone') return 'You ask ' + k + ' whether they\'ve had any difficulties lately, and don\'t say that all young people are like this. There\'s a pause on the other end, then they slowly say a few words.';
+    if (g.recall('familyTeen') === 'listen') return 'You and ' + k + 'When talking, you still wait for them to finish. When you\'re the one who can\'t decide, you try saying it out first.';
+    if (g.recall('familyTeen') === 'later') return 'You think of that club sign-up form that was never handed in. This time, with ' + k + ' you talk over a small matter, and you don\'t say "when I\'m done being busy" again.';
+    return '';
+  };
+  const siblingMemory = (g) => {
+    const id = ['sib0', 'sib1'].find((x) => JY.byId[x] && g.alive(x));
+    // 原照护对象无法辨认时，只在唯一健在手足的家庭中续接。
+    if (!id || ['sib0', 'sib1'].filter((x) => !!JY.byId[x]).length !== 1) return '';
+    const n = g.name(id);
+    return ({ share: n + ' sends birthday wishes and asks about your check-up date. You still lay important matters out and talk them over.', time: n + ' calls and says it\'s your turn to rest. You both still remember the days of covering for each other.', apart: 'You send ' + n + ' a birthday photo. In a chat that used to hold only receipts, everyday talk slowly returns.' })[g.recall('familySibling')] || '';
   };
 
   JY.addFlags({
@@ -209,12 +235,12 @@
         return who + ' calls to say the apartment in ' + (c ? c + ' ' : 'the city ') + 'has a spare room, ' + gk + 'and wants you' + (hasSp(g) ? ' both' : '') + ' to come and live together.';
       },
       choices: [
-        { t: 'Pack up and move over', canon: true,
+        { t: 'Move to your child\'s home', canon: true,
           fx: (g) => { if (!g.recall('kidCity')) g.remember('kidCity', g.recall('workCity') && g.rnd() < 0.5 ? g.recall('workCity') : CN.pick(['Beijing', 'Shanghai', 'Shenzhen', 'Hangzhou', 'Chengdu', 'Wuhan', 'Nanjing', 'Xi\'an'])); toKids(g); g.stat('人缘', 3); g.stat('心情', -1); },
           res: (g) => (g.recall('kidCity') === 'abroad' ? 'You brought two suitcases of clothes and a bag of rice from home. After the plane landed, you could not read a single character on the signs along the streets.' : 'You brought two suitcases of clothes and a bag of rice from home. The new home was very clean, and you did not know where to put your hands.') },
-        { t: 'No, stay in your own home', dev: 10, fx: (g) => { g.remember('liveWith', 'alone'); g.stat('心情', 2); stayHome(g); },
+        { t: 'Stay in your own home', dev: 10, fx: (g) => { g.remember('liveWith', 'alone'); g.stat('心情', 2); stayHome(g); },
           res: (g) => (CN.alone(g) ? 'You said you were used to your place. After you hung up, the apartment was very quiet.' : 'You said you were both used to your place. After you hung up, ' + spName(g) + ' said that was just as well: live apart, and the visits mean more.') },
-        { t: 'Follow nobody, go back to your hometown', dev: 20, cond: (g) => g.recall('house') !== 'hometown', fx: (g) => { g.remember('liveWith', 'hometown'); g.info('住处', 'Moved back to your hometown'); stayHome(g); }, res: 'The house in your hometown was covered in dust. You swept all day, and at night you heard insects you had not heard in decades.' },
+        { t: 'Move back to your hometown', dev: 20, cond: (g) => g.recall('house') !== 'hometown', fx: (g) => { g.remember('liveWith', 'hometown'); g.info('住处', 'Moved back to your hometown'); stayHome(g); }, res: 'The house in your hometown was covered in dust. You swept all day, and at night you heard insects you had not heard in decades.' },
       ] },
     { id: 'o_where_nokid', age: 66, t: 'Where to live from here', loc: 'home',
       cond: (g) => !hasKid(g),
@@ -279,7 +305,7 @@
 
     /* ================= 69 岁：体检 ================= */
     { id: 'o_checkup', age: 69, t: 'Checkup report', loc: 'hospital',
-      text: (g) => (g.s('健康') >= 60 ? 'Three arrows pointed up on the checkup report: blood pressure, blood sugar, cholesterol. The doctor said it was not serious but needed managing.' : 'It took three pages to flip through the checkup report. The doctor pointed at a few lines and said your body now needed real looking after.'),
+      text: (g) => (g.recall('chronic') ? 'The doctor digs out your mid-life chronic illness records and goes through the medication of all these years once more.' : '') + (g.s('健康') >= 60 ? 'Three arrows pointed up on the checkup report: blood pressure, blood sugar, cholesterol. The doctor said it was not serious but needed managing.' : 'It took three pages to flip through the checkup report. The doctor pointed at a few lines and said your body now needed real looking after.'),
       choices: [
         { t: 'Take your pills on time and watch what you eat', canon: true, fx: (g) => { g.stat('健康', 3); g.stat('心情', -1); g.remember('chronic', 'control'); stayHome(g); }, res: 'You bought a pill box with seven compartments and sorted the week’s pills every Sunday night.' },
         { t: 'Wear a health band and let an AI keep watch', dev: 10, fx: (g) => { spend(g, 2000); g.stat('健康', 2); g.remember('chronic', 'ai'); stayHome(g); }, res: 'The band cost $285. At every mealtime it reminded you to eat a bit less. You scolded it several times, and it kept reminding you anyway.' },
@@ -296,7 +322,7 @@
         else if (hasKid(g)) bits.push(kidName(g) + ' ordered a cake');
         if (lw(g) === 'nursing') bits.push('the retirement community held a party for everyone with a birthday this month');
         if (!bits.length) bits.push('an old neighbor from downstairs brought a small cake, and the two of you stuck in one candle');
-        return 'Your seventieth birthday. ' + bits.join(', ') + '. ';
+        return 'Your seventieth birthday. ' + bits.join(', ') + '. ' + partnerMemory(g) + siblingMemory(g);
       } },
     { id: 'o_rehire_end', age: 70, t: 'Handed in the badge', auto: true,
       cond: (g) => g.recall('afterRetire') === 'rehire',
@@ -438,10 +464,10 @@
         return 'In the daytime everyone in the house is out. Some things you can no longer do alone: twisting off jar lids, changing light bulbs, bending to pick things up.';
       },
       choices: [
-        { t: 'Get a care robot that can do nursing', canon: true, fx: (g) => { spend(g, 40000); g.stat('健康', 3); g.remember('robot', 'home'); }, res: () => (paid >= 40000 ? 'It cost ' + CN.fmt(paid) + '. ' : 'You were short of money, and the neighborhood committee covered part of it. ') + 'It switched on the light when you got up at night, and answered when you spoke to it.' },
-        { t: 'Move into a nursing home ($700 a month)', dev: 15, cond: (g) => canNursing(g), fx: (g) => { toNursing(g); g.stat('人缘', 2); }, res: (g) => 'You picked one not far from the old home. The window faced south. ' + (hasSp(g) ? spName(g) + ' shared a room with you.' : '') },
+        { t: 'Buy a care robot', canon: true, fx: (g) => { spend(g, 40000); g.stat('健康', 3); g.remember('robot', 'home'); }, res: () => (paid >= 40000 ? 'It cost ' + CN.fmt(paid) + '. ' : 'You were short of money, and the neighborhood committee covered part of it. ') + 'It switched on the light when you got up at night, and answered when you spoke to it.' },
+        { t: 'Move into a nursing home', dev: 15, cond: (g) => canNursing(g), fx: (g) => { toNursing(g); g.stat('人缘', 2); }, res: (g) => 'You picked one not far from the old home. The window faced south. ' + (hasSp(g) ? spName(g) + ' shared a room with you.' : '') },
         { t: 'Move in with your child', dev: 10, cond: (g) => hasKid(g) && lw(g) !== 'kids', fx: (g) => { toKids(g); }, res: 'Your child cleared the study for you. You heard the couple whispering about it.' },
-        { t: 'Carry on as you are, no trouble to anyone', dev: 10, fx: (g) => { g.remember('robot', 'none'); g.stat('心情', 2); }, res: (g) => (lw(g) === 'kids' ? 'You said you could still get around. Your child installed handrails and night lights in your room.' : 'You said you knew where everything in the house was. That was enough.') },
+        { t: 'Keep looking after yourself', dev: 10, fx: (g) => { g.remember('robot', 'none'); g.stat('心情', 2); }, res: (g) => (lw(g) === 'kids' ? 'You said you could still get around. Your child installed handrails and night lights in your room.' : 'You said you knew where everything in the house was. That was enough.') },
       ] },
 
     /* ================= 77 岁 ================= */
@@ -474,7 +500,7 @@
         const where = g.recall('hukou') === 'rural' ? 'the village' : g.recall('hukou') === 'county' ? 'the county seat' : 'the city';
         if (e === 'phd' || e === 'master') return 'You often think of your graduate school years, the lab lights, the late-night snacks at the canteen. Back then, the future felt like a very long road.';
         if (e === 'bachelor' || e === 'college') return 'You can no longer remember the name of the person in the upper bunk of your college dorm. But what ' + (u === 'top' ? 'the famous campus gate' : 'the little restaurant outside the school gate') + ' looked like, you can recall with your eyes closed.';
-        if (e === 'vocational') return 'You often think of the smell of machine oil in the vocational school workshop. The trade you learned there fed you for most of your life.';
+        if (e === 'vocational') return 'You often think of the smell of machine oil in the vocational school workshop. You\'ve walked other roads since, but the movements you practised so carefully then are still remembered.';
         if (e === 'senior') return 'You often remember the two days of the gaokao (the college entrance exam), when the area outside the exam site in ' + where + ' was packed with waiting parents.';
         return 'You did not read much. But in ' + where + ', you remember the bell of that primary school to this day.';
       } },
@@ -510,25 +536,27 @@
     /* ================= 79 岁 ================= */
     { id: 'o_look_back_work', age: 79, t: 'Remembering the working years', auto: true,
       text: (g) => {
+        const memory = CN.careerMemory && CN.careerMemory(g);
+        if (memory) return memory;
         const j = g.recall('preJob');
         const c = g.recall('workCity');
         const at = c ? ' in ' + c : '';
         const m = {
           civil: 'You often dream of your old office: files piled on the desk, a plane tree outside the window.',
           teacher: 'Some of the students you taught are grandparents now. At New Year a few still message you and call you teacher.',
-          doctor: 'You spent most of your life on night shifts in the hospital. Now, when you hear an ambulance, you still glance at your watch without thinking.',
-          nurse: 'You have given maybe several hundred thousand injections. Your hands are still steady.',
+          doctor: 'You remember the days of night shifts at the hospital. Hearing an ambulance now, you still instinctively glance at your watch.',
+          nurse: 'You remember the lights of the nursing station and the handover book. Some movements are still remembered after leaving the post.',
           tech: 'Nobody has used the code you wrote for ages. Once in a while you see that old company’s name in the news.',
-          office: 'You ' + at + ' spent decades in a cubicle farm. The faces in the elevator, you cannot recall a single one.',
-          worker: 'You stood on the assembly line for half your life. When you hear the hum of machines now, your fingers still move along.',
-          rider: 'You ' + at + ' delivered enough orders to circle the Earth several times. You remember every compound that was hard to find.',
-          driver: 'You drove for decades, so' + at + ' you know every shortcut.',
-          farmer: 'You farmed all your life. When it rains now, your first thought is still the crops in the field.',
-          shop: 'The shop you ran changed its sign long ago. When you walk past, you still glance inside.',
-          boss: 'The businesses you ran made money and lost money. Looking back now, you remember the losses more clearly.',
+          office: 'You remember ' + at + 'the days sitting in a cubicle; the badge and the lift at closing time are all still remembered.',
+          worker: 'You remember that stretch on the assembly line. Hearing the hum of machines now, your fingers still move along.',
+          rider: 'You remember ' + at + 'the building doors you met while delivering, and having to phone and ask slowly when you couldn\'t find the entrance.',
+          driver: 'You remember the roads you drove, ' + at + 'and the bowl of rice eaten while waiting to load is remembered too.',
+          farmer: 'You once worked in the fields. When it rains now, you still think of the crops and the skies you used to wait on.',
+          shop: 'You remember the busy counter and the stocktake after closing; there was endless work then, and also moments to sit and rest.',
+          boss: 'You remember the days of running a business; the ledgers you leafed through hold both busyness and moments of indecision.',
           creator: 'The videos you made are still online. Sometimes a new like appears, and you do not know who from.',
         };
-        return m[j] || ('You changed jobs several times in your life. ' + (c ? c + ' years' : 'Those years') + ', looking back now, feel like someone else’s story.');
+        return m[j] || 'You remember how you used to arrange your days; there was busyness, and also times of slowing down.';
       } },
     { id: 'o_care_echo', age: 79, t: 'The days', auto: true,
       cond: (g) => !!lw(g),
@@ -865,6 +893,18 @@
    * afterWidow 'alone'|'kids'|'nursing'|'remarry'；remarried（晚年再婚，老伴 id sp2，和你同住）；lastCall
    */
   // 退休以后的日子（读 retired）
+  // 续接现有节点，不增加停问、费用或亲密度。
+  [
+    ['o_spcare_echo', (g) => partnerMemory(g)],
+    ['o_care_plan', (g) => kidMemory(g)],
+    ['o_care_echo', (g) => kidMemory(g)],
+    ['o_kids_visit', (g) => kidMemory(g, true)],
+  ].forEach(([id, tail]) => {
+    const n = JY.LIFE_NODES.find((x) => x.id === id);
+    const text = n.text;
+    n.text = (g) => (typeof text === 'function' ? text(g) : text) + tail(g);
+  });
+
   JY.addFlavor('any', [
     { t: 'Since retiring, you wake up even earlier than you did when you worked.', cond: (g) => g.recall('retired') === true && g.age < 80 },
     { t: 'You dug out your old work badge, looked at it for a while, and put it back in the drawer.', cond: (g) => g.recall('retired') === true },

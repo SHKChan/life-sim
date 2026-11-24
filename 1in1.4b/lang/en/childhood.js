@@ -502,7 +502,7 @@
         if (g.recall('olympiad')) s += 4;
         if (g.recall('cityKid') === 'class') s += 2;
         s += Math.round((g.rnd() - 0.5) * 18);
-        g.remember('zkScore', s >= 86 ? 'high' : s >= 70 ? 'mid' : 'low'); // 分数线按真实比例：约两成上好高中，一半出头上普高
+        g.remember('zkScore', s >= 98 ? 'high' : s >= 80 ? 'mid' : 'low'); // 分数线按真实比例：约两成上好高中，六成上普高（学识在 v2.1 后普遍偏高，线随之上移）
         CN.setEdu(g, 'junior', 'Junior high');
         atSchool(g, 'Zhongkao exam hall');
       },
@@ -549,8 +549,8 @@
       text: 'You were sixteen, old enough to go out and work properly. Your cousin said a factory was hiring, and the restaurant owner said you could stay and learn to cook.',
       choices: [
         { t: 'Go with your cousin to a factory in the south', canon: true, fx: (g) => { const c = CN.goCity(g, 2, CN.pick(['Dongguan', 'Suzhou', 'Foshan', 'Ningbo'])); CN.setJob(g, 'worker', 'Factory assembly line'); g.move('factory', c + ' · Electronics factory'); g.stat('财富', 3); g.stat('健康', -2); }, res: (g) => 'In ' + g.recall('workCity') + ', you stood on the assembly line twelve hours at a stretch. When your first month’s pay came, you sent half of it home and spent the rest treating your cousin to barbecue.' },
-        { t: 'Stay at the restaurant and learn to cook', dev: 15, fx: (g) => { CN.setJob(g, 'shop', 'Restaurant apprentice'); g.move('county', 'County town · Restaurant kitchen'); g.remember('craft', 'cook'); g.stat('人缘', 2); }, res: 'The master had a terrible temper and wonderful knife skills. You ruined thirty kilos of potatoes before you learned to cut them into shreds. He swore at you, but at closing time he gave you an extra bowl of rice.' },
-        { t: 'Learn a trade from your uncle in the village', dev: 20, fx: (g) => { CN.setJob(g, 'worker', 'Apprentice'); g.remember('craft', CN.pick(['tile', 'electric', 'weld'])); CN.goHome(g); g.stat('健康', 2); }, res: 'You followed your uncle from village to village, installing plumbing and electrics and laying tile. Uncle said, a skill in your hands means you won’t go hungry.' },
+        { t: 'Stay at the restaurant and learn to cook', dev: 15, fx: (g) => { CN.setJob(g, 'restaurant', 'Restaurant apprentice'); g.move('county', 'County town · Restaurant kitchen'); g.remember('craft', 'cook'); g.stat('人缘', 2); }, res: 'The master had a terrible temper and wonderful knife skills. You ruined thirty kilos of potatoes before you learned to cut them into shreds. He swore at you, but at closing time he gave you an extra bowl of rice.' },
+        { t: 'Learn a trade from your uncle in the village', dev: 20, fx: (g) => { CN.setJob(g, 'worker', 'Apprentice'); g.remember('craft', CN.pick(['tile', 'electric', 'weld'])); CN.setJob(g, { tile: 'renovation', electric: 'electrician', weld: 'welder' }[g.recall('craft')], 'Craft apprentice'); CN.goHome(g); g.stat('健康', 2); }, res: 'You followed your uncle from village to village, installing plumbing and electrics and laying tile. Uncle said, a skill in your hands means you won’t go hungry.' },
       ] },
 
     /* ================= 17 岁 ================= */

@@ -184,7 +184,7 @@
         { t: (g) => '拿赔偿，自己开家小店（本钱 ' + fmt(SHOP[tier(g)] || 150000) + '，' + CN.jobLine(g, 'shop') + '）', dev: 25,
           fx: (g) => { A = k1(myInc(g) / 12 * 11); CN.earn(g, A); B = SHOP[tier(g)] || 150000; M = spend(g, B); CN.setJob(g, 'shop', '开了家小店'); g.remember('crisis35', 'shop'); },
           res: () => '赔偿 ' + fmt(A) + '。盘铺面、装修、进货一共花了 ' + fmt(B) + (M ? '，不够的 ' + fmt(M) + ' 是借的' : '') + '。开张那天，前同事送来一个花篮。' },
-        { t: (g) => '回老家考个编制（' + CN.jobLine(g, 'civil', 4) + '）', dev: 25, check: ['学识', 60], cond: (g) => !atHome(g),
+        { t: (g) => '回老家考个编制（' + CN.jobLine(g, 'civil', 4) + '）', dev: 25, check: ['学识', 60], cond: (g) => !atHome(g) && degreed(g),
           fx: (g) => { backHome(g); CN.setJob(g, 'civil', '县里的事业编'); g.remember('crisis35', 'home'); g.stat('心情', 4); }, res: '三十五岁是报名的最后一年。你考上了，搬回了老家。',
           fail: { fx: (g) => { backHome(g); CN.setJob(g, 'none', '待业'); g.remember('crisis35', 'idle'); g.stat('心情', -6); }, res: '差了两分。你还是搬回了老家，先在家里待着。', dev: 10 } },
       ] },
@@ -747,6 +747,7 @@
    * 工资用 youth.js 挂在 CN 上的 CN.jobPay / CN.jobLine（和 economy.js 的收入表一致）。 */
   const EMP = ['office', 'tech', 'sales', 'civil', 'teacher', 'doctor', 'nurse', 'worker', 'rider', 'driver', 'soldier'];
   const hiEdu = (g) => ['bachelor', 'master', 'phd'].includes(g.recall('edu'));
+  const degreed = (g) => ['college', 'bachelor', 'master', 'phd'].includes(g.recall('edu'));
   const title = (g) => JY.engine.get().L.info['职业'] || JOBT[job(g)] || '';
   // 每一世不同、同一年里固定的随机数（yearRoll 只看年份，所有人同一年出生，各世会一样）
   const lifeSeed = (g) => { const c = JY.byId[g.me]; const t = ((c && c.name) || '') + (g.recall('city') || ''); let h = 7; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) % 1000003; return h; };

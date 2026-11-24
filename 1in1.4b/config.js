@@ -17,4 +17,8 @@ window.JY_CONFIG = {
   // 问题反馈：'用户名/仓库' 时可以一键提交到 GitHub Issues；feedbackApi 填后端地址时直接 POST（例如 Cloudflare Worker 的 /api/feedback）
   feedbackRepo: 'SHKChan/life-sim',
   feedbackApi: '',
+  // 语言：由 vibe-game 全站顶栏的「中 / EN」切换（读 localStorage 的 vibe.lang）；没存过就跟随浏览器当前语言（中文、繁体、英文，其余按英文）。
+  // langNav: true 表示不再显示游戏自己的语言按钮
+  langOpen: true,
+  langNav: true,
 };

@@ -187,7 +187,10 @@
     const { esc } = u;
     const al = JY.album();
     const ch = JY.FATE ? JY.FATE.homeChallenge(u) : '';
-    if (!al.lives) return ch;
+    if (!al.lives) return ch + '<section class="album"><div class="section-h"><h2>一生大概是這樣的</h2><span>虛構示例，你的人生會不一樣</span></div><div class="card">'
+      + '<p><b>河南周口 · 農村 · 工人家庭</b>，2026 年出生。</p>'
+      + '<p>十五歲，中考差了幾分，你去了縣裡的職高學汽修。二十七歲，在大城市租著房，要不要回老家，你選了留下。五十四歲，體檢單上一排紅箭頭，醫生說再不歇就晚了。</p>'
+      + '<p class="note">結局：<b>負重前行</b> · 享年 79 歲。留言：下輩子，給自己多留點時間。</p></div></section>';
     const row = (name, n, total) => '<div class="alb-row"><span>' + esc(name) + '</span><span class="bar"><i style="width:' + Math.round(100 * Math.min(1, n / total)) + '%"></i></span><b>' + n + ' / ' + total + '</b></div>';
     const got = ACH.filter((a) => al.ach[a.id]);
     return ch + '<section class="album"><div class="section-h"><h2>人生圖鑑</h2><span>活過 ' + al.lives + ' 世 · 清空投胎記錄也不會丟</span></div><div class="card">'

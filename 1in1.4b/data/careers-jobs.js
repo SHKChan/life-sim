@@ -14,7 +14,13 @@
   };
   const staff = { restaurant: '饭馆厨师', beauty: '理发师', grocery: '超市店员', mechanic: '汽修工', parcel: '快递站店员', cooperative: '合作社技术员', livestock: '养殖技术员', grower: '种植技术员' };
   const title = (g, own) => own ? defs[pick(g, own)][0] : staff[pick(g, own)] || defs[pick(g, own)][0];
-  const set = (g, own) => { const k = pick(g, own); CN.setJob(g, k, title(g, own) + (g.age < 18 ? '学徒' : '')); g.remember('tradeOwn', !!own); g.remember('lifePath', 'work'); };
+  const set = (g, own) => {
+    const sd = Math.abs(Number(g.recall('seed')) || 0);
+    if (!own && g.age >= 18 && sd % 5 < 2 && !['restaurant', 'beauty', 'grocery', 'mechanic', 'parcel'].includes(g.recall('job'))) {
+      const dr = sd % 2 === 0;
+      CN.setJob(g, dr ? 'driver' : 'rider', dr ? '货车司机' : '外卖骑手'); g.remember('tradeOwn', false); g.remember('lifePath', 'work'); return;
+    }
+    const k = pick(g, own); CN.setJob(g, k, title(g, own) + (g.age < 18 ? '学徒' : '')); g.remember('tradeOwn', !!own); g.remember('lifePath', 'work'); };
   const byId = (id) => JY.LIFE_NODES.find((n) => n.id === id);
   const spend = (g, fee) => {
     if (!g.recall('money0')) { g.stat('财富', -1); return; }
